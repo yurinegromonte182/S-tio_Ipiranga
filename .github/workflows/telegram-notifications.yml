@@ -1,73 +1,81 @@
-name: 🌿 Notificações com Python
+name: 🌿 Sítio Ipiranga - Notificações
 
 on:
   workflow_dispatch:
+  schedule:
+    # 06:00, 12:00, 18:00 (horário Brasil)
+    - cron: '0 9,15,21 * * *'
 
 jobs:
-  notify:
+  enviar-notificacao:
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 Checkout
+      - name: 📥 Baixar repositório
         uses: actions/checkout@v4
-        
-      - name: 🐍 Configurar Python
-        uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          fetch-depth: 1
           
-      - name: 📤 Enviar com Python
+      - name: 📤 Enviar mensagem para Telegram
         env:
-          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          python3 -c "
-import requests
-import os
-import json
-from datetime import datetime
-
-token = os.getenv('BOT_TOKEN')
-chat_id = os.getenv('CHAT_ID')
-
-print(f'Token: {token[:10]}...')
-print(f'Chat ID: {chat_id}')
-
-# Contar plantas
-try:
-    with open('dados.geojson', 'r') as f:
-        data = json.load(f)
-    plantas = len(data.get('features', []))
-except:
-    plantas = 0
-
-# Mensagem
-data_hora = datetime.now().strftime('%d/%m/%Y %H:%M')
-mensagem = f'''🌿 *Sítio Ipiranga*
-📅 {data_hora}
-🌳 *{plantas} plantas* cadastradas
-✅ Sistema ativo
-
-📱 *Acesse o app:*
-https://yurimegromonte182.github.io/S-tio_Jintanga/'''
-
-print('Enviando mensagem...')
-
-url = f'https://api.telegram.org/bot{token}/sendMessage'
-payload = {
-    'chat_id': chat_id,
-    'text': mensagem,
-    'parse_mode': 'Markdown'
-}
-
-response = requests.post(url, json=payload)
-print(f'Status: {response.status_code}')
-print(f'Resposta: {response.text}')
-
-if response.status_code == 200:
-    print('✅ Sucesso!')
-    exit(0)
-else:
-    print('❌ Erro!')
-    exit(1)
-"
+          echo "=== INICIANDO ENVIO ==="
+          
+          # Verificar se temos os dados
+          if [ ! -f "dados.geojson" ]; then
+            echo "⚠️ Arquivo dados.geojson não encontrado"
+            echo "Criando mensagem básica..."
+            
+            MENSAGEM="🌿 *Sítio Ipiranga*%0A"
+            MENSAGEM="${MENSAGEM}📅 $(date '+%d/%m/%Y') às $(date '+%H:%M')%0A"
+            MENSAGEM="${MENSAGEM}⚠️ *AVISO:* Arquivo dados.geojson não encontrado%0A"
+            MENSAGEM="${MENSAGEM}Exporte os dados do QField e faça upload.%0A"
+            MENSAGEM="${MENSAGEM}%0A📱 *Acesse o app:*%0A"
+            MENSAGEM="${MENSAGEM}https://yurimegromonte182.github.io/S-tio_Jintanga/"
+          else
+            echo "✅ Arquivo dados.geojson encontrado"
+            
+            # Contar plantas
+            QTDE_PLANTAS=$(jq '.features | length' dados.geojson 2>/dev/null || echo "0")
+            
+            MENSAGEM="🌿 *Sítio Ipiranga*%0A"
+            MENSAGEM="${MENSAGEM}📅 $(date '+%d/%m/%Y') às $(date '+%H:%M')%0A"
+            MENSAGEM="${MENSAGEM}🌳 *${QTDE_PLANTAS} plantas* cadastradas%0A"
+            MENSAGEM="${MENSAGEM}✅ Sistema funcionando normalmente%0A"
+            MENSAGEM="${MENSAGEM}%0A📱 *Acesse o app:*%0A"
+            MENSAGEM="${MENSAGEM}https://yurimegromonte182.github.io/S-tio_Jintanga/"
+          fi
+          
+          echo "📝 Mensagem preparada:"
+          echo "---"
+          echo -e "${MENSAGEM//%0A/\\n}"
+          echo "---"
+          
+          echo "🤖 Enviando para Telegram..."
+          
+          # Enviar com timeout e tratamento de erro
+          RESPOSTA=$(curl -s -m 30 -X POST \
+            "https://api.telegram.org/bot${TOKEN}/sendMessage" \
+            -d chat_id="${CHAT_ID}" \
+            -d text="${MENSAGEM}" \
+            -d parse_mode="Markdown" \
+            -w "\nCURL_EXIT:%{exitcode}")
+          
+          # Separar resposta do código de saída
+          CURL_EXIT=$(echo "$RESPOSTA" | grep "CURL_EXIT:" | cut -d: -f2)
+          RESPOSTA_API=$(echo "$RESPOSTA" | grep -v "CURL_EXIT:")
+          
+          echo "Código de saída do curl: ${CURL_EXIT:-0}"
+          echo "Resposta da API: $RESPOSTA_API"
+          
+          if [ "${CURL_EXIT:-0}" -eq 0 ] && echo "$RESPOSTA_API" | grep -q '"ok":true'; then
+            echo "🎉 ✅ MENSAGEM ENVIADA COM SUCESSO!"
+            exit 0
+          else
+            echo "❌ ERRO AO ENVIAR MENSAGEM"
+            echo "Detalhes do erro:"
+            echo "$RESPOSTA_API"
+            exit 1
+          fi
