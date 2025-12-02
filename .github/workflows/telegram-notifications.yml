@@ -1,81 +1,356 @@
 name: 🌿 Sítio Ipiranga - Notificações
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dados.geojson'
   schedule:
-    # 06:00, 12:00, 18:00 (horário Brasil)
-    - cron: '0 9,15,21 * * *'
+    # 06:00 BR = 09:00 UTC
+    - cron: '0 9 * * *'
+    # 12:00 BR = 15:00 UTC
+    - cron: '0 15 * * *'
+    # 18:00 BR = 21:00 UTC
+    - cron: '0 21 * * *'
+  workflow_dispatch:
 
 jobs:
-  enviar-notificacao:
+  notificar-telegram:
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 Baixar repositório
+      - name: 📥 Checkout do repositório
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          
-      - name: 📤 Enviar mensagem para Telegram
-        env:
-          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        
+      - name: 🔧 Instalar dependências
         run: |
-          echo "=== INICIANDO ENVIO ==="
+          sudo apt-get update
+          sudo apt-get install -y jq curl
           
-          # Verificar se temos os dados
+      - name: 📊 Processar dados e enviar notificação
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -e
+          
+          echo "=== INICIANDO PROCESSAMENTO ==="
+          
+          # Verificar se o arquivo existe
           if [ ! -f "dados.geojson" ]; then
             echo "⚠️ Arquivo dados.geojson não encontrado"
-            echo "Criando mensagem básica..."
             
-            MENSAGEM="🌿 *Sítio Ipiranga*%0A"
-            MENSAGEM="${MENSAGEM}📅 $(date '+%d/%m/%Y') às $(date '+%H:%M')%0A"
-            MENSAGEM="${MENSAGEM}⚠️ *AVISO:* Arquivo dados.geojson não encontrado%0A"
-            MENSAGEM="${MENSAGEM}Exporte os dados do QField e faça upload.%0A"
-            MENSAGEM="${MENSAGEM}%0A📱 *Acesse o app:*%0A"
-            MENSAGEM="${MENSAGEM}https://yurimegromonte182.github.io/S-tio_Jintanga/"
-          else
-            echo "✅ Arquivo dados.geojson encontrado"
+            MENSAGEM="🌿 Sítio Ipiranga%0A"
+            MENSAGEM="${MENSAGEM}📅 $(date '+%d/%m/%Y às %H:%M')%0A%0A"
+            MENSAGEM="${MENSAGEM}⚠️ AVISO: Arquivo de dados não encontrado%0A"
+            MENSAGEM="${MENSAGEM}%0AExporte os dados do QField e faça upload no repositório.%0A"
+            MENSAGEM="${MENSAGEM}%0A📱 Acesse: https://yurimegromonte182.github.io/S-tio_Ipiranga/"
             
-            # Contar plantas
-            QTDE_PLANTAS=$(jq '.features | length' dados.geojson 2>/dev/null || echo "0")
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -d chat_id="${TELEGRAM_CHAT_ID}" \
+              -d text="${MENSAGEM}"
             
-            MENSAGEM="🌿 *Sítio Ipiranga*%0A"
-            MENSAGEM="${MENSAGEM}📅 $(date '+%d/%m/%Y') às $(date '+%H:%M')%0A"
-            MENSAGEM="${MENSAGEM}🌳 *${QTDE_PLANTAS} plantas* cadastradas%0A"
-            MENSAGEM="${MENSAGEM}✅ Sistema funcionando normalmente%0A"
-            MENSAGEM="${MENSAGEM}%0A📱 *Acesse o app:*%0A"
-            MENSAGEM="${MENSAGEM}https://yurimegromonte182.github.io/S-tio_Jintanga/"
+            echo "✅ Mensagem de aviso enviada"
+            exit 0
           fi
           
-          echo "📝 Mensagem preparada:"
-          echo "---"
-          echo -e "${MENSAGEM//%0A/\\n}"
-          echo "---"
+          echo "✅ Arquivo dados.geojson encontrado"
           
-          echo "🤖 Enviando para Telegram..."
-          
-          # Enviar com timeout e tratamento de erro
-          RESPOSTA=$(curl -s -m 30 -X POST \
-            "https://api.telegram.org/bot${TOKEN}/sendMessage" \
-            -d chat_id="${CHAT_ID}" \
-            -d text="${MENSAGEM}" \
-            -d parse_mode="Markdown" \
-            -w "\nCURL_EXIT:%{exitcode}")
-          
-          # Separar resposta do código de saída
-          CURL_EXIT=$(echo "$RESPOSTA" | grep "CURL_EXIT:" | cut -d: -f2)
-          RESPOSTA_API=$(echo "$RESPOSTA" | grep -v "CURL_EXIT:")
-          
-          echo "Código de saída do curl: ${CURL_EXIT:-0}"
-          echo "Resposta da API: $RESPOSTA_API"
-          
-          if [ "${CURL_EXIT:-0}" -eq 0 ] && echo "$RESPOSTA_API" | grep -q '"ok":true'; then
-            echo "🎉 ✅ MENSAGEM ENVIADA COM SUCESSO!"
-            exit 0
-          else
-            echo "❌ ERRO AO ENVIAR MENSAGEM"
-            echo "Detalhes do erro:"
-            echo "$RESPOSTA_API"
+          # Validar JSON
+          if ! jq empty dados.geojson 2>/dev/null; then
+            echo "❌ Erro: arquivo JSON inválido"
             exit 1
           fi
+          
+          # Data e hora atual
+          HOJE=$(date +%Y-%m-%d)
+          DATA_BR=$(date '+%d/%m/%Y')
+          HORA_BR=$(date '+%H:%M')
+          
+          # Função para calcular dias desde uma data
+          dias_desde() {
+            if [ -z "$1" ] || [ "$1" = "null" ]; then
+              echo "999"
+            else
+              echo $(( ( $(date -d "$HOJE" +%s) - $(date -d "$1" +%s) ) / 86400 ))
+            fi
+          }
+          
+          # Normalizar texto
+          normalizar() {
+            echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/^ *//;s/ *$//'
+          }
+          
+          # Obter intervalos por espécie
+          get_intervalo() {
+            local especie=$(normalizar "$1")
+            local tipo=$2
+            
+            case "$tipo" in
+              "rega")
+                case "$especie" in
+                  *"mangabeira"*) echo 7 ;;
+                  *"caju"*) echo 10 ;;
+                  *"coq"*) echo 5 ;;
+                  *"cacau"*) echo 3 ;;
+                  *) echo 7 ;;
+                esac
+                ;;
+              "poda")
+                case "$especie" in
+                  *"mangabeira"*) echo 180 ;;
+                  *"caju"*) echo 365 ;;
+                  *"coq"*) echo 730 ;;
+                  *"cacau"*) echo 180 ;;
+                  *) echo 180 ;;
+                esac
+                ;;
+              "colheita")
+                case "$especie" in
+                  *"mangabeira"*) echo 90 ;;
+                  *"caju"*) echo 60 ;;
+                  *"coq"*) echo 30 ;;
+                  *"cacau"*) echo 120 ;;
+                  *) echo 90 ;;
+                esac
+                ;;
+            esac
+          }
+          
+          # Limpar arquivo temporário
+          rm -f /tmp/acoes.txt
+          
+          # Processar cada planta
+          echo "📋 Processando plantas..."
+          jq -c '.features[]' dados.geojson | while read -r feature; do
+            ID=$(echo "$feature" | jq -r '.properties.id // .properties.fid // "SN"')
+            NOME=$(echo "$feature" | jq -r '.properties.nome_popular // .properties.especie // "Planta"')
+            ULT_REGA=$(echo "$feature" | jq -r '.properties.ultima_rega // "null"')
+            ULT_PODA=$(echo "$feature" | jq -r '.properties.ultima_poda // "null"')
+            ULT_COLH=$(echo "$feature" | jq -r '.properties.ultima_colheita // "null"')
+            
+            NOME_NORM=$(normalizar "$NOME")
+            
+            # Verificar rega
+            INT_R=$(get_intervalo "$NOME_NORM" "rega")
+            DIAS_R=$(dias_desde "$ULT_REGA")
+            
+            if [ "$DIAS_R" -ge $((INT_R + 2)) ]; then
+              echo "REGA_URG:$NOME #$ID|Atrasada $DIAS_R dias" >> /tmp/acoes.txt
+            elif [ "$DIAS_R" -ge "$INT_R" ]; then
+              if [ "$ULT_REGA" = "null" ]; then
+                echo "REGA_NORM:$NOME #$ID|Nunca regada" >> /tmp/acoes.txt
+              else
+                echo "REGA_NORM:$NOME #$ID|Ha $DIAS_R dias" >> /tmp/acoes.txt
+              fi
+            fi
+            
+            # Verificar poda
+            INT_P=$(get_intervalo "$NOME_NORM" "poda")
+            DIAS_P=$(dias_desde "$ULT_PODA")
+            
+            if [ "$DIAS_P" -ge "$INT_P" ]; then
+              if [ "$ULT_PODA" = "null" ]; then
+                echo "PODA:$NOME #$ID|Nunca podada" >> /tmp/acoes.txt
+              else
+                echo "PODA:$NOME #$ID|Ha $DIAS_P dias" >> /tmp/acoes.txt
+              fi
+            fi
+            
+            # Verificar colheita
+            INT_C=$(get_intervalo "$NOME_NORM" "colheita")
+            DIAS_C=$(dias_desde "$ULT_COLH")
+            
+            if [ "$DIAS_C" -ge "$INT_C" ]; then
+              if [ "$ULT_COLH" = "null" ]; then
+                echo "COLHEITA:$NOME #$ID|Verificar frutos" >> /tmp/acoes.txt
+              else
+                echo "COLHEITA:$NOME #$ID|Ha $DIAS_C dias" >> /tmp/acoes.txt
+              fi
+            fi
+          done
+          
+          # Contar total de plantas
+          TOTAL=$(jq '.features | length' dados.geojson)
+          
+          # Saudação por horário
+          HORA_NUM=$(date +%H)
+          if [ "$HORA_NUM" -lt 12 ]; then
+            SAUDACAO="☀️ Bom dia"
+          elif [ "$HORA_NUM" -lt 18 ]; then
+            SAUDACAO="⛅ Boa tarde"
+          else
+            SAUDACAO="🌙 Boa noite"
+          fi
+          
+          # Montar mensagem
+          MENSAGEM="${SAUDACAO}!%0A"
+          MENSAGEM="${MENSAGEM}📅 ${DATA_BR} às ${HORA_BR}%0A"
+          MENSAGEM="${MENSAGEM}🌳 ${TOTAL} plantas no sistema%0A%0A"
+          
+          # Contar ações
+          if [ -f /tmp/acoes.txt ]; then
+            TOTAL_ACOES=$(wc -l < /tmp/acoes.txt)
+          else
+            TOTAL_ACOES=0
+          fi
+          
+          if [ "$TOTAL_ACOES" -eq 0 ]; then
+            MENSAGEM="${MENSAGEM}✅ *Tudo em dia!*%0A"
+            MENSAGEM="${MENSAGEM}Nenhuma ação necessária hoje. 🌿"
+          else
+            URG_COUNT=$(grep -c "^REGA_URG:" /tmp/acoes.txt 2>/dev/null || echo 0)
+            NORM_COUNT=$(grep -c "^REGA_NORM:" /tmp/acoes.txt 2>/dev/null || echo 0)
+            PODA_COUNT=$(grep -c "^PODA:" /tmp/acoes.txt 2>/dev/null || echo 0)
+            COLH_COUNT=$(grep -c "^COLHEITA:" /tmp/acoes.txt 2>/dev/null || echo 0)
+            
+            MENSAGEM="${MENSAGEM}📋 *${TOTAL_ACOES} ações pendentes*%0A%0A"
+            
+            # Mostrar resumo se muitas ações
+            if [ "$TOTAL_ACOES" -gt 12 ]; then
+              [ "$URG_COUNT" -gt 0 ] && MENSAGEM="${MENSAGEM}🚨 *URGENTE:* ${URG_COUNT} rega(s) atrasada(s)%0A"
+              [ "$NORM_COUNT" -gt 0 ] && MENSAGEM="${MENSAGEM}💧 *Rega:* ${NORM_COUNT} planta(s)%0A"
+              [ "$PODA_COUNT" -gt 0 ] && MENSAGEM="${MENSAGEM}✂️ *Poda:* ${PODA_COUNT} planta(s)%0A"
+              [ "$COLH_COUNT" -gt 0 ] && MENSAGEM="${MENSAGEM}🍊 *Colheita:* ${COLH_COUNT} planta(s)%0A"
+              MENSAGEM="${MENSAGEM}%0A💡 Veja detalhes no app"
+            else
+              CONTADOR=0
+              
+              # Urgentes primeiro
+              if [ "$URG_COUNT" -gt 0 ]; then
+                MENSAGEM="${MENSAGEM}🚨 *URGENTE:*%0A"
+                while IFS='|' read -r tipo_planta descricao; do
+                  tipo=$(echo "$tipo_planta" | cut -d: -f1)
+                  planta=$(echo "$tipo_planta" | cut -d: -f2)
+                  if [ "$tipo" = "REGA_URG" ] && [ "$CONTADOR" -lt 12 ]; then
+                    MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
+                    CONTADOR=$((CONTADOR + 1))
+                  fi
+                done < /tmp/acoes.txt
+                MENSAGEM="${MENSAGEM}%0A"
+              fi
+              
+              # Rega normal
+              if [ "$NORM_COUNT" -gt 0 ] && [ "$CONTADOR" -lt 12 ]; then
+                MENSAGEM="${MENSAGEM}💧 *Rega:*%0A"
+                while IFS='|' read -r tipo_planta descricao; do
+                  tipo=$(echo "$tipo_planta" | cut -d: -f1)
+                  planta=$(echo "$tipo_planta" | cut -d: -f2)
+                  if [ "$tipo" = "REGA_NORM" ] && [ "$CONTADOR" -lt 12 ]; then
+                    MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
+                    CONTADOR=$((CONTADOR + 1))
+                  fi
+                done < /tmp/acoes.txt
+                MENSAGEM="${MENSAGEM}%0A"
+              fi
+              
+              # Poda
+              if [ "$PODA_COUNT" -gt 0 ] && [ "$CONTADOR" -lt 12 ]; then
+                MENSAGEM="${MENSAGEM}✂️ *Poda:*%0A"
+                while IFS='|' read -r tipo_planta descricao; do
+                  tipo=$(echo "$tipo_planta" | cut -d: -f1)
+                  planta=$(echo "$tipo_planta" | cut -d: -f2)
+                  if [ "$tipo" = "PODA" ] && [ "$CONTADOR" -lt 12 ]; then
+                    MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
+                    CONTADOR=$((CONTADOR + 1))
+                  fi
+                done < /tmp/acoes.txt
+                MENSAGEM="${MENSAGEM}%0A"
+              fi
+              
+              # Colheita
+              if [ "$COLH_COUNT" -gt 0 ] && [ "$CONTADOR" -lt 12 ]; then
+                MENSAGEM="${MENSAGEM}🍊 *Colheita:*%0A"
+                while IFS='|' read -r tipo_planta descricao; do
+                  tipo=$(echo "$tipo_planta" | cut -d: -f1)
+                  planta=$(echo "$tipo_planta" | cut -d: -f2)
+                  if [ "$tipo" = "COLHEITA" ] && [ "$CONTADOR" -lt 12 ]; then
+                    MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
+                    CONTADOR=$((CONTADOR + 1))
+                  fi
+                done < /tmp/acoes.txt
+              fi
+            fi
+          fi
+          
+          MENSAGEM="${MENSAGEM}%0A📱 *Acesse:*%0A"
+          MENSAGEM="${MENSAGEM}https://yurimegromonte182.github.io/S-tio_Ipiranga/"
+          
+          # Limpar temporário
+          rm -f /tmp/acoes.txt
+          
+          # Enviar notificação
+          echo "📤 Enviando notificação..."
+          
+          RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" -X POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="${MENSAGEM}" \
+            -d parse_mode="Markdown")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+          RESPONSE_BODY=$(echo "$RESPONSE" | grep -v "HTTP_CODE:")
+          
+          echo "Status HTTP: ${HTTP_CODE}"
+          echo "Resposta: ${RESPONSE_BODY}"
+          
+          if [ "${HTTP_CODE}" = "200" ] && echo "$RESPONSE_BODY" | grep -q '"ok":true'; then
+            echo "✅ Notificação enviada com sucesso!"
+          else
+            echo "❌ Erro ao enviar notificação"
+            echo "Detalhes: ${RESPONSE_BODY}"
+            exit 1
+          fi
+          
+      - name: 📊 Resumo estatístico (apenas 06h)
+        if: github.event.schedule == '0 9 * * *'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "=== ENVIANDO RESUMO ESTATÍSTICO ==="
+          
+          if [ ! -f "dados.geojson" ]; then
+            echo "⚠️ Arquivo não encontrado, pulando estatísticas"
+            exit 0
+          fi
+          
+          TOTAL=$(jq '.features | length' dados.geojson)
+          
+          COQUEIROS=$(jq '[.features[] | select(
+            (.properties.nome_popular // .properties.especie // "") | 
+            ascii_downcase | contains("coq")
+          )] | length' dados.geojson)
+          
+          CAJUEIROS=$(jq '[.features[] | select(
+            (.properties.nome_popular // .properties.especie // "") | 
+            ascii_downcase | contains("caju")
+          )] | length' dados.geojson)
+          
+          CACAU=$(jq '[.features[] | select(
+            (.properties.nome_popular // .properties.especie // "") | 
+            ascii_downcase | contains("cacau")
+          )] | length' dados.geojson)
+          
+          MANGABEIRA=$(jq '[.features[] | select(
+            (.properties.nome_popular // .properties.especie // "") | 
+            ascii_downcase | contains("mangabeira")
+          )] | length' dados.geojson)
+          
+          OUTRAS=$((TOTAL - COQUEIROS - CAJUEIROS - CACAU - MANGABEIRA))
+          
+          STATS="📊 *Resumo do Sítio*%0A"
+          STATS="${STATS}🌳 *Total:* ${TOTAL} plantas%0A%0A"
+          [ "$COQUEIROS" -gt 0 ] && STATS="${STATS}🥥 Coqueiros: ${COQUEIROS}%0A"
+          [ "$CAJUEIROS" -gt 0 ] && STATS="${STATS}🌰 Cajueiros: ${CAJUEIROS}%0A"
+          [ "$CACAU" -gt 0 ] && STATS="${STATS}🍫 Cacau: ${CACAU}%0A"
+          [ "$MANGABEIRA" -gt 0 ] && STATS="${STATS}🥭 Mangabeira: ${MANGABEIRA}%0A"
+          [ "$OUTRAS" -gt 0 ] && STATS="${STATS}🌿 Outras: ${OUTRAS}%0A"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="${STATS}" \
+            -d parse_mode="Markdown"
+          
+          echo "✅ Resumo estatístico enviado!"
