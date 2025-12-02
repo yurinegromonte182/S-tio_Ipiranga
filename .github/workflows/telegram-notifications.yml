@@ -121,11 +121,7 @@ jobs:
           # Limpar arquivo temporário
           rm -f /tmp/acoes.txt
           
-          # Processar cada planta
-          echo "📋 Processando plantas..."
-          jq -c '.features[]' dados.geojson | while read -r feature; do
-            ID=$(echo "$feature" | jq -r '.properties.id // .properties.fid // "SN"')
-            NOME=$(echo "$feature" | jq -r '.properties.nome_popular // .properties.especie // "Planta"')
+Planta"')
             ULT_REGA=$(echo "$feature" | jq -r '.properties.ultima_rega // "null"')
             ULT_PODA=$(echo "$feature" | jq -r '.properties.ultima_poda // "null"')
             ULT_COLH=$(echo "$feature" | jq -r '.properties.ultima_colheita // "null"')
@@ -189,21 +185,34 @@ jobs:
           MENSAGEM="${MENSAGEM}📅 ${DATA_BR} às ${HORA_BR}%0A"
           MENSAGEM="${MENSAGEM}🌳 ${TOTAL} plantas no sistema%0A%0A"
           
-          # Contar ações
+          # Contar ações (limpar espaços)
           if [ -f /tmp/acoes.txt ]; then
-            TOTAL_ACOES=$(wc -l < /tmp/acoes.txt)
+            TOTAL_ACOES=$(wc -l < /tmp/acoes.txt | tr -d '[:space:]')
           else
             TOTAL_ACOES=0
           fi
+          
+          # Garantir que é um número válido
+          TOTAL_ACOES=${TOTAL_ACOES:-0}
+          
+          echo "Total de ações encontradas: ${TOTAL_ACOES}"
           
           if [ "$TOTAL_ACOES" -eq 0 ]; then
             MENSAGEM="${MENSAGEM}✅ *Tudo em dia!*%0A"
             MENSAGEM="${MENSAGEM}Nenhuma ação necessária hoje. 🌿"
           else
-            URG_COUNT=$(grep -c "^REGA_URG:" /tmp/acoes.txt 2>/dev/null || echo 0)
-            NORM_COUNT=$(grep -c "^REGA_NORM:" /tmp/acoes.txt 2>/dev/null || echo 0)
-            PODA_COUNT=$(grep -c "^PODA:" /tmp/acoes.txt 2>/dev/null || echo 0)
-            COLH_COUNT=$(grep -c "^COLHEITA:" /tmp/acoes.txt 2>/dev/null || echo 0)
+            URG_COUNT=$(grep -c "^REGA_URG:" /tmp/acoes.txt 2>/dev/null | tr -d '[:space:]' || echo 0)
+            NORM_COUNT=$(grep -c "^REGA_NORM:" /tmp/acoes.txt 2>/dev/null | tr -d '[:space:]' || echo 0)
+            PODA_COUNT=$(grep -c "^PODA:" /tmp/acoes.txt 2>/dev/null | tr -d '[:space:]' || echo 0)
+            COLH_COUNT=$(grep -c "^COLHEITA:" /tmp/acoes.txt 2>/dev/null | tr -d '[:space:]' || echo 0)
+            
+            # Garantir que são números válidos
+            URG_COUNT=${URG_COUNT:-0}
+            NORM_COUNT=${NORM_COUNT:-0}
+            PODA_COUNT=${PODA_COUNT:-0}
+            COLH_COUNT=${COLH_COUNT:-0}
+            
+            echo "Urgentes: ${URG_COUNT}, Normal: ${NORM_COUNT}, Poda: ${PODA_COUNT}, Colheita: ${COLH_COUNT}"
             
             MENSAGEM="${MENSAGEM}📋 *${TOTAL_ACOES} ações pendentes*%0A%0A"
             
@@ -223,53 +232,67 @@ jobs:
                 while IFS='|' read -r tipo_planta descricao; do
                   tipo=$(echo "$tipo_planta" | cut -d: -f1)
                   planta=$(echo "$tipo_planta" | cut -d: -f2)
-                  if [ "$tipo" = "REGA_URG" ] && [ "$CONTADOR" -lt 12 ]; then
-                    MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
-                    CONTADOR=$((CONTADOR + 1))
+                  if [ "$tipo" = "REGA_URG" ]; then
+                    if [ "$CONTADOR" -lt 12 ]; then
+                      MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
+                      CONTADOR=$((CONTADOR + 1))
+                    fi
                   fi
                 done < /tmp/acoes.txt
                 MENSAGEM="${MENSAGEM}%0A"
               fi
               
               # Rega normal
-              if [ "$NORM_COUNT" -gt 0 ] && [ "$CONTADOR" -lt 12 ]; then
-                MENSAGEM="${MENSAGEM}💧 *Rega:*%0A"
-                while IFS='|' read -r tipo_planta descricao; do
-                  tipo=$(echo "$tipo_planta" | cut -d: -f1)
-                  planta=$(echo "$tipo_planta" | cut -d: -f2)
-                  if [ "$tipo" = "REGA_NORM" ] && [ "$CONTADOR" -lt 12 ]; then
-                    MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
-                    CONTADOR=$((CONTADOR + 1))
-                  fi
-                done < /tmp/acoes.txt
-                MENSAGEM="${MENSAGEM}%0A"
+              if [ "$NORM_COUNT" -gt 0 ]; then
+                if [ "$CONTADOR" -lt 12 ]; then
+                  MENSAGEM="${MENSAGEM}💧 *Rega:*%0A"
+                  while IFS='|' read -r tipo_planta descricao; do
+                    tipo=$(echo "$tipo_planta" | cut -d: -f1)
+                    planta=$(echo "$tipo_planta" | cut -d: -f2)
+                    if [ "$tipo" = "REGA_NORM" ]; then
+                      if [ "$CONTADOR" -lt 12 ]; then
+                        MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
+                        CONTADOR=$((CONTADOR + 1))
+                      fi
+                    fi
+                  done < /tmp/acoes.txt
+                  MENSAGEM="${MENSAGEM}%0A"
+                fi
               fi
               
               # Poda
-              if [ "$PODA_COUNT" -gt 0 ] && [ "$CONTADOR" -lt 12 ]; then
-                MENSAGEM="${MENSAGEM}✂️ *Poda:*%0A"
-                while IFS='|' read -r tipo_planta descricao; do
-                  tipo=$(echo "$tipo_planta" | cut -d: -f1)
-                  planta=$(echo "$tipo_planta" | cut -d: -f2)
-                  if [ "$tipo" = "PODA" ] && [ "$CONTADOR" -lt 12 ]; then
-                    MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
-                    CONTADOR=$((CONTADOR + 1))
-                  fi
-                done < /tmp/acoes.txt
-                MENSAGEM="${MENSAGEM}%0A"
+              if [ "$PODA_COUNT" -gt 0 ]; then
+                if [ "$CONTADOR" -lt 12 ]; then
+                  MENSAGEM="${MENSAGEM}✂️ *Poda:*%0A"
+                  while IFS='|' read -r tipo_planta descricao; do
+                    tipo=$(echo "$tipo_planta" | cut -d: -f1)
+                    planta=$(echo "$tipo_planta" | cut -d: -f2)
+                    if [ "$tipo" = "PODA" ]; then
+                      if [ "$CONTADOR" -lt 12 ]; then
+                        MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
+                        CONTADOR=$((CONTADOR + 1))
+                      fi
+                    fi
+                  done < /tmp/acoes.txt
+                  MENSAGEM="${MENSAGEM}%0A"
+                fi
               fi
               
               # Colheita
-              if [ "$COLH_COUNT" -gt 0 ] && [ "$CONTADOR" -lt 12 ]; then
-                MENSAGEM="${MENSAGEM}🍊 *Colheita:*%0A"
-                while IFS='|' read -r tipo_planta descricao; do
-                  tipo=$(echo "$tipo_planta" | cut -d: -f1)
-                  planta=$(echo "$tipo_planta" | cut -d: -f2)
-                  if [ "$tipo" = "COLHEITA" ] && [ "$CONTADOR" -lt 12 ]; then
-                    MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
-                    CONTADOR=$((CONTADOR + 1))
-                  fi
-                done < /tmp/acoes.txt
+              if [ "$COLH_COUNT" -gt 0 ]; then
+                if [ "$CONTADOR" -lt 12 ]; then
+                  MENSAGEM="${MENSAGEM}🍊 *Colheita:*%0A"
+                  while IFS='|' read -r tipo_planta descricao; do
+                    tipo=$(echo "$tipo_planta" | cut -d: -f1)
+                    planta=$(echo "$tipo_planta" | cut -d: -f2)
+                    if [ "$tipo" = "COLHEITA" ]; then
+                      if [ "$CONTADOR" -lt 12 ]; then
+                        MENSAGEM="${MENSAGEM}• ${planta} - ${descricao}%0A"
+                        CONTADOR=$((CONTADOR + 1))
+                      fi
+                    fi
+                  done < /tmp/acoes.txt
+                fi
               fi
             fi
           fi
@@ -289,16 +312,23 @@ jobs:
             -d text="${MENSAGEM}" \
             -d parse_mode="Markdown")
           
-          HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+          HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2 | tr -d '[:space:]')
           RESPONSE_BODY=$(echo "$RESPONSE" | grep -v "HTTP_CODE:")
           
-          echo "Status HTTP: ${HTTP_CODE}"
+          echo "Status HTTP: [${HTTP_CODE}]"
           echo "Resposta: ${RESPONSE_BODY}"
           
-          if [ "${HTTP_CODE}" = "200" ] && echo "$RESPONSE_BODY" | grep -q '"ok":true'; then
-            echo "✅ Notificação enviada com sucesso!"
+          if [ "$HTTP_CODE" = "200" ]; then
+            if echo "$RESPONSE_BODY" | grep -q '"ok":true'; then
+              echo "✅ Notificação enviada com sucesso!"
+              exit 0
+            else
+              echo "⚠️ Resposta recebida mas houve um problema"
+              echo "Detalhes: ${RESPONSE_BODY}"
+              exit 1
+            fi
           else
-            echo "❌ Erro ao enviar notificação"
+            echo "❌ Erro ao enviar notificação (HTTP ${HTTP_CODE})"
             echo "Detalhes: ${RESPONSE_BODY}"
             exit 1
           fi
