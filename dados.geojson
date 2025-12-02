@@ -1,6 +1,6 @@
 {
 "type": "FeatureCollection",
-"name": "frutiferas",
+"name": "dados",
 "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
 "features": [
 { "type": "Feature", "properties": { "fid": 2, "id": 289, "latitude": null, "longitude": null, "nome_popular": "Cacau", "nome_cientifico": null, "data_plantio": null, "tipo_plantio": null, "altura_total": null, "diametro_copa": null, "data_poda_formacao_1": null, "data_poda_formacao_2": null, "data_poda_formacao_3": null, "data_poda_reducao": null, "data_poda_floracao": null, "data_adubacao_ordinaria": null, "adubacao_frutificacao": null, "irrigacao_ordinaria": null, "irrigacao_floracao": null, "irrigacao_frutificacao": null, "data_irrigacao_ordinaria": null, "data_irrigacao_floracao": null, "data_irrigacao_frutificacao": null, "inicio_colheita": null, "fim_colheita": null, "volume_colhido": null, "foto": null }, "geometry": null },
