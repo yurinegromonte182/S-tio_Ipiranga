@@ -1,50 +1,44 @@
-name: 🔍 VERIFICAR SECRETS
+name: 🔍 VER ERRO REAL DO CURL
 
 on:
   workflow_dispatch:
 
 jobs:
-  verificar:
+  ver-erro:
     runs-on: ubuntu-latest
     steps:
-      - name: Verificar Secrets
+      - name: Ver erro COMPLETO do curl
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "=== VERIFICAÇÃO DE SECRETS ==="
+          echo "=== DETALHES ==="
+          echo "Token: ${TOKEN:0:20}..."
+          echo "Chat ID: $CHAT_ID"
           echo ""
           
-          echo "1. TELEGRAM_BOT_TOKEN:"
-          if [ -n "$TOKEN" ]; then
-            echo "   ✅ CONFIGURADO"
-            echo "   Primeiros 10 caracteres: ${TOKEN:0:10}..."
-            echo "   Comprimento: ${#TOKEN} caracteres"
-          else
-            echo "   ❌ NÃO CONFIGURADO (vazio)"
-          fi
+          echo "=== TESTE CURL COM VERBOSE ==="
+          
+          # Comando que MOSTRA TUDO
+          curl -v \
+               --fail \
+               --show-error \
+               --max-time 30 \
+               -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
+               -H "Content-Type: application/x-www-form-urlencoded" \
+               -d "chat_id=${CHAT_ID}" \
+               -d "text=Teste simples" \
+               -d "parse_mode=Markdown" \
+               2>&1 | tee /tmp/curl_output.txt
           
           echo ""
-          echo "2. TELEGRAM_CHAT_ID:"
-          if [ -n "$CHAT" ]; then
-            echo "   ✅ CONFIGURADO"
-            echo "   Valor: $CHAT"
-          else
-            echo "   ❌ NÃO CONFIGURADO (vazio)"
-          fi
+          echo "=== CÓDIGO DE SAÍDA: $? ==="
           
-          echo ""
-          echo "=== CONCLUSÃO ==="
-          
-          if [ -n "$TOKEN" ] && [ -n "$CHAT" ]; then
-            echo "🎉 TUDO CONFIGURADO CORRETAMENTE!"
-            echo "O problema pode estar no workflow."
-            exit 0
+          if [ $? -eq 0 ]; then
+            echo "✅ CURL executado com sucesso!"
           else
-            echo "⚠️ SECRETS FALTANDO!"
-            echo "Configure em: Settings → Secrets → Actions"
-            echo "Adicione:"
-            echo "- TELEGRAM_BOT_TOKEN: 8246537638:AAGHsDcT9EDVrhvRMgC5Kpj6z6yWSJT8ONU"
-            echo "- TELEGRAM_CHAT_ID: [seu número]"
-            exit 1
+            echo "❌ CURL falhou!"
+            echo ""
+            echo "Últimas 10 linhas do output:"
+            tail -10 /tmp/curl_output.txt
           fi
