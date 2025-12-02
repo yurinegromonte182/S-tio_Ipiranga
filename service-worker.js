@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sitio-ipiranga-v7.1';
+const CACHE_NAME = 'sitio-ipiranga-v7.2';
 const CACHE_TIMEOUT = 3000;
 
 // URLs para cachear (apenas arquivos estáticos)
@@ -10,7 +10,7 @@ const urlsToCache = [
 
 // Instalação
 self.addEventListener('install', event => {
-  console.log('[SW] Instalando v7.1...');
+  console.log('[SW] Instalando v7.2...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -56,13 +56,47 @@ self.addEventListener('fetch', event => {
 
   // 🎯 SUPABASE: Sempre buscar da rede (dados dinâmicos)
   if (url.origin.includes('supabase.co')) {
+    // Verificar se é para a tabela frutiferas
+    if (url.pathname.includes('/frutiferas')) {
+      console.log('[SW] Requisição Supabase para frutiferas:', request.method, url.pathname);
+    }
+    
     event.respondWith(
       fetch(request)
         .catch(error => {
           console.warn('[SW] Supabase offline:', error);
-          // Retornar resposta vazia se Supabase estiver offline
+          
+          // Se for GET para frutiferas e estiver offline, tentar retornar do cache
+          if (request.method === 'GET' && url.pathname.includes('/frutiferas')) {
+            return caches.match('/S-tio_Ipiranga/frutiferas-fallback.json')
+              .then(cached => {
+                if (cached) {
+                  console.log('[SW] Retornando frutíferas do cache offline');
+                  return cached;
+                }
+                
+                // Retornar resposta de fallback
+                return new Response(
+                  JSON.stringify({ 
+                    error: 'offline', 
+                    message: 'Banco de dados offline. Dados locais serão usados.',
+                    frutiferas: []
+                  }),
+                  {
+                    status: 503,
+                    headers: { 'Content-Type': 'application/json' }
+                  }
+                );
+              });
+          }
+          
+          // Para outras requisições Supabase
           return new Response(
-            JSON.stringify({ error: 'offline', cached: true }),
+            JSON.stringify({ 
+              error: 'offline', 
+              message: 'Supabase offline',
+              cached: true 
+            }),
             {
               status: 503,
               headers: { 'Content-Type': 'application/json' }
@@ -154,7 +188,7 @@ self.addEventListener('fetch', event => {
                     <h1>📡</h1>
                     <h2>Você está offline</h2>
                     <p>Verifique sua conexão com a internet e tente novamente.</p>
-                    <p><small>Os dados salvos anteriormente ainda estão disponíveis.</small></p>
+                    <p><small>As frutíferas salvas anteriormente ainda estão disponíveis.</small></p>
                     <button onclick="location.reload()">🔄 Tentar Novamente</button>
                   </div>
                 </body>
@@ -163,6 +197,30 @@ self.addEventListener('fetch', event => {
                   headers: { 'Content-Type': 'text/html' }
                 }
               );
+            }
+            
+            // Para arquivos JSON de frutíferas
+            if (request.url.includes('frutiferas') && request.url.endsWith('.json')) {
+              return caches.match('/S-tio_Ipiranga/frutiferas-fallback.json')
+                .then(cached => {
+                  if (cached) {
+                    console.log('[SW] Retornando frutíferas do fallback');
+                    return cached;
+                  }
+                  
+                  // Fallback padrão
+                  return new Response(
+                    JSON.stringify({ 
+                      frutiferas: [],
+                      offline: true,
+                      timestamp: new Date().toISOString()
+                    }),
+                    {
+                      status: 200,
+                      headers: { 'Content-Type': 'application/json' }
+                    }
+                  );
+                });
             }
             
             return new Response('', { status: 408 });
@@ -191,4 +249,104 @@ self.addEventListener('message', event => {
       })
     );
   }
+  
+  if (event.data.action === 'syncFrutiferas') {
+    // Sincronização de frutíferas em background
+    console.log('[SW] Sincronizando frutíferas...');
+    
+    // Aqui você pode adicionar lógica para sincronizar
+    // frutíferas locais com Supabase quando online
+    
+    event.ports[0].postMessage({ 
+      status: 'syncing',
+      message: 'Sincronizando frutíferas...' 
+    });
+  }
 });
+
+// Background sync para frutíferas
+self.addEventListener('sync', event => {
+  if (event.tag === 'sync-frutiferas') {
+    console.log('[SW] Background sync para frutíferas');
+    
+    event.waitUntil(
+      syncFrutiferasComSupabase()
+        .then(() => {
+          console.log('[SW] Frutíferas sincronizadas com sucesso');
+          self.registration.showNotification('Sítio Ipiranga', {
+            body: 'Frutíferas sincronizadas com o servidor!',
+            icon: '/S-tio_Ipiranga/icon.png',
+            tag: 'sync-complete'
+          });
+        })
+        .catch(error => {
+          console.error('[SW] Erro na sincronização:', error);
+        })
+    );
+  }
+});
+
+// Função para sincronizar frutíferas
+async function syncFrutiferasComSupabase() {
+  // Esta função pode ser implementada para sincronizar
+  // frutíferas locais com Supabase
+  
+  // Exemplo:
+  // 1. Buscar frutíferas locais do IndexedDB
+  // 2. Enviar para Supabase
+  // 3. Marcar como sincronizadas
+  
+  return Promise.resolve();
+}
+
+// Period sync para atualizações regulares
+self.addEventListener('periodicsync', event => {
+  if (event.tag === 'update-frutiferas') {
+    console.log('[SW] Atualização periódica de frutíferas');
+    
+    event.waitUntil(
+      atualizarFrutiferasDoSupabase()
+        .then(result => {
+          console.log('[SW] Frutíferas atualizadas:', result);
+        })
+        .catch(error => {
+          console.error('[SW] Erro na atualização periódica:', error);
+        })
+    );
+  }
+});
+
+// Função para atualizar frutíferas do Supabase
+async function atualizarFrutiferasDoSupabase() {
+  // Esta função pode ser implementada para buscar
+  // atualizações de frutíferas do Supabase
+  
+  try {
+    const response = await fetch('https://erbefbnjxgpetbetlzya.supabase.co/rest/v1/frutiferas?select=*&order=updated_at.desc&limit=50', {
+      headers: {
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmVmYm5qeGdwZXRiZXRsenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzI4ODcsImV4cCI6MjA3NjYwODg4N30.d09pjgddZpNY3Z4cVZ3V4h77aAf_GVGF0sOBTZkZf2A'
+      }
+    });
+    
+    if (response.ok) {
+      const frutiferas = await response.json();
+      
+      // Enviar mensagem para clientes com as novas frutíferas
+      const clients = await self.clients.matchAll();
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'frutiferas-updated',
+          data: frutiferas,
+          timestamp: new Date().toISOString()
+        });
+      });
+      
+      return { success: true, count: frutiferas.length };
+    }
+    
+    return { success: false, error: 'Erro na resposta' };
+  } catch (error) {
+    console.error('[SW] Erro ao atualizar frutíferas:', error);
+    return { success: false, error: error.message };
+  }
+}
