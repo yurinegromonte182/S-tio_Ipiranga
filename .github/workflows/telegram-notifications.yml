@@ -142,7 +142,7 @@ Planta"')
               fi
             fi
             
-            # Verificar poda
+            # Verificar  poda
             INT_P=$(get_intervalo "$NOME_NORM" "poda")
             DIAS_P=$(dias_desde "$ULT_PODA")
             
