@@ -153,14 +153,14 @@ jobs:
           TOTAL=$(jq '.features | length' dados.geojson)
         
           # Saudação por horário 
-HORA_NUM=$(date +%H)
-if [ "$HORA_NUM" -lt 12 ]; then
-  SAUDACAO="☀️ Bom dia"
-elif [ "$HORA_NUM" -lt 18 ]; then
-  SAUDACAO="⛅ Boa tarde"
-else
+      HORA_NUM=$(date +%H)
+      if [ "$HORA_NUM" -lt 12 ]; then
+        SAUDACAO="☀️ Bom dia"
+      elif [ "$HORA_NUM" -lt 18 ]; then
+        SAUDACAO="⛅ Boa tarde"
+      else
   SAUDACAO="🌙 Boa noite"
-fi
+      fi
           
           MESSAGE="${SAUDACAO}!%0A"
           MESSAGE="${MESSAGE}${DATA_EXIBICAO} as ${HORA_EXIBICAO}%0A%0A"
