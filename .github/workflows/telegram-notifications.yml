@@ -92,35 +92,26 @@ jobs:
           # Verificar se a resposta é válida JSON
           if echo "$RESPONSE" | jq -e . >/dev/null 2>&1; then
             TOTAL=$(echo "$RESPONSE" | jq '. | length')
-            echo "✅ $TOTAL frutíferas encontradas"
-            echo "$RESPONSE" > plantas.json
+            echo "✅ $TOTAL frutíferas encontradas na tabela frutiferas do Supabase"
+            echo "$RESPONSE" > dados.json
             
-            # Debug: Ver primeira planta
-            echo "📄 Amostra da primeira planta:"
-            jq '.[0]' plantas.json
+            # Debug: Ver primeira frutífera
+            echo "📄 Amostra da primeira frutífera:"
+            jq '.[0]' dados.json
             
           else
             echo "❌ ERRO: Resposta não é JSON válido"
             echo "Resposta: ${RESPONSE:0:500}..."
             
             # Usar backup local se existir
-            if [ -f "dados.geojson" ]; then
-              echo "⚠️ Usando backup local..."
-              TOTAL=$(jq '.features | length' dados.geojson 2>/dev/null || echo "0")
-              echo "✅ $TOTAL plantas no backup local"
+            if [ -f "dados.json" ]; then
+              echo "⚠️ Usando dados.json local..."
+              TOTAL=$(jq '. | length' dados.json 2>/dev/null || echo "0")
+              echo "✅ $TOTAL frutíferas no dados.json local"
               
-              # Converter do GeoJSON para formato compatível
-              jq '[.features[] | {
-                id: (.properties.fid // .properties.id // "S/N"),
-                nome: (.properties.nome_popular // "Frutífera"),
-                ultRega: (.properties.data_irrigacao_ordinaria // .properties.ultima_rega),
-                ultPoda: (.properties.data_poda_formacao_1 // .properties.ultima_poda),
-                ultColh: (.properties.inicio_colheita // .properties.ultima_colheita),
-                dataPlantio: .properties.data_plantio
-              }]' dados.geojson > plantas.json
             else
               TOTAL=0
-              echo '[]' > plantas.json
+              echo '[]' > dados.json
             fi
           fi
           
@@ -149,13 +140,13 @@ jobs:
             COLHEITA_PEND=""
             TOTAL_ACOES=0
             
-            # Processar cada planta
-            while IFS= read -r planta; do
-              ID=$(echo "$planta" | jq -r '.id // "S/N"')
-              NOME=$(echo "$planta" | jq -r '.nome // "Frutífera"')
-              ULT_REGA=$(echo "$planta" | jq -r '.ultRega // "null"')
-              ULT_PODA=$(echo "$planta" | jq -r '.ultPoda // "null"')
-              ULT_COLH=$(echo "$planta" | jq -r '.ultColh // "null"')
+            # Processar cada frutífera
+            while IFS= read -r item; do
+              ID=$(echo "$item" | jq -r '.id // "S/N"')
+              NOME=$(echo "$item" | jq -r '.nome // "Frutífera"')
+              ULT_REGA=$(echo "$item" | jq -r '.ultRega // "null"')
+              ULT_PODA=$(echo "$item" | jq -r '.ultPoda // "null"')
+              ULT_COLH=$(echo "$item" | jq -r '.ultColh // "null"')
               
               # Debug individual (apenas para as primeiras 3)
               if [ "$TOTAL_ACOES" -lt 3 ]; then
@@ -215,7 +206,7 @@ jobs:
                 TOTAL_ACOES=$((TOTAL_ACOES + 1))
               fi
               
-            done < <(jq -c '.[]' plantas.json)
+            done < <(jq -c '.[]' dados.json)
             
             # Montar mensagem final
             if [ "$TOTAL_ACOES" -eq 0 ]; then
@@ -267,8 +258,8 @@ jobs:
               BANANEIRAS=0
               OUTRAS=0
               
-              while IFS= read -r planta; do
-                NOME=$(echo "$planta" | jq -r '.nome // ""' | tr '[:upper:]' '[:lower:]' | tr 'áàãâ' 'a' | tr 'éê' 'e' | tr 'í' 'i' | tr 'óôõ' 'o' | tr 'ú' 'u' | tr 'ç' 'c')
+              while IFS= read -r item; do
+                NOME=$(echo "$item" | jq -r '.nome // ""' | tr '[:upper:]' '[:lower:]' | tr 'áàãâ' 'a' | tr 'éê' 'e' | tr 'í' 'i' | tr 'óôõ' 'o' | tr 'ú' 'u' | tr 'ç' 'c')
                 
                 if echo "$NOME" | grep -q "coq\|coqueiro\|coco"; then
                   COQUEIROS=$((COQUEIROS + 1))
@@ -283,7 +274,7 @@ jobs:
                 else
                   OUTRAS=$((OUTRAS + 1))
                 fi
-              done < <(jq -c '.[]' plantas.json)
+              done < <(jq -c '.[]' dados.json)
               
               STATS="📊 *Resumo do Sítio:*%0A"
               STATS="${STATS}🌳 Total: ${TOTAL} frutíferas%0A"
