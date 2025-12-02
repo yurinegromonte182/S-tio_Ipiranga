@@ -82,46 +82,77 @@ jobs:
             echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/^ *//;s/ *$//'
           }
           
-          # Obter intervalos por espécie
-          get_intervalo() {
-            local especie=$(normalizar "$1")
-            local tipo=$2
-            
-            case "$tipo" in
-              "rega")
-                case "$especie" in
-                  *"mangabeira"*) echo 7 ;;
-                  *"caju"*) echo 10 ;;
-                  *"coq"*) echo 5 ;;
-                  *"cacau"*) echo 3 ;;
-                  *) echo 7 ;;
-                esac
-                ;;
-              "poda")
-                case "$especie" in
-                  *"mangabeira"*) echo 180 ;;
-                  *"caju"*) echo 365 ;;
-                  *"coq"*) echo 730 ;;
-                  *"cacau"*) echo 180 ;;
-                  *) echo 180 ;;
-                esac
-                ;;
-              "colheita")
-                case "$especie" in
-                  *"mangabeira"*) echo 90 ;;
-                  *"caju"*) echo 60 ;;
-                  *"coq"*) echo 30 ;;
-                  *"cacau"*) echo 120 ;;
-                  *) echo 90 ;;
-                esac
-                ;;
+     # Função para calcular dias desde uma data (CORRIGIDA)
+dias_desde() {
+    if [ -z "$1" ] || [ "$1" = "null" ] || [ "$1" = "" ]; then
+        echo "999"
+    else
+        # Converter data para epoch, ignorando erros
+        data_epoch=$(date -d "$1" +%s 2>/dev/null || echo "0")
+        hoje_epoch=$(date -d "$HOJE" +%s)
+        
+        if [ "$data_epoch" = "0" ]; then
+            echo "999"
+        else
+            echo $(( (hoje_epoch - data_epoch) / 86400 ))
+        fi
+    fi
+}
+
+# Normalizar texto (CORRIGIDA)
+normalizar() {
+    if [ -z "$1" ]; then
+        echo ""
+    else
+        echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+    fi
+}
+
+# Obter intervalos por espécie (CORRIGIDA)
+get_intervalo() {
+    local especie=$(normalizar "$1")
+    local tipo=$2
+    
+    if [ -z "$especie" ]; then
+        caso "*"  # Fallback para espécie desconhecida
+    fi
+    
+    case "$tipo" in
+        "rega")
+            case "$especie" in
+                *mangabeira*) echo 7 ;;
+                *caju*) echo 10 ;;
+                *coq*) echo 5 ;;
+                *cacau*) echo 3 ;;
+                *) echo 7 ;;
             esac
-          }
-          
-          # Limpar arquivo temporário
-          rm -f /tmp/acoes.txt
-          
-Planta"')
+            ;;
+        "poda")
+            case "$especie" in
+                *mangabeira*) echo 180 ;;
+                *caju*) echo 365 ;;
+                *coq*) echo 730 ;;
+                *cacau*) echo 180 ;;
+                *) echo 180 ;;
+            esac
+            ;;
+        "colheita")
+            case "$especie" in
+                *mangabeira*) echo 90 ;;
+                *caju*) echo 60 ;;
+                *coq*) echo 30 ;;
+                *cacau*) echo 120 ;;
+                *) echo 90 ;;
+            esac
+            ;;
+        *)
+            echo "0"  # Tipo desconhecido
+            ;;
+    esac
+}
+
+# E NO FINAL do script (não aqui!):
+# rm -f /tmp/acoes.txt
             ULT_REGA=$(echo "$feature" | jq -r '.properties.ultima_rega // "null"')
             ULT_PODA=$(echo "$feature" | jq -r '.properties.ultima_poda // "null"')
             ULT_COLH=$(echo "$feature" | jq -r '.properties.ultima_colheita // "null"')
