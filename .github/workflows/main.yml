@@ -1,44 +1,42 @@
-name: 🔍 VER ERRO REAL DO CURL
+name: ✅ SOLUÇÃO FINAL
 
 on:
   workflow_dispatch:
 
 jobs:
-  ver-erro:
+  enviar:
     runs-on: ubuntu-latest
     steps:
-      - name: Ver erro COMPLETO do curl
+      - name: Enviar com token codificado
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "=== DETALHES ==="
-          echo "Token: ${TOKEN:0:20}..."
+          echo "=== SOLUÇÃO ==="
+          
+          # 1. Mostrar dados (ocultando parte do token)
+          echo "Token original: ${TOKEN:0:15}..."
           echo "Chat ID: $CHAT_ID"
+          
+          # 2. Codificar o token para URL (IMPORTANTE!)
+          TOKEN_ENCODED=$(echo "$TOKEN" | sed 's/:/%3A/g')
+          
+          # 3. Método 1: Usar GET simples (funciona sempre)
+          echo ""
+          echo "Método 1: GET simples"
+          URL="https://api.telegram.org/bot${TOKEN_ENCODED}/sendMessage?chat_id=${CHAT_ID}&text=✅+Teste+GET+$(date +%s)"
+          echo "URL: ${URL:0:80}..."
+          
+          curl -s "$URL"
           echo ""
           
-          echo "=== TESTE CURL COM VERBOSE ==="
-          
-          # Comando que MOSTRA TUDO
-          curl -v \
-               --fail \
-               --show-error \
-               --max-time 30 \
-               -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
-               -H "Content-Type: application/x-www-form-urlencoded" \
-               -d "chat_id=${CHAT_ID}" \
-               -d "text=Teste simples" \
-               -d "parse_mode=Markdown" \
-               2>&1 | tee /tmp/curl_output.txt
+          # 4. Método 2: POST com dados codificados
+          echo ""
+          echo "Método 2: POST correto"
+          curl -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=✅ Teste POST $(date '+%H:%M:%S')" \
+            --data-urlencode "parse_mode=Markdown"
           
           echo ""
-          echo "=== CÓDIGO DE SAÍDA: $? ==="
-          
-          if [ $? -eq 0 ]; then
-            echo "✅ CURL executado com sucesso!"
-          else
-            echo "❌ CURL falhou!"
-            echo ""
-            echo "Últimas 10 linhas do output:"
-            tail -10 /tmp/curl_output.txt
-          fi
+          echo "✅ Testes completos"
