@@ -1704,7 +1704,7 @@
       document.getElementById('actionCount').textContent = `📋 ${acoes.length} ações`;
     }
 
-   async function marcarFeito(pid, tipo) {
+  async function marcarFeito(pid, tipo) {
   const p = plantas.find(pl => pl.id === pid);
   if (!p) return alert('Planta não encontrada');
   
@@ -1713,49 +1713,27 @@
     return;
   }
   
-  try {
-    const response = await fetch(
-      'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/insertPonto',  // ⬅️ URL CORRETA
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          planta_id: p.nomeId,  // Ex: "MG-001"
-          acao_tipo: tipo,      // "rega", "poda", "colheita"
-          perfil: perfilAtual.nome,
-          observacao: `Ação via PWA Sítio Ipiranga`,
-          data_execucao: new Date().toISOString()
-        })
-      }
-    );
-    
-    const result = await response.json();
-    console.log('Resposta do Supabase:', result); // Para debug
-    
-    if (result.success) {
-      const hoje = new Date().toISOString().split('T')[0];
-      
-      if (tipo === 'rega') p.ultRega = hoje;
-      if (tipo === 'poda') p.ultPoda = hoje;
-      if (tipo === 'colheita') p.ultColh = hoje;
-      
-      historico.push({
-        id: Math.random(),
-        tipo,
-        planta: p.nome,
-        plantaId: p.nomeId,
-        perfil: perfilAtual.nome,
-        data: new Date().toISOString(),
-        observacao: 'Enviado para Supabase'
-      });
-      
-      salvarDados();
-      renderAll();
-      showToast(`✅ ${tipo} registrada por ${perfilAtual.nome} (Supabase)`);
-      
-      sincronizarEmBackground();
+  const hoje = new Date().toISOString().split('T')[0];
+  
+  if (tipo === 'rega') p.ultRega = hoje;
+  if (tipo === 'poda') p.ultPoda = hoje;
+  if (tipo === 'colheita') p.ultColh = hoje;
+  
+  historico.push({
+    id: Math.random(),
+    tipo,
+    planta: p.nome,
+    plantaId: p.nomeId,
+    perfil: perfilAtual.nome,
+    data: new Date().toISOString()
+  });
+  
+  salvarDados();
+  renderAll();
+  showToast(`✅ ${tipo} registrada por ${perfilAtual.nome}`);
+  
+  sincronizarEmBackground();
+}
     } else {
       throw new Error(result.message || 'Erro na função do Supabase');
     }
@@ -1785,7 +1763,7 @@
     
     sincronizarEmBackground();
   }
-}
+
     
     
     function marcarPendente() {
