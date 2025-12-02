@@ -14,7 +14,7 @@ jobs:
   notify-telegram:
     runs-on: ubuntu-latest
     env:
-      SUPABASE_URL: https://mcp.supabase.com/mcp?project_ref=erbefbnjxgpetbetlzya
+      SUPABASE_URL: https://erbefbnjxgpetbetlzya.supabase.co
       SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmVmYm5qeGdwZXRiZXRsenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzI4ODcsImV4cCI6MjA3NjYwODg4N30.d09pjgddZpNY3Z4cVZ3V4h77aAf_GVGF0sOBTZkZf2A
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -39,12 +39,14 @@ jobs:
           HORA_EXIBICAO=$(date +%H:%M)
           HORA_NUM=$(date +%H)
           
-          # Função para calcular dias
+          # Função para calcular dias (ajustada para datas NULL)
           dias_desde() {
             if [ -z "$1" ] || [ "$1" = "null" ] || [ "$1" = "" ]; then
               echo "999"
             else
-              data_epoch=$(date -d "$1" +%s 2>/dev/null || echo "0")
+              # Remover aspas se houver
+              data_limpa=$(echo "$1" | tr -d '"')
+              data_epoch=$(date -d "$data_limpa" +%s 2>/dev/null || echo "0")
               hoje_epoch=$(date -d "$HOJE" +%s)
               if [ "$data_epoch" = "0" ]; then
                 echo "999"
@@ -54,36 +56,61 @@ jobs:
             fi
           }
           
-          echo "🔄 Tentando buscar dados do Supabase..."
+          echo "🔄 Buscando dados do Supabase..."
           
-          # Tentar buscar da função RPC
+          # URL para a função RPC
+          RPC_URL="${SUPABASE_URL}/rest/v1/rpc/get_plantas_para_telegram"
+          
+          # Buscar dados da função RPC
           RESPONSE=$(curl -s -X POST \
-            "$SUPABASE_URL/rest/v1/rpc/get_plantas_para_telegram" \
+            "$RPC_URL" \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
             -H "Content-Type: application/json" \
-            -d '{}' 2>/dev/null || echo "[]")
+            -H "Prefer: return=minimal" \
+            -d '{}')
           
-          # Verificar se a resposta é válida
+          # DEBUG: Ver resposta bruta
+          echo "📦 Resposta bruta (primeiros 500 chars):"
+          echo "${RESPONSE:0:500}"
+          
+          # Verificar se a resposta é válida JSON
           if echo "$RESPONSE" | jq -e . >/dev/null 2>&1; then
-            TOTAL=$(echo "$RESPONSE" | jq '. | length')
-            echo "✅ $TOTAL plantas encontradas no Supabase"
-            echo "$RESPONSE" > plantas.json
+            # A função retorna um array dentro de json_agg
+            # Se for um array direto
+            if echo "$RESPONSE" | jq 'type' | grep -q "array"; then
+              TOTAL=$(echo "$RESPONSE" | jq '. | length')
+              echo "✅ $TOTAL frutíferas encontradas"
+              echo "$RESPONSE" > plantas.json
+            # Se for um objeto com array
+            elif echo "$RESPONSE" | jq 'has("json_agg")' 2>/dev/null | grep -q "true"; then
+              TOTAL=$(echo "$RESPONSE" | jq '.json_agg | length')
+              echo "✅ $TOTAL frutíferas encontradas (via json_agg)"
+              echo "$RESPONSE" | jq '.json_agg' > plantas.json
+            else
+              # Tentar extrair array de qualquer forma
+              TOTAL=$(echo "$RESPONSE" | jq 'length' 2>/dev/null || echo "0")
+              echo "ℹ️  Estrutura diferente, tentando adaptar... Total: $TOTAL"
+              echo "$RESPONSE" > plantas.json
+            fi
           else
-            echo "⚠️ Erro ao buscar do Supabase, usando backup local..."
+            echo "❌ ERRO: Resposta não é JSON válido"
+            echo "Resposta completa:"
+            echo "$RESPONSE"
             
-            # Verificar se existe arquivo local
+            # Usar backup local
             if [ -f "dados.geojson" ]; then
+              echo "⚠️ Usando backup local..."
               TOTAL=$(jq '.features | length' dados.geojson 2>/dev/null || echo "0")
               echo "✅ $TOTAL plantas no backup local"
               
-              # Converter para formato similar
+              # Converter do GeoJSON para formato compatível
               jq '[.features[] | {
-                id: (.properties.id // .properties.fid // "S/N"),
-                nome: (.properties.nome_popular // "Planta"),
-                ultRega: .properties.ultima_rega,
-                ultPoda: .properties.ultima_poda,
-                ultColh: .properties.ultima_colheita,
+                id: (.properties.fid // .properties.id // "S/N"),
+                nome: (.properties.nome_popular // "Frutífera"),
+                ultRega: (.properties.data_irrigacao_ordinaria // .properties.ultima_rega),
+                ultPoda: (.properties.data_poda_formacao_1 // .properties.ultima_poda),
+                ultColh: (.properties.inicio_colheita // .properties.ultima_colheita),
                 dataPlantio: .properties.data_plantio
               }]' dados.geojson > plantas.json
             else
@@ -105,11 +132,15 @@ jobs:
           MESSAGE="${SAUDACAO}!%0A"
           MESSAGE="${MESSAGE}🌿 *Sítio Ipiranga*%0A"
           MESSAGE="${MESSAGE}📅 ${DATA_EXIBICAO} às ${HORA_EXIBICAO}%0A"
-          MESSAGE="${MESSAGE}🌳 *${TOTAL} plantas* cadastradas%0A%0A"
+          MESSAGE="${MESSAGE}🌳 *${TOTAL} frutíferas* cadastradas%0A%0A"
           
           if [ "$TOTAL" -eq "0" ]; then
-            MESSAGE="${MESSAGE}⚠️ *Nenhuma planta encontrada*%0A"
+            MESSAGE="${MESSAGE}⚠️ *Nenhuma frutífera encontrada*%0A"
           else
+            # DEBUG: Ver primeira planta
+            echo "📄 Primeira planta (amostra):"
+            jq '.[0]' plantas.json
+            
             # Arrays para ações
             REGA_URG=""
             REGA_NORM=""
@@ -119,49 +150,60 @@ jobs:
             
             # Processar cada planta
             while IFS= read -r planta; do
-              ID=$(echo "$planta" | jq -r '.id // .planta_id // "S/N"')
-              NOME=$(echo "$planta" | jq -r '.nome // .nome_popular // "Planta"')
-              ULT_REGA=$(echo "$planta" | jq -r '.ultRega // .ultima_rega // "null"')
-              ULT_PODA=$(echo "$planta" | jq -r '.ultPoda // .ultima_poda // "null"')
-              ULT_COLH=$(echo "$planta" | jq -r '.ultColh // .ultima_colheita // "null"')
+              ID=$(echo "$planta" | jq -r '.id // "S/N"')
+              NOME=$(echo "$planta" | jq -r '.nome // "Frutífera"')
+              ULT_REGA=$(echo "$planta" | jq -r '.ultRega')
+              ULT_PODA=$(echo "$planta" | jq -r '.ultPoda')
+              ULT_COLH=$(echo "$planta" | jq -r '.ultColh')
               
-              # Normalizar nome
+              # DEBUG: Ver valores
+              # echo "ID: $ID, NOME: $NOME"
+              # echo "ULT_REGA: $ULT_REGA, ULT_PODA: $ULT_PODA, ULT_COLH: $ULT_COLH"
+              
+              # Normalizar nome para minúsculas
               NOME_NORM=$(echo "$NOME" | tr '[:upper:]' '[:lower:]')
               
-              # Determinar intervalos
-              if echo "$NOME_NORM" | grep -q "mangabeira"; then
+              # Determinar intervalos baseados no tipo
+              if echo "$NOME_NORM" | grep -qi "mangabeira\|mangaba"; then
                 REGA_INT=7; PODA_INT=180; COLHEITA_INT=90
-              elif echo "$NOME_NORM" | grep -q "caju"; then
+                EMOJI="🥭"
+              elif echo "$NOME_NORM" | grep -qi "caju\|cajueiro"; then
                 REGA_INT=10; PODA_INT=365; COLHEITA_INT=60
-              elif echo "$NOME_NORM" | grep -q "coq"; then
+                EMOJI="🌰"
+              elif echo "$NOME_NORM" | grep -qi "coq\|coqueiro\|coco"; then
                 REGA_INT=5; PODA_INT=730; COLHEITA_INT=30
-              elif echo "$NOME_NORM" | grep -q "cacau"; then
+                EMOJI="🥥"
+              elif echo "$NOME_NORM" | grep -qi "cacau"; then
                 REGA_INT=3; PODA_INT=180; COLHEITA_INT=120
+                EMOJI="🍫"
               else
                 REGA_INT=7; PODA_INT=180; COLHEITA_INT=90
+                EMOJI="🌿"
               fi
               
               # Verificar rega
               DIAS_R=$(dias_desde "$ULT_REGA")
+              # echo "DIAS_R: $DIAS_R, REGA_INT: $REGA_INT"
+              
               if [ "$DIAS_R" -ge $((REGA_INT + 2)) ]; then
-                REGA_URG="${REGA_URG}• 🚨 ${NOME} #${ID} - ${DIAS_R} dias%0A"
+                REGA_URG="${REGA_URG}• 🚨 ${EMOJI} ${NOME} #${ID} - ${DIAS_R} dias%0A"
                 TOTAL_ACOES=$((TOTAL_ACOES + 1))
               elif [ "$DIAS_R" -ge "$REGA_INT" ]; then
-                REGA_NORM="${REGA_NORM}• 💧 ${NOME} #${ID} - ${DIAS_R} dias%0A"
+                REGA_NORM="${REGA_NORM}• 💧 ${EMOJI} ${NOME} #${ID} - ${DIAS_R} dias%0A"
                 TOTAL_ACOES=$((TOTAL_ACOES + 1))
               fi
               
               # Verificar poda
               DIAS_P=$(dias_desde "$ULT_PODA")
               if [ "$DIAS_P" -ge "$PODA_INT" ]; then
-                PODA_PEND="${PODA_PEND}• ✂️ ${NOME} #${ID} - ${DIAS_P} dias%0A"
+                PODA_PEND="${PODA_PEND}• ✂️ ${EMOJI} ${NOME} #${ID} - ${DIAS_P} dias%0A"
                 TOTAL_ACOES=$((TOTAL_ACOES + 1))
               fi
               
               # Verificar colheita
               DIAS_C=$(dias_desde "$ULT_COLH")
               if [ "$DIAS_C" -ge "$COLHEITA_INT" ]; then
-                COLHEITA_PEND="${COLHEITA_PEND}• 🍎 ${NOME} #${ID} - ${DIAS_C} dias%0A"
+                COLHEITA_PEND="${COLHEITA_PEND}• 🍎 ${EMOJI} ${NOME} #${ID} - ${DIAS_C} dias%0A"
                 TOTAL_ACOES=$((TOTAL_ACOES + 1))
               fi
               
@@ -188,46 +230,68 @@ jobs:
           echo "======================"
           
           # Enviar para Telegram
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+          echo "📤 Enviando para Telegram..."
+          TELEGRAM_RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
             -d chat_id="$TELEGRAM_CHAT_ID" \
             -d text="$MESSAGE" \
-            -d parse_mode="Markdown"
+            -d parse_mode="Markdown" \
+            -w "\n%{http_code}")
           
-          echo "✅ Notificação enviada!"
+          HTTP_CODE=$(echo "$TELEGRAM_RESPONSE" | tail -n1)
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Notificação enviada com sucesso!"
+          else
+            echo "❌ Erro ao enviar: HTTP $HTTP_CODE"
+            echo "Resposta: $(echo "$TELEGRAM_RESPONSE" | head -n -1)"
+          fi
           
-          # Estatísticas diárias (06h)
-          if [[ "${{ github.event.schedule }}" == "0 9 * * *" ]] && [ "$TOTAL" -gt "0" ]; then
-            # Contar por tipo
-            COQUEIROS=0
-            CAJUEIROS=0
-            CACAU=0
-            MANGABEIRA=0
-            
-            while IFS= read -r planta; do
-              NOME=$(echo "$planta" | jq -r '.nome // .nome_popular // ""' | tr '[:upper:]' '[:lower:]')
+          # Estatísticas diárias (06h BR = 09:00 UTC)
+          if [ "$HORA_NUM" -eq 6 ] || [ "$(date -u +%H)" -eq 9 ]; then
+            if [ "$TOTAL" -gt "0" ]; then
+              echo "🌅 Enviando estatísticas diárias..."
               
-              if echo "$NOME" | grep -q "coq"; then
-                COQUEIROS=$((COQUEIROS + 1))
-              elif echo "$NOME" | grep -q "caju"; then
-                CAJUEIROS=$((CAJUEIROS + 1))
-              elif echo "$NOME" | grep -q "cacau"; then
-                CACAU=$((CACAU + 1))
-              elif echo "$NOME" | grep -q "mangabeira"; then
-                MANGABEIRA=$((MANGABEIRA + 1))
+              # Contar por tipo
+              COQUEIROS=0
+              CAJUEIROS=0
+              CACAU=0
+              MANGABEIRA=0
+              OUTRAS=0
+              
+              while IFS= read -r planta; do
+                NOME=$(echo "$planta" | jq -r '.nome // ""' | tr '[:upper:]' '[:lower:]')
+                
+                if echo "$NOME" | grep -qi "coq\|coqueiro\|coco"; then
+                  COQUEIROS=$((COQUEIROS + 1))
+                elif echo "$NOME" | grep -qi "caju\|cajueiro"; then
+                  CAJUEIROS=$((CAJUEIROS + 1))
+                elif echo "$NOME" | grep -qi "cacau"; then
+                  CACAU=$((CACAU + 1))
+                elif echo "$NOME" | grep -qi "mangabeira\|mangaba"; then
+                  MANGABEIRA=$((MANGABEIRA + 1))
+                else
+                  OUTRAS=$((OUTRAS + 1))
+                fi
+              done < <(jq -c '.[]' plantas.json)
+              
+              STATS="📊 *Resumo do Sítio:*%0A"
+              STATS="${STATS}🌳 Total: ${TOTAL} frutíferas%0A"
+              [ "$COQUEIROS" -gt 0 ] && STATS="${STATS}🥥 Coqueiros: ${COQUEIROS}%0A"
+              [ "$CAJUEIROS" -gt 0 ] && STATS="${STATS}🌰 Cajueiros: ${CAJUEIROS}%0A"
+              [ "$CACAU" -gt 0 ] && STATS="${STATS}🍫 Cacau: ${CACAU}%0A"
+              [ "$MANGABEIRA" -gt 0 ] && STATS="${STATS}🥭 Mangabeiras: ${MANGABEIRA}%0A"
+              [ "$OUTRAS" -gt 0 ] && STATS="${STATS}🌿 Outras: ${OUTRAS}%0A"
+              
+              TELEGRAM_STATS_RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+                -d chat_id="$TELEGRAM_CHAT_ID" \
+                -d text="$STATS" \
+                -d parse_mode="Markdown" \
+                -w "\n%{http_code}")
+              
+              STATS_HTTP_CODE=$(echo "$TELEGRAM_STATS_RESPONSE" | tail -n1)
+              if [ "$STATS_HTTP_CODE" = "200" ]; then
+                echo "✅ Estatísticas enviadas!"
+              else
+                echo "⚠️ Não foi possível enviar estatísticas"
               fi
-            done < <(jq -c '.[]' plantas.json)
-            
-            STATS="📊 *Resumo do Sítio:*%0A"
-            STATS="${STATS}🌳 Total: ${TOTAL} plantas%0A"
-            [ "$COQUEIROS" -gt 0 ] && STATS="${STATS}🥥 Coqueiros: ${COQUEIROS}%0A"
-            [ "$CAJUEIROS" -gt 0 ] && STATS="${STATS}🌰 Cajueiros: ${CAJUEIROS}%0A"
-            [ "$CACAU" -gt 0 ] && STATS="${STATS}🍫 Cacau: ${CACAU}%0A"
-            [ "$MANGABEIRA" -gt 0 ] && STATS="${STATS}🥭 Mangabeira: ${MANGABEIRA}%0A"
-            
-            curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-              -d chat_id="$TELEGRAM_CHAT_ID" \
-              -d text="$STATS" \
-              -d parse_mode="Markdown"
-              
-            echo "✅ Estatísticas enviadas!"
+            fi
           fi
