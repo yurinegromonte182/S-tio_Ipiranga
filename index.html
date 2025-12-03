@@ -12,42 +12,23 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Sítio Ipiranga">
   
-  <!-- Bootstrap CSS -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
   
   <style>
-    /* ============================================ */
-    /* VARIÁVEIS CSS CUSTOMIZADAS */
-    /* ============================================ */
-    :root {
-      --sidebar-width: 380px;
-      --header-height: 64px;
-      --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-
-    /* ============================================ */
-    /* CONFIGURAÇÕES GLOBAIS */
-    /* ============================================ */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-
+    
     body {
-      font-family: var(--font-family);
-      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      overflow-x: hidden;
+      min-height: 100vh;
     }
 
-    /* ============================================ */
-    /* LOADING SCREEN */
-    /* ============================================ */
     #appLoader {
       position: fixed;
       top: 0;
@@ -108,359 +89,83 @@
       100% { width: 100%; }
     }
 
-    /* ============================================ */
-    /* CABEÇALHO / HEADER */
-    /* ============================================ */
-    .navbar {
-      height: var(--header-height);
-      z-index: 1000;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-
-    /* ============================================ */
-    /* CONTAINER PRINCIPAL */
-    /* ============================================ */
-    .main-container {
-      height: 100vh;
-      padding-top: var(--header-height);
-      display: flex;
-    }
-
-    /* ============================================ */
-    /* BARRA LATERAL / SIDEBAR */
-    /* ============================================ */
-    .sidebar {
-      width: var(--sidebar-width);
-      padding: 1.5rem;
-      z-index: 100;
-      background-color: #f8f9fa;
-      overflow-y: auto;
-      border-right: 1px solid #e5e7eb;
-    }
-
-    .sidebar::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .sidebar::-webkit-scrollbar-track {
-      background: #f3f4f6;
-    }
-
-    .sidebar::-webkit-scrollbar-thumb {
-      background: #d1d5db;
-      border-radius: 3px;
-    }
-
-    /* ============================================ */
-    /* PAINÉIS DE CARDS */
-    /* ============================================ */
-    .card {
-      border: 1px solid #e5e7eb;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      margin-bottom: 1rem;
-    }
-
-    .card-header {
-      padding: 1rem 1.25rem;
-      background-color: white;
-      border-bottom: 1px solid #e5e7eb;
-      font-weight: 600;
-      color: #374151;
-    }
-
-    .stat-card {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .stat-card .number {
-      font-size: 2rem;
-      font-weight: bold;
-      margin-bottom: 0.25rem;
-    }
-
-    .stat-card .label {
-      font-size: 0.875rem;
-      opacity: 0.9;
-    }
-
-    /* ============================================ */
-    /* MAPAS BASE */
-    /* ============================================ */
-    .basemap-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-    }
-
-    .basemap-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem;
-      background-color: #f9fafb;
-      border: 2px solid #e5e7eb;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #374151;
-    }
-
-    .basemap-btn:hover {
-      background-color: #dbeafe;
-      border-color: #1e40af;
-      color: #1e40af;
-    }
-
-    .basemap-btn.active {
-      background-color: #1e40af;
-      border-color: #1e3a8a;
-      color: white;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    .basemap-btn i {
-      font-size: 1.5rem;
-    }
-
-    /* ============================================ */
-    /* ITENS DE CAMADAS */
-    /* ============================================ */
-    .layer-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.75rem;
-      background-color: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 0.5rem;
-      margin-bottom: 0.5rem;
-      transition: all 0.2s ease;
-    }
-
-    .layer-item:hover {
-      background-color: #dbeafe;
-      border-color: #1e40af;
-    }
-
-    .layer-left {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .layer-badge {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      border: 3px solid currentColor;
-    }
-
-    .layer-label {
-      font-weight: 500;
-      color: #374151;
-      font-size: 0.875rem;
-    }
-
-    /* ============================================ */
-    /* SWITCH DE CAMADAS (Toggle) */
-    /* ============================================ */
-    .layer-switch {
-      position: relative;
-      width: 44px;
-      height: 24px;
-    }
-
-    .layer-switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .layer-slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #d1d5db;
-      border-radius: 24px;
-      transition: all 0.2s ease;
-    }
-
-    .layer-slider:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      border-radius: 50%;
-      transition: all 0.2s ease;
-    }
-
-    input:checked + .layer-slider {
-      background-color: #1e40af;
-    }
-
-    input:checked + .layer-slider:before {
-      transform: translateX(20px);
-    }
-
-    /* ============================================ */
-    /* SIMBOLOGIA */
-    /* ============================================ */
-    .symbology-section {
-      margin-top: 0.5rem;
-      padding: 0.75rem;
-      background-color: white;
-      border-radius: 0.5rem;
-      border: 1px solid #e5e7eb;
-    }
-
-    .symbology-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
-      font-size: 0.813rem;
-    }
-
-    .symbology-item:last-child {
-      margin-bottom: 0;
-    }
-
-    .symbology-icon {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      border: 2px solid;
-    }
-
-    /* ============================================ */
-    /* CONTAINER DO MAPA */
-    /* ============================================ */
-    .map-container {
-      position: relative;
-      flex: 1;
-    }
-
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* ============================================ */
-    /* CUSTOMIZAÇÕES DO LEAFLET */
-    /* ============================================ */
-    .leaflet-popup-content-wrapper {
-      border-radius: 0.5rem !important;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
-    }
-
-    .leaflet-popup-content {
-      font-family: var(--font-family) !important;
-      line-height: 1.6 !important;
-    }
-
-    .popup-content {
-      max-width: 300px;
-      font-size: 13px;
-    }
-
-    .popup-content h3 {
-      margin: 0 0 10px 0;
-      color: #667eea;
-      border-bottom: 2px solid #667eea;
-      padding-bottom: 5px;
-    }
-
-    .popup-content .info-row {
-      margin: 8px 0;
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-
-    .popup-content .info-label {
-      font-weight: bold;
-      color: #555;
-    }
-
-    .popup-content .info-value {
-      color: #333;
-      text-align: right;
-    }
-
-    /* ============================================ */
-    /* PAINEL DE STATUS */
-    /* ============================================ */
-    .status-panel {
-      display: none;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1rem;
-      border-radius: 0.5rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      margin-bottom: 1rem;
-    }
-
-    .status-panel.show {
-      display: flex !important;
-    }
-
-    .status-panel.success {
-      background-color: #dcfce7;
-      color: #166534;
-      border: 1px solid #bbf7d0;
-    }
-
-    .status-panel.error {
-      background-color: #fef2f2;
-      color: #dc2626;
-      border: 1px solid #fecaca;
-    }
-
-    .status-panel.info {
-      background-color: #dbeafe;
-      color: #1e40af;
-      border: 1px solid #bae6fd;
-    }
-
-    /* ============================================ */
-    /* APP PRINCIPAL */
-    /* ============================================ */
     #mainApp {
-      display: none;
       opacity: 0;
       transition: opacity 0.3s;
       min-height: 100vh;
     }
 
     #mainApp.loaded {
-      display: block;
       opacity: 1;
     }
 
-    /* ============================================ */
-    /* TABS DO APP */
-    /* ============================================ */
+    .status-bar {
+      background: #1f2937;
+      color: white;
+      padding: 0.5rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.offline {
+      background: #ef4444;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 1.5rem 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .header h1 {
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .header-stats {
+      font-size: 0.9rem;
+      opacity: 0.95;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
     .tabs {
       display: flex;
       background: white;
       border-bottom: 2px solid #e5e7eb;
       overflow-x: auto;
       position: sticky;
-      top: 0;
+      top: 100px;
       z-index: 99;
     }
     
@@ -497,44 +202,459 @@
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .action-item {
+      padding: 1rem;
+      border-left: 4px solid #10b981;
+      background: #f0fdf4;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+    }
+    
+    .action-item.urgent {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+    
+    .action-item.warning {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
 
-    /* ============================================ */
-    /* RESPONSIVIDADE - MOBILE */
-    /* ============================================ */
+    .action-title {
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .action-meta {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .badge.urgent {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    
+    .badge.warning {
+      background: #fef3c7;
+      color: #d97706;
+    }
+    
+    .action-desc {
+      color: #4b5563;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .btn {
+      padding: 0.75rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #10b981;
+      color: white;
+    }
+    
+    .btn-primary:active {
+      background: #059669;
+      transform: scale(0.98);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #10b981;
+      border: 2px solid #10b981;
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      overflow-x: auto;
+      padding-bottom: 0.25rem;
+    }
+    
+    .filter-btn {
+      padding: 0.5rem 1rem;
+      border: 1px solid #d1d5db;
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    
+    .filter-btn.active {
+      background: #10b981;
+      color: white;
+      border-color: #10b981;
+    }
+
+    .search-box, .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      font-family: inherit;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #374151;
+      font-size: 0.9rem;
+    }
+
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .frutifera-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .frutifera-card:active {
+      transform: scale(0.98);
+    }
+    
+    .frutifera-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    
+    .frutifera-name {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    
+    .frutifera-info {
+      display: grid;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+
+    .info-box {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #0c4a6e;
+    }
+
+    .success-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      color: #166534;
+    }
+
+    .warning-box {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+    }
+
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2937;
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 2000;
+      display: none;
+      max-width: 90%;
+    }
+
+    .toast.show {
+      display: block;
+      animation: slideUp 0.3s;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px) translateX(-50%); opacity: 0; }
+      to { transform: translateY(0) translateX(-50%); opacity: 1; }
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #9ca3af;
+    }
+    
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .stat-card {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 1.25rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .footer-space {
+      height: 2rem;
+    }
+
+    /* ESTILOS DO MAPA */
+    #mapContainer {
+      width: 100%;
+      height: calc(100vh - 180px);
+      min-height: 400px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .map-controls {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .map-btn {
+      padding: 0.75rem;
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .map-btn:hover {
+      border-color: #10b981;
+      color: #10b981;
+    }
+
+    .map-btn.active {
+      background: #10b981;
+      color: white;
+      border-color: #10b981;
+    }
+
+    .layer-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+
+    .layer-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .layer-badge {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 3px solid currentColor;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #d1d5db;
+      border-radius: 24px;
+      transition: all 0.2s;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: #10b981;
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 8px !important;
+    }
+
+    .leaflet-popup-content {
+      font-family: inherit !important;
+      line-height: 1.6 !important;
+      margin: 0.75rem !important;
+    }
+
+    .popup-content h3 {
+      margin: 0 0 0.75rem 0;
+      color: #10b981;
+      border-bottom: 2px solid #10b981;
+      padding-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+
+    .popup-content .info-row {
+      margin: 0.5rem 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      font-size: 0.85rem;
+    }
+
+    .popup-content .info-label {
+      font-weight: 600;
+      color: #6b7280;
+    }
+
+    .popup-content .info-value {
+      color: #1f2937;
+      text-align: right;
+    }
+
     @media (max-width: 768px) {
-      :root {
-        --header-height: auto;
+      #mapContainer {
+        height: calc(100vh - 220px);
       }
       
-      .navbar {
-        height: auto;
-        padding: 0.75rem 1rem;
-      }
-      
-      .main-container {
-        flex-direction: column;
-        padding-top: 0;
-      }
-      
-      .sidebar {
-        width: 100%;
-        order: 2;
-        max-height: 40vh;
-      }
-      
-      .map-container {
-        order: 1;
-        height: 60vh;
-      }
-
-      .basemap-grid {
-        grid-template-columns: 1fr 1fr;
+      .map-controls {
+        grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
-  <!-- LOADING SCREEN -->
   <div id="appLoader">
     <div class="loader-icon">🌿</div>
     <div class="loader-text">Sítio Ipiranga</div>
@@ -544,485 +664,785 @@
     </div>
   </div>
 
-  <!-- APP PRINCIPAL -->
   <div id="mainApp">
-    <!-- CABEÇALHO -->
-    <nav class="navbar navbar-dark fixed-top">
-      <div class="container-fluid">
-        <span class="navbar-brand mb-0 h1">
-          <i class="fas fa-tree"></i> Sítio Ipiranga
-        </span>
-        <span class="text-white">
-          <i class="fas fa-map-marked-alt"></i> Gestão de Frutíferas
-        </span>
+    <div class="status-bar">
+      <div class="status-indicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Online</span>
       </div>
-    </nav>
+      <div id="syncStatus" style="font-size: 0.75rem;">Sítio Ipiranga</div>
+    </div>
 
-    <!-- CONTAINER PRINCIPAL -->
-    <div class="main-container">
-      <!-- BARRA LATERAL -->
-      <div class="sidebar">
-        <!-- Painel de Status -->
-        <div id="statusPanel" class="status-panel">
-          <i class="fas fa-info-circle"></i>
-          <span id="statusMessage">Carregando dados...</span>
-        </div>
-
-        <!-- Card de Estatísticas -->
-        <div class="card">
-          <div class="card-header">
-            <i class="fas fa-chart-bar"></i> Estatísticas
-          </div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-6">
-                <div class="stat-card">
-                  <div class="number" id="totalTrees">0</div>
-                  <div class="label">Árvores</div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="stat-card">
-                  <div class="number" id="totalSpecies">0</div>
-                  <div class="label">Espécies</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card de Mapas Base -->
-        <div class="card">
-          <div class="card-header">
-            <i class="fas fa-layer-group"></i> Mapas Base
-          </div>
-          <div class="card-body">
-            <div class="basemap-grid">
-              <div class="basemap-btn active" data-basemap="osm">
-                <i class="fas fa-map"></i>
-                <span>OpenStreetMap</span>
-              </div>
-              <div class="basemap-btn" data-basemap="satellite">
-                <i class="fas fa-satellite"></i>
-                <span>Satélite</span>
-              </div>
-              <div class="basemap-btn" data-basemap="topo">
-                <i class="fas fa-mountain"></i>
-                <span>Topográfico</span>
-              </div>
-              <div class="basemap-btn" data-basemap="dark">
-                <i class="fas fa-moon"></i>
-                <span>Escuro</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card de Camadas -->
-        <div class="card">
-          <div class="card-header">
-            <i class="fas fa-layer-group"></i> Camadas
-          </div>
-          <div class="card-body">
-            <!-- Camada de Frutíferas -->
-            <div class="layer-item">
-              <div class="layer-left">
-                <div class="layer-badge" style="color: #10b981;"></div>
-                <span class="layer-label">Frutíferas</span>
-              </div>
-              <label class="layer-switch">
-                <input type="checkbox" id="layerFrutiferas" checked>
-                <span class="layer-slider"></span>
-              </label>
-            </div>
-            
-            <!-- Simbologia de Frutíferas -->
-            <div class="symbology-section" id="symbologyFrutiferas">
-              <div class="text-muted mb-2" style="font-size: 0.75rem; font-weight: 600;">LEGENDA POR ESPÉCIE</div>
-              <div class="symbology-item">
-                <div class="symbology-icon" style="border-color: #10b981; background-color: #10b981;"></div>
-                <span id="species1">Carregando...</span>
-              </div>
-              <div class="symbology-item">
-                <div class="symbology-icon" style="border-color: #f59e0b; background-color: #f59e0b;"></div>
-                <span id="species2">Carregando...</span>
-              </div>
-              <div class="symbology-item">
-                <div class="symbology-icon" style="border-color: #ef4444; background-color: #ef4444;"></div>
-                <span id="species3">Carregando...</span>
-              </div>
-              <div class="symbology-item">
-                <div class="symbology-icon" style="border-color: #8b5cf6; background-color: #8b5cf6;"></div>
-                <span id="species4">Carregando...</span>
-              </div>
-            </div>
-
-            <!-- Camada de Mosaico -->
-            <div class="layer-item">
-              <div class="layer-left">
-                <div class="layer-badge" style="color: #f59e0b;"></div>
-                <span class="layer-label">Mosaico Aéreo</span>
-              </div>
-              <label class="layer-switch">
-                <input type="checkbox" id="layerMosaico">
-                <span class="layer-slider"></span>
-              </label>
-            </div>
-
-            <!-- Simbologia de Mosaico -->
-            <div class="symbology-section" id="symbologyMosaico" style="display: none;">
-              <div class="text-muted mb-2" style="font-size: 0.75rem; font-weight: 600;">LEGENDA</div>
-              <div class="symbology-item">
-                <div style="width: 30px; height: 16px; background: linear-gradient(to right, #f59e0b, #ef4444); border: 1px solid #d1d5db; border-radius: 2px;"></div>
-                <span>Imagem Ortorretificada</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- MAPA -->
-      <div class="map-container">
-        <div id="map"></div>
+    <div class="header">
+      <h1>🌿 Sítio Ipiranga</h1>
+      <div class="header-stats">
+        <span id="frutiferaCount">📊 0 frutíferas</span>
+        <span id="actionCount">📋 0 ações</span>
+        <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">✅ Supabase</span>
       </div>
     </div>
+    
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(event, 'acoes')">📋 Ações</button>
+      <button class="tab" onclick="switchTab(event, 'cadastro')">➕ Cadastro</button>
+      <button class="tab" onclick="switchTab(event, 'frutiferas')">🌱 Frutíferas</button>
+      <button class="tab" onclick="switchTab(event, 'mapa')">🗺️ Mapa</button>
+      <button class="tab" onclick="switchTab(event, 'historico')">📜 Histórico</button>
+      <button class="tab" onclick="switchTab(event, 'stats')">📊 Stats</button>
+      <button class="tab" onclick="switchTab(event, 'config')">⚙️ Config</button>
+    </div>
+    
+    <!-- Tab: Ações -->
+    <div id="acoes" class="tab-content active">
+      <div class="section">
+        <div class="section-title">📋 Ações Necessárias Hoje</div>
+        
+        <div id="autoSyncInfo" class="info-box">
+          <span>📡 Enviando ações para Supabase</span><br>
+          <small>As ações são salvas localmente e enviadas para o banco de dados</small>
+        </div>
+        
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="filterAcoes(event, 'todas')">Todas</button>
+          <button class="filter-btn" onclick="filterAcoes(event, 'urgente')">🚨 Urgentes</button>
+          <button class="filter-btn" onclick="filterAcoes(event, 'rega')">💧 Rega</button>
+          <button class="filter-btn" onclick="filterAcoes(event, 'poda')">✂️ Poda</button>
+          <button class="filter-btn" onclick="filterAcoes(event, 'colheita')">🍊 Colheita</button>
+        </div>
+        <div id="acoesHoje">
+          <div class="loading">Carregando dados...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Cadastro -->
+    <div id="cadastro" class="tab-content">
+      <div class="section">
+        <div class="section-title">➕ Cadastrar Nova Frutífera</div>
+        
+        <div class="info-box">
+          🌱 Frutíferas são salvas localmente no seu dispositivo
+        </div>
+
+        <form onsubmit="cadastrarFrutifera(event)">
+          <div class="form-group">
+            <label>🌿 Espécie *</label>
+            <select id="novaEspecie" required>
+              <option value="">Selecione...</option>
+              <option value="Mangabeira">🥭 Mangabeira</option>
+              <option value="Cajueiro">🌰 Cajueiro</option>
+              <option value="Coqueiro">🥥 Coqueiro</option>
+              <option value="Cacau">🍫 Cacau</option>
+              <option value="Outra">🌳 Outra espécie</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="outraEspecieGroup" style="display:none;">
+            <label>Nome da espécie</label>
+            <input type="text" id="outraEspecieNome" placeholder="Ex: Goiabeira, Mangueira...">
+          </div>
+
+          <div class="form-group">
+            <label>🏷️ Identificação/Código *</label>
+            <input type="text" id="novoId" placeholder="Ex: MG-001, COQ-15..." required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>📅 Data do Plantio *</label>
+              <input type="date" id="dataPlantio" required>
+            </div>
+            <div class="form-group">
+              <label>🌱 Idade (meses)</label>
+              <input type="number" id="idadeFrutifera" min="0" placeholder="0">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>📍 Localização GPS</label>
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: end;">
+              <input type="text" id="coordenadas" placeholder="Latitude, Longitude" readonly style="margin-bottom: 0;">
+              <button type="button" onclick="obterLocalizacao()" style="padding: 0.75rem 1rem; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; margin-bottom: 0;">
+                📍 Obter GPS
+              </button>
+            </div>
+            <div id="coordDisplay" style="background: #f9fafb; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem; display: none;"></div>
+          </div>
+
+          <div class="form-group">
+            <label>👤 Responsável pelo plantio</label>
+            <input type="text" id="responsavel" placeholder="Nome" value="">
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            ✅ Cadastrar Frutífera
+          </button>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Tab: Frutíferas -->
+    <div id="frutiferas" class="tab-content">
+      <div class="section">
+        <div class="section-title">🌱 Minhas Frutíferas</div>
+        
+        <div class="info-box">
+          💾 Todos os dados são salvos localmente no seu dispositivo
+        </div>
+        
+        <input type="text" class="search-box" id="searchFrutifera" placeholder="🔎 Buscar frutífera..." onkeyup="filtrarFrutiferas()">
+        
+        <div style="margin-top: 1rem;" id="frutiferasList"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Mapa -->
+    <div id="mapa" class="tab-content">
+      <div class="section">
+        <div class="section-title">🗺️ Mapa de Frutíferas</div>
+        
+        <div class="info-box">
+          📍 Visualize todas as frutíferas georeferenciadas no mapa
+        </div>
+
+        <div class="map-controls">
+          <button class="map-btn active" data-basemap="osm" onclick="changeBasemap('osm', event)">
+            🗺️ OpenStreetMap
+          </button>
+          <button class="map-btn" data-basemap="satellite" onclick="changeBasemap('satellite', event)">
+            🛰️ Satélite
+          </button>
+        </div>
+
+        <div class="layer-toggle">
+          <div class="layer-label">
+            <div class="layer-badge" style="color: #10b981;"></div>
+            <span>Frutíferas</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleFrutiferas" checked onchange="toggleFrutiferasLayer()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div id="mapContainer"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Histórico -->
+    <div id="historico" class="tab-content">
+      <div class="section">
+        <div class="section-title">📜 Histórico de Ações</div>
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="filterHistorico(event, '7')">Últimos 7 dias</button>
+          <button class="filter-btn" onclick="filterHistorico(event, '30')">Últimos 30 dias</button>
+          <button class="filter-btn" onclick="filterHistorico(event, 'todos')">Tudo</button>
+        </div>
+        <div id="historicoList">
+          <div class="loading">Carregando histórico</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Stats -->
+    <div id="stats" class="tab-content">
+      <div class="section">
+        <div class="section-title">📊 Estatísticas Gerais</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Total Frutíferas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statPend">0</div>
+            <div class="stat-label">Pendências</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statUrg">0</div>
+            <div class="stat-label">Urgentes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statEsp">0</div>
+            <div class="stat-label">Espécies</div>
+          </div>
+        </div>
+
+        <div class="section" style="margin-top: 1rem;">
+          <div class="section-title">🌳 Resumo por Espécie</div>
+          <div id="speciesSummary"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tab: Config -->
+    <div id="config" class="tab-content">
+      <div class="section">
+        <div class="section-title">📋 Intervalos por Espécie (dias)</div>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.5rem;">
+          Ajuste os intervalos de manutenção para cada tipo de frutífera
+        </p>
+        
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🥭 Mangabeira</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+              <input type="number" id="mang_rega" value="7" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+              <input type="number" id="mang_poda" value="180" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+              <input type="number" id="mang_colh" value="90" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🌰 Cajueiro</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+              <input type="number" id="caju_rega" value="10" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+              <input type="number" id="caju_poda" value="365" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+              <input type="number" id="caju_colh" value="60" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🥥 Coqueiro</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+              <input type="number" id="coq_rega" value="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+              <input type="number" id="coq_poda" value="730" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+              <input type="number" id="coq_colh" value="30" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🍫 Cacau</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+              <input type="number" id="cac_rega" value="3" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+              <input type="number" id="cac_poda" value="180" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+              <input type="number" id="cac_colh" value="120" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveConfig()">💾 Salvar Intervalos</button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div class="footer-space"></div>
   </div>
 
-  <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
-    // ============================================
-    // 🔧 CONFIGURAÇÃO SUPABASE
-    // ============================================
     const SUPABASE_URL = 'https://erbefbnjxgpetbetlzya.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmVmYm5qeGdwZXRiZXRsenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzI4ODcsImV4cCI6MjA3NjYwODg4N30.d09pjgddZpNY3Z4cVZ3V4h77aAf_GVGF0sOBTZkZf2A';
-    
-    const { createClient } = supabase;
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    // Variáveis globais
+
     let frutiferas = [];
+    let historico = [];
+    let perfilAtual = localStorage.getItem('perfilAtual') || 'Default';
+    let currentFilter = 'todas';
+    
+    // Variáveis do mapa
     let map;
     let baseLayers = {};
-    let overlayLayers = {};
+    let frutiferasLayer;
     let markers = {};
-    let allTreesData = [];
-    let currentBaseLayer = 'osm';
     let speciesColors = {
-      color1: '#10b981',
-      color2: '#f59e0b', 
-      color3: '#ef4444',
-      color4: '#8b5cf6'
+      'Mangabeira': '#10b981',
+      'Cajueiro': '#f59e0b',
+      'Coqueiro': '#ef4444',
+      'Cacau': '#8b5cf6'
     };
-    let speciesColorMap = {};
 
-    // ============================================
-    // 📥 FUNÇÃO PARA CARREGAR FRUTÍFERAS
-    // ============================================
     async function carregarFrutiferas() {
-      console.log('📥 Carregando frutíferas do Supabase...');
+      console.log('🔥 Carregando frutíferas do Supabase...');
       
       try {
-        // Tentar carregar do localStorage primeiro
         const frutiferasLocal = JSON.parse(localStorage.getItem('frutiferas') || '[]');
         
         if (frutiferasLocal.length > 0) {
           frutiferas = frutiferasLocal;
           console.log(`📦 ${frutiferas.length} frutíferas do cache local`);
-          atualizarMapa();
-          atualizarEstatisticas();
+          atualizarTodasAbas();
         }
         
-        // Buscar dados atualizados do Supabase
         if (navigator.onLine) {
           const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/rpc/get_plantas_para_telegram`,
+            `${SUPABASE_URL}/rest/v1/frutiferas?select=*`,
             {
-              method: 'POST',
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({})
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+              }
             }
           );
           
           if (response.ok) {
             const dados = await response.json();
             
-            // Converter os dados da função RPC para o formato do app
-            frutiferas = dados.map(item => ({
-              id: item.id || 'S/N',
-              especie: item.nome || 'Frutífera',
-              nome_popular: item.nome || 'Frutífera',
-              identificacao: item.id || 'S/N',
-              data_plantio: item.dataPlantio || null,
-              ultima_rega: item.ultRega || null,
-              ultima_poda: item.ultPoda || null,
-              ultima_colheita: item.ultColh || null,
-              latitude: item.latitude || -7.1195,
-              longitude: item.longitude || -34.8450,
+            frutiferas = dados.map(f => ({
+              id: f.fid || f.id || 'S/N',
+              especie: f.nome_popular || 'Frutífera',
+              nome_popular: f.nome_popular || 'Frutífera',
+              identificacao: f.fid || f.id || 'S/N',
+              data_plantio: f.data_plantio || null,
+              ultima_rega: f.data_irrigacao_ordinaria || null,
+              ultima_poda: f.data_poda_formacao_1 || null,
+              ultima_colheita: f.inicio_colheita || null,
+              latitude: f.latitude || null,
+              longitude: f.longitude || null,
+              altura_total: f.altura_total || null,
+              diametro_copa: f.diametro_copa || null,
               created_at: new Date().toISOString()
             }));
             
             localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
             console.log(`✅ ${frutiferas.length} frutíferas carregadas do Supabase`);
-            atualizarMapa();
-            atualizarEstatisticas();
-          } else {
-            console.warn('⚠️ Erro ao buscar do Supabase:', response.status);
-            await tentarTabelaDireta();
+            atualizarTodasAbas();
+            
+            // Atualizar mapa se estiver na aba
+            if (document.getElementById('mapa').classList.contains('active')) {
+              atualizarMapa();
+            }
           }
-        } else {
-          console.log('📡 Offline - usando dados do cache');
-          mostrarStatus('Modo offline - usando dados locais', 'info');
         }
         
       } catch (error) {
         console.error('❌ Erro ao carregar frutíferas:', error);
-        mostrarStatus('⚠️ Erro ao carregar. Usando dados locais.', 'error');
+        mostrarToast('⚠️ Erro ao carregar. Usando dados locais.');
       }
     }
 
-    // ============================================
-    // 🗺️ FUNÇÕES DO MAPA
-    // ============================================
-    function initMap() {
-      map = L.map('map').setView([-7.1195, -34.8450], 13);
+    function atualizarTodasAbas() {
+      console.log('🔄 Atualizando UI com', frutiferas.length, 'frutíferas');
       
-      // Mapas Base
+      document.getElementById('frutiferaCount').textContent = `📊 ${frutiferas.length} frutíferas`;
+      
+      atualizarListaFrutiferas();
+      carregarAcoesHoje();
+      atualizarStats();
+    }
+
+    function atualizarListaFrutiferas() {
+      const lista = document.getElementById('frutiferasList');
+      if (!lista) return;
+      
+      if (frutiferas.length === 0) {
+        lista.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🌱</div>
+            <p>Nenhuma frutífera cadastrada ainda.</p>
+            <p><small>Vá para a aba "Cadastro" para adicionar sua primeira frutífera!</small></p>
+          </div>
+        `;
+        return;
+      }
+      
+      lista.innerHTML = frutiferas.map(f => `
+        <div class="frutifera-card">
+          <div class="frutifera-header">
+            <div class="frutifera-name">${f.nome_popular || f.especie}</div>
+            <span class="badge">${f.identificacao || f.id}</span>
+          </div>
+          <div class="frutifera-info">
+            <div>📅 Plantio: ${formatarData(f.data_plantio) || 'Sem data'}</div>
+            <div>💧 Última rega: ${formatarData(f.ultima_rega) || 'Nunca'}</div>
+            <div>✂️ Última poda: ${formatarData(f.ultima_poda) || 'Nunca'}</div>
+            ${f.latitude && f.longitude ? `<div>📍 GPS: ${f.latitude.toFixed(6)}, ${f.longitude.toFixed(6)}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function carregarAcoesHoje() {
+      const container = document.getElementById('acoesHoje');
+      if (!container) return;
+      
+      if (frutiferas.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>Nenhuma frutífera cadastrada.</p>
+            <p><small>Cadastre frutíferas para ver as ações pendentes</small></p>
+          </div>
+        `;
+        return;
+      }
+      
+      const acoes = [];
+      
+      frutiferas.forEach(f => {
+        const diasRega = f.ultima_rega ? calcularDias(f.ultima_rega) : 999;
+        const intervaloRega = obterIntervaloRega(f);
+        
+        if (diasRega >= intervaloRega) {
+          acoes.push({
+            tipo: 'rega',
+            urgencia: diasRega >= (intervaloRega + 2) ? 'urgent' : 'warning',
+            frutifera: f,
+            dias: diasRega,
+            titulo: `Regar ${f.nome_popular || f.especie}`,
+            descricao: `Última rega: ${diasRega === 999 ? 'Nunca' : diasRega + ' dias atrás'}`
+          });
+        }
+        
+        const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
+        const intervaloPoda = obterIntervaloPoda(f);
+        
+        if (diasPoda >= intervaloPoda) {
+          acoes.push({
+            tipo: 'poda',
+            urgencia: 'warning',
+            frutifera: f,
+            dias: diasPoda,
+            titulo: `Podar ${f.nome_popular || f.especie}`,
+            descricao: `Última poda: ${diasPoda === 999 ? 'Nunca' : diasPoda + ' dias atrás'}`
+          });
+        }
+        
+        const diasColheita = f.ultima_colheita ? calcularDias(f.ultima_colheita) : 999;
+        const intervaloColheita = obterIntervaloColheita(f);
+        
+        if (diasColheita >= intervaloColheita) {
+          acoes.push({
+            tipo: 'colheita',
+            urgencia: 'normal',
+            frutifera: f,
+            dias: diasColheita,
+            titulo: `Colher ${f.nome_popular || f.especie}`,
+            descricao: `Última colheita: ${diasColheita === 999 ? 'Nunca' : diasColheita + ' dias atrás'}`
+          });
+        }
+      });
+      
+      if (acoes.length === 0) {
+        container.innerHTML = `
+          <div class="info-box success-box">
+            ✅ <strong>Tudo em dia!</strong><br>
+            Nenhuma ação pendente no momento.
+          </div>
+        `;
+        document.getElementById('actionCount').textContent = '📋 0 ações';
+        return;
+      }
+      
+      document.getElementById('actionCount').textContent = `📋 ${acoes.length} ações`;
+      
+      let acoesFiltradas = acoes;
+      if (currentFilter !== 'todas') {
+        if (currentFilter === 'urgente') {
+          acoesFiltradas = acoes.filter(a => a.urgencia === 'urgent');
+        } else {
+          acoesFiltradas = acoes.filter(a => a.tipo === currentFilter);
+        }
+      }
+      
+      container.innerHTML = acoesFiltradas.map(acao => `
+        <div class="action-item ${acao.urgencia}">
+          <div class="action-title">
+            ${acao.urgencia === 'urgent' ? '🚨' : acao.tipo === 'rega' ? '💧' : acao.tipo === 'poda' ? '✂️' : '🍊'}
+            ${acao.titulo}
+          </div>
+          <div class="action-desc">${acao.descricao}</div>
+          <div class="action-meta">
+            Frutífera: ${acao.frutifera.identificacao || acao.frutifera.id}
+          </div>
+          <button class="btn btn-primary" onclick="registrarAcao('${acao.tipo}', '${acao.frutifera.id}')">
+            ✅ Marcar como feito
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function atualizarStats() {
+      const total = frutiferas.length;
+      const especies = [...new Set(frutiferas.map(f => f.especie || f.nome_popular))].length;
+      
+      let pendentes = 0;
+      let urgentes = 0;
+      
+      frutiferas.forEach(f => {
+        const diasRega = f.ultima_rega ? calcularDias(f.ultima_rega) : 999;
+        const intervaloRega = obterIntervaloRega(f);
+        
+        if (diasRega >= intervaloRega) {
+          pendentes++;
+          if (diasRega >= (intervaloRega + 2)) urgentes++;
+        }
+      });
+      
+      if (document.getElementById('statTotal')) {
+        document.getElementById('statTotal').textContent = total;
+        document.getElementById('statPend').textContent = pendentes;
+        document.getElementById('statUrg').textContent = urgentes;
+        document.getElementById('statEsp').textContent = especies;
+      }
+
+      const especiesCount = {};
+      frutiferas.forEach(f => {
+        const esp = f.especie || f.nome_popular || 'Desconhecida';
+        especiesCount[esp] = (especiesCount[esp] || 0) + 1;
+      });
+
+      const summaryEl = document.getElementById('speciesSummary');
+      if (summaryEl) {
+        summaryEl.innerHTML = Object.entries(especiesCount)
+          .map(([esp, count]) => `
+            <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: #f9fafb; border-radius: 6px; margin-bottom: 0.5rem;">
+              <span>${esp}</span>
+              <strong>${count}</strong>
+            </div>
+          `).join('') || '<div class="empty-state"><p>Nenhuma frutífera cadastrada</p></div>';
+      }
+    }
+
+    async function registrarAcao(tipo, frutiferaId) {
+      console.log(`📝 Registrando ${tipo} para frutífera ${frutiferaId}`);
+      
+      try {
+        const campo = tipo === 'rega' ? 'ultima_rega' : 
+                      tipo === 'poda' ? 'ultima_poda' : 'ultima_colheita';
+        
+        const dataHoje = new Date().toISOString().split('T')[0];
+        
+        const index = frutiferas.findIndex(f => f.id === frutiferaId);
+        if (index >= 0) {
+          frutiferas[index][campo] = dataHoje;
+          localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+        }
+        
+        atualizarTodasAbas();
+        mostrarToast(`✅ ${tipo.charAt(0).toUpperCase() + tipo.slice(1)} registrada!`);
+        
+        if (navigator.onLine) {
+          const campoSupabase = campo === 'ultima_rega' ? 'data_irrigacao_ordinaria' : 
+                                campo === 'ultima_poda' ? 'data_poda_formacao_1' : 
+                                'inicio_colheita';
+          
+          await fetch(
+            `${SUPABASE_URL}/rest/v1/frutiferas?fid=eq.${frutiferaId}`,
+            {
+              method: 'PATCH',
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify({ [campoSupabase]: dataHoje })
+            }
+          );
+        }
+        
+      } catch (error) {
+        console.error('❌ Erro ao registrar ação:', error);
+      }
+    }
+
+    async function cadastrarFrutifera(event) {
+      event.preventDefault();
+      
+      const especie = document.getElementById('novaEspecie').value;
+      const outraEspecie = document.getElementById('outraEspecieNome').value;
+      const identificacao = document.getElementById('novoId').value;
+      const dataPlantio = document.getElementById('dataPlantio').value;
+      const coordenadas = document.getElementById('coordenadas').value;
+      const responsavel = document.getElementById('responsavel').value;
+      
+      let lat = null, lon = null;
+      if (coordenadas) {
+        const coords = coordenadas.split(',').map(c => parseFloat(c.trim()));
+        lat = coords[0];
+        lon = coords[1];
+      }
+      
+      const novaFrutifera = {
+        id: 'FRT-' + Date.now(),
+        especie: especie === 'Outra' ? outraEspecie : especie,
+        nome_popular: especie === 'Outra' ? outraEspecie : especie,
+        identificacao: identificacao,
+        data_plantio: dataPlantio,
+        latitude: lat,
+        longitude: lon,
+        responsavel: responsavel,
+        ultima_rega: null,
+        ultima_poda: null,
+        ultima_colheita: null,
+        created_at: new Date().toISOString()
+      };
+      
+      try {
+        frutiferas.push(novaFrutifera);
+        localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+        
+        atualizarTodasAbas();
+        mostrarToast('✅ Frutífera cadastrada com sucesso!');
+        
+        event.target.reset();
+        document.getElementById('coordDisplay').style.display = 'none';
+        
+        if (navigator.onLine) {
+          await fetch(
+            `${SUPABASE_URL}/rest/v1/frutiferas`,
+            {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify({
+                fid: novaFrutifera.id,
+                nome_popular: novaFrutifera.especie,
+                data_plantio: novaFrutifera.data_plantio,
+                latitude: lat,
+                longitude: lon
+              })
+            }
+          );
+        }
+        
+        switchTab({ target: document.querySelector('.tab[onclick*="frutiferas"]') }, 'frutiferas');
+        
+      } catch (error) {
+        console.error('❌ Erro ao cadastrar frutífera:', error);
+        mostrarToast('❌ Erro ao cadastrar frutífera');
+      }
+    }
+
+    // FUNÇÕES DO MAPA
+    function inicializarMapa() {
+      if (map) return;
+      
+      map = L.map('mapContainer').setView([-7.1195, -34.8450], 13);
+      
       baseLayers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19
       }).addTo(map);
 
       baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Esri, Maxar, Earthstar Geographics',
+        attribution: 'Esri, Maxar',
         maxZoom: 19
       });
 
-      baseLayers.topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenTopoMap contributors',
-        maxZoom: 17
-      });
-
-      baseLayers.dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© CARTO',
-        maxZoom: 19
-      });
-
-      // Layer group para marcadores
-      overlayLayers.frutiferas = L.layerGroup().addTo(map);
-
-      // Event listeners para mapas base
-      document.querySelectorAll('.basemap-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          const basemapType = this.dataset.basemap;
-          
-          // Remove active de todos
-          document.querySelectorAll('.basemap-btn').forEach(b => b.classList.remove('active'));
-          this.classList.add('active');
-          
-          // Remove camada atual
-          if (baseLayers[currentBaseLayer]) {
-            map.removeLayer(baseLayers[currentBaseLayer]);
-          }
-          
-          // Adiciona nova camada
-          if (baseLayers[basemapType]) {
-            baseLayers[basemapType].addTo(map);
-            currentBaseLayer = basemapType;
-          }
-        });
-      });
-
-      // Event listener para camada de frutíferas
-      document.getElementById('layerFrutiferas').addEventListener('change', function() {
-        const symbology = document.getElementById('symbologyFrutiferas');
-        if (this.checked) {
-          overlayLayers.frutiferas.addTo(map);
-          symbology.style.display = 'block';
-        } else {
-          map.removeLayer(overlayLayers.frutiferas);
-          symbology.style.display = 'none';
-        }
-      });
-
-      // Event listener para camada de mosaico
-      document.getElementById('layerMosaico').addEventListener('change', function() {
-        const symbology = document.getElementById('symbologyMosaico');
-        if (this.checked) {
-          // Carregar mosaico se disponível
-          carregarMosaico();
-          symbology.style.display = 'block';
-        } else {
-          if (overlayLayers.mosaico) {
-            map.removeLayer(overlayLayers.mosaico);
-          }
-          symbology.style.display = 'none';
-        }
-      });
+      frutiferasLayer = L.layerGroup().addTo(map);
+      
+      atualizarMapa();
     }
 
     function atualizarMapa() {
-      // Limpar marcadores existentes
-      overlayLayers.frutiferas.clearLayers();
+      if (!map || !frutiferasLayer) return;
       
-      if (frutiferas.length === 0) {
-        mostrarStatus('Nenhuma frutífera cadastrada', 'info');
-        return;
-      }
-
+      frutiferasLayer.clearLayers();
+      markers = {};
+      
       const bounds = [];
-      const species = new Set();
       
-      // Identificar as espécies únicas
-      frutiferas.forEach(tree => {
-        if (tree.especie) {
-          species.add(tree.especie);
+      frutiferas.forEach(f => {
+        if (f.latitude && f.longitude) {
+          const color = speciesColors[f.especie] || '#10b981';
+          
+          const marker = L.circleMarker([f.latitude, f.longitude], {
+            radius: 8,
+            fillColor: color,
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.8
+          });
+
+          const popupContent = `
+            <div class="popup-content">
+              <h3>${f.nome_popular || f.especie}</h3>
+              <div class="info-row">
+                <span class="info-label">Código:</span>
+                <span class="info-value">${f.identificacao || f.id}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Data Plantio:</span>
+                <span class="info-value">${formatarData(f.data_plantio) || 'Não informado'}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Última Rega:</span>
+                <span class="info-value">${formatarData(f.ultima_rega) || 'Nunca'}</span>
+              </div>
+              ${f.altura_total ? `
+              <div class="info-row">
+                <span class="info-label">Altura:</span>
+                <span class="info-value">${f.altura_total} m</span>
+              </div>` : ''}
+            </div>
+          `;
+
+          marker.bindPopup(popupContent);
+          frutiferasLayer.addLayer(marker);
+          markers[f.id] = marker;
+          bounds.push([f.latitude, f.longitude]);
         }
       });
 
-      // Mapear cores para as espécies
-      const speciesArray = Array.from(species).sort();
-      const colors = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-      speciesArray.forEach((sp, idx) => {
-        speciesColorMap[sp] = colors[idx % colors.length];
-      });
-
-      // Atualizar legenda
-      speciesArray.forEach((sp, idx) => {
-        const element = document.getElementById(`species${idx + 1}`);
-        if (element && idx < 4) {
-          element.textContent = sp;
-        }
-      });
-
-      // Ocultar legendas não utilizadas
-      for (let i = speciesArray.length; i < 4; i++) {
-        const element = document.getElementById(`species${i + 1}`);
-        if (element) {
-          element.parentElement.style.display = 'none';
-        }
-      }
-
-      // Adicionar marcadores ao mapa
-      frutiferas.forEach(tree => {
-        const lat = tree.latitude || -7.1195;
-        const lon = tree.longitude || -34.8450;
-        
-        const marker = L.marker([lat, lon], {
-          icon: getMarkerIcon(tree.especie)
-        });
-
-        marker.bindPopup(createPopupContent(tree));
-        overlayLayers.frutiferas.addLayer(marker);
-        bounds.push([lat, lon]);
-      });
-
-      // Ajustar visão do mapa para mostrar todos os marcadores
       if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [50, 50] });
       }
-
-      mostrarStatus(`${frutiferas.length} frutíferas carregadas no mapa`, 'success');
     }
 
-    function getMarkerIcon(species) {
-      const color = speciesColorMap[species] || '#10b981';
-      const colorName = {
-        '#10b981': 'green',
-        '#f59e0b': 'orange',
-        '#ef4444': 'red',
-        '#8b5cf6': 'violet'
-      }[color] || 'green';
-
-      return L.icon({
-        iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${colorName}.png`,
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41]
-      });
+    function changeBasemap(basemapType, event) {
+      document.querySelectorAll('.map-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      Object.values(baseLayers).forEach(layer => map.removeLayer(layer));
+      baseLayers[basemapType].addTo(map);
     }
 
-    function createPopupContent(tree) {
-      let content = `
-        <div class="popup-content">
-          <h3>${tree.especie || tree.nome_popular || 'Frutífera'}</h3>
-          <div class="info-row">
-            <span class="info-label">Identificação:</span>
-            <span class="info-value">${tree.identificacao || tree.id}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Data Plantio:</span>
-            <span class="info-value">${formatarData(tree.data_plantio) || 'Não informado'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Última Rega:</span>
-            <span class="info-value">${formatarData(tree.ultima_rega) || 'Nunca'}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Última Poda:</span>
-            <span class="info-value">${formatarData(tree.ultima_poda) || 'Nunca'}</span>
-          </div>
-      `;
-
-      if (tree.ultima_colheita) {
-        content += `
-          <div class="info-row">
-            <span class="info-label">Última Colheita:</span>
-            <span class="info-value">${formatarData(tree.ultima_colheita)}</span>
-          </div>
-        `;
+    function toggleFrutiferasLayer() {
+      const isChecked = document.getElementById('toggleFrutiferas').checked;
+      if (isChecked) {
+        frutiferasLayer.addTo(map);
+      } else {
+        map.removeLayer(frutiferasLayer);
       }
-
-      content += `</div>`;
-      return content;
     }
 
-    function carregarMosaico() {
-      // Exemplo de carregamento de mosaico aéreo
-      // Nota: Substitua as coordenadas e URL pelo seu mosaico real
-      overlayLayers.mosaico = L.imageOverlay(
-        'https://erbefbnjxgpetbetlzya.supabase.co/storage/v1/object/public/mosaico_tiles/mosaico_tile.tif',
-        [[-7.15, -34.88], [-7.09, -34.81]],
-        {
-          opacity: 0.7,
-          attribution: 'Mosaico Aéreo'
-        }
-      ).addTo(map);
-      
-      mostrarStatus('Mosaico aéreo carregado', 'success');
-    }
-
-    // ============================================
-    // 📊 FUNÇÕES AUXILIARES
-    // ============================================
-    function atualizarEstatisticas() {
-      const total = frutiferas.length;
-      const especies = [...new Set(frutiferas.map(f => f.especie || f.nome_popular))].length;
-      
-      document.getElementById('totalTrees').textContent = total;
-      document.getElementById('totalSpecies').textContent = especies;
-    }
-
-    function mostrarStatus(message, type = 'info') {
-      const panel = document.getElementById('statusPanel');
-      const messageEl = document.getElementById('statusMessage');
-      
-      panel.className = `status-panel show ${type}`;
-      messageEl.textContent = message;
-
-      if (type === 'success' || type === 'info') {
-        setTimeout(() => {
-          panel.classList.remove('show');
-        }, 3000);
-      }
+    // FUNÇÕES AUXILIARES
+    function calcularDias(dataString) {
+      if (!dataString) return 999;
+      const data = new Date(dataString);
+      const hoje = new Date();
+      const diff = hoje - data;
+      return Math.floor(diff / (1000 * 60 * 60 * 24));
     }
 
     function formatarData(dataString) {
@@ -1031,9 +1451,135 @@
       return data.toLocaleDateString('pt-BR');
     }
 
-    // ============================================
-    // 🚀 INICIALIZAÇÃO
-    // ============================================
+    function obterIntervaloRega(frutifera) {
+      const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
+      if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_rega') || '5');
+      if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_rega') || '3');
+      if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_rega') || '7');
+      if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_rega') || '10');
+      return 7;
+    }
+
+    function obterIntervaloPoda(frutifera) {
+      const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
+      if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_poda') || '730');
+      if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_poda') || '180');
+      if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_poda') || '180');
+      if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_poda') || '365');
+      return 180;
+    }
+
+    function obterIntervaloColheita(frutifera) {
+      const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
+      if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_colh') || '30');
+      if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_colh') || '120');
+      if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_colh') || '90');
+      if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_colh') || '60');
+      return 90;
+    }
+
+    function mostrarToast(mensagem) {
+      const toast = document.getElementById('toast');
+      toast.textContent = mensagem;
+      toast.className = 'toast show';
+      
+      setTimeout(() => {
+        toast.className = 'toast';
+      }, 3000);
+    }
+
+    // FUNÇÕES DE UI
+    function switchTab(event, tabName) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      event.target.classList.add('active');
+      document.getElementById(tabName).classList.add('active');
+      
+      // Inicializar mapa quando a aba for aberta
+      if (tabName === 'mapa') {
+        setTimeout(() => {
+          if (!map) {
+            inicializarMapa();
+          } else {
+            map.invalidateSize();
+            atualizarMapa();
+          }
+        }, 100);
+      }
+    }
+
+    function filterAcoes(event, filtro) {
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      currentFilter = filtro;
+      carregarAcoesHoje();
+    }
+
+    function filtrarFrutiferas() {
+      const query = document.getElementById('searchFrutifera').value.toLowerCase();
+      const cards = document.querySelectorAll('.frutifera-card');
+      
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    }
+
+    function filterHistorico(event, periodo) {
+      document.querySelectorAll('#historico .filter-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    function obterLocalizacao() {
+      if (!navigator.geolocation) {
+        mostrarToast('❌ Geolocalização não suportada');
+        return;
+      }
+      
+      mostrarToast('📍 Obtendo localização...');
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude.toFixed(6);
+          const lon = position.coords.longitude.toFixed(6);
+          document.getElementById('coordenadas').value = `${lat}, ${lon}`;
+          document.getElementById('coordDisplay').style.display = 'block';
+          document.getElementById('coordDisplay').textContent = `✅ Localização obtida: ${lat}, ${lon}`;
+          mostrarToast('✅ Localização obtida!');
+        },
+        (error) => {
+          console.error('Erro ao obter localização:', error);
+          mostrarToast('❌ Erro ao obter localização');
+        }
+      );
+    }
+
+    function saveConfig() {
+      ['mang', 'caju', 'coq', 'cac'].forEach(prefixo => {
+        ['rega', 'poda', 'colh'].forEach(tipo => {
+          const valor = document.getElementById(`${prefixo}_${tipo}`).value;
+          localStorage.setItem(`${prefixo}_${tipo}`, valor);
+        });
+      });
+      
+      mostrarToast('✅ Configurações salvas!');
+      atualizarTodasAbas();
+    }
+
+    document.getElementById('novaEspecie')?.addEventListener('change', function() {
+      const outraGroup = document.getElementById('outraEspecieGroup');
+      if (this.value === 'Outra') {
+        outraGroup.style.display = 'block';
+        document.getElementById('outraEspecieNome').required = true;
+      } else {
+        outraGroup.style.display = 'none';
+        document.getElementById('outraEspecieNome').required = false;
+      }
+    });
+
+    // INICIALIZAÇÃO
     async function inicializarApp() {
       console.log('🚀 Inicializando app...');
       
@@ -1041,16 +1587,10 @@
       const mainApp = document.getElementById('mainApp');
       
       try {
-        // Inicializar mapa
-        initMap();
-        
-        // Carregar frutíferas
         await carregarFrutiferas();
         
-        // Aguardar mínimo para UX
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Remover loader
         if (loader) {
           loader.classList.add('hidden');
           setTimeout(() => loader.remove(), 300);
@@ -1060,22 +1600,45 @@
           mainApp.classList.add('loaded');
         }
         
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        
+        if (navigator.onLine) {
+          if (statusDot) statusDot.className = 'status-dot';
+          if (statusText) statusText.textContent = 'Online';
+        } else {
+          if (statusDot) statusDot.className = 'status-dot offline';
+          if (statusText) statusText.textContent = 'Offline';
+        }
+        
         console.log('✅ App inicializado com sucesso!');
         
       } catch (error) {
         console.error('❌ Erro na inicialização:', error);
         if (loader) loader.classList.add('hidden');
         if (mainApp) mainApp.classList.add('loaded');
-        mostrarStatus('Erro ao inicializar o aplicativo', 'error');
       }
     }
 
-    // Iniciar quando DOM estiver pronto
+    window.addEventListener('online', () => {
+      document.getElementById('statusDot').className = 'status-dot';
+      document.getElementById('statusText').textContent = 'Online';
+      mostrarToast('🌐 Você voltou online!');
+      carregarFrutiferas();
+    });
+
+    window.addEventListener('offline', () => {
+      document.getElementById('statusDot').className = 'status-dot offline';
+      document.getElementById('statusText').textContent = 'Offline';
+      mostrarToast('📡 Você está offline');
+    });
+
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', inicializarApp);
     } else {
       inicializarApp();
     }
   </script>
+
 </body>
 </html>
