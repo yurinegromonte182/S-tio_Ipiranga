@@ -1,81 +1,69 @@
-name: 🌿 Sítio Ipiranga - Notificações
+name: Notificações Automáticas de Frutíferas
 
 on:
-  workflow_dispatch:
   schedule:
-    # 06:00, 12:00, 18:00 (horário Brasil)
-    - cron: '0 9,15,21 * * *'
+    - cron: "0 */6 * * *"  # a cada 6 horas
+  workflow_dispatch:
 
 jobs:
-  enviar-notificacao:
+  notificacoes:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: 📥 Baixar repositório
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          
-      - name: 📤 Enviar mensagem para Telegram
-        env:
-          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          echo "=== INICIANDO ENVIO ==="
-          
-          # Verificar se temos os dados
-          if [ ! -f "dados.geojson" ]; then
-            echo "⚠️ Arquivo dados.geojson não encontrado"
-            echo "Criando mensagem básica..."
-            
-            MENSAGEM="🌿 *Sítio Ipiranga*%0A"
-            MENSAGEM="${MENSAGEM}📅 $(date '+%d/%m/%Y') às $(date '+%H:%M')%0A"
-            MENSAGEM="${MENSAGEM}⚠️ *AVISO:* Arquivo dados.geojson não encontrado%0A"
-            MENSAGEM="${MENSAGEM}Exporte os dados do QField e faça upload.%0A"
-            MENSAGEM="${MENSAGEM}%0A📱 *Acesse o app:*%0A"
-            MENSAGEM="${MENSAGEM}https://yurimegromonte182.github.io/S-tio_Jintanga/"
-          else
-            echo "✅ Arquivo dados.geojson encontrado"
-            
-            # Contar plantas
-            QTDE_PLANTAS=$(jq '.features | length' dados.geojson 2>/dev/null || echo "0")
-            
-            MENSAGEM="🌿 *Sítio Ipiranga*%0A"
-            MENSAGEM="${MENSAGEM}📅 $(date '+%d/%m/%Y') às $(date '+%H:%M')%0A"
-            MENSAGEM="${MENSAGEM}🌳 *${QTDE_PLANTAS} plantas* cadastradas%0A"
-            MENSAGEM="${MENSAGEM}✅ Sistema funcionando normalmente%0A"
-            MENSAGEM="${MENSAGEM}%0A📱 *Acesse o app:*%0A"
-            MENSAGEM="${MENSAGEM}https://yurimegromonte182.github.io/S-tio_Jintanga/"
-          fi
-          
-          echo "📝 Mensagem preparada:"
-          echo "---"
-          echo -e "${MENSAGEM//%0A/\\n}"
-          echo "---"
-          
-          echo "🤖 Enviando para Telegram..."
-          
-          # Enviar com timeout e tratamento de erro
-          RESPOSTA=$(curl -s -m 30 -X POST \
-            "https://api.telegram.org/bot${TOKEN}/sendMessage" \
-            -d chat_id="${CHAT_ID}" \
-            -d text="${MENSAGEM}" \
-            -d parse_mode="Markdown" \
-            -w "\nCURL_EXIT:%{exitcode}")
-          
-          # Separar resposta do código de saída
-          CURL_EXIT=$(echo "$RESPOSTA" | grep "CURL_EXIT:" | cut -d: -f2)
-          RESPOSTA_API=$(echo "$RESPOSTA" | grep -v "CURL_EXIT:")
-          
-          echo "Código de saída do curl: ${CURL_EXIT:-0}"
-          echo "Resposta da API: $RESPOSTA_API"
-          
-          if [ "${CURL_EXIT:-0}" -eq 0 ] && echo "$RESPOSTA_API" | grep -q '"ok":true'; then
-            echo "🎉 ✅ MENSAGEM ENVIADA COM SUCESSO!"
-            exit 0
-          else
-            echo "❌ ERRO AO ENVIAR MENSAGEM"
-            echo "Detalhes do erro:"
-            echo "$RESPOSTA_API"
-            exit 1
-          fi
+    - name: 🔧 Preparar ambiente
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq curl
+
+    - name: 🔑 Configurar variáveis
+      run: |
+        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> $GITHUB_ENV
+        echo "SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}" >> $GITHUB_ENV
+        echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" >> $GITHUB_ENV
+        echo "CHAT_ID=${{ secrets.CHAT_ID }}" >> $GITHUB_ENV
+
+    - name: 📥 Buscar dados do Supabase e enviar notificações
+      run: |
+        SUPABASE_URL="${SUPABASE_URL}"
+        SUPABASE_SERVICE_KEY="${SUPABASE_SERVICE_KEY}"
+        BOT_TOKEN="${BOT_TOKEN}"
+        CHAT_ID="${CHAT_ID}"
+
+        # Endpoint REST da tabela
+        ENDPOINT="${SUPABASE_URL}/rest/v1/frutiferas?select=*"
+
+        echo "📡 Baixando dados do Supabase..."
+        dados=$(curl -s "$ENDPOINT" \
+          -H "apikey: $SUPABASE_SERVICE_KEY" \
+          -H "Authorization: Bearer $SUPABASE_SERVICE_KEY")
+
+        total=$(echo "$dados" | jq 'length')
+        echo "📌 Registros recebidos: $total"
+
+        # 🔄 Loop pelos registros
+        echo "$dados" | jq -c '.[]' | while read item; do
+
+            id=$(echo "$item" | jq -r '.id')
+            nome=$(echo "$item" | jq -r '.nome_popular')
+            ultima_rega=$(echo "$item" | jq -r '.data_irrigacao_ordinaria')
+            ultima_poda=$(echo "$item" | jq -r '.data_poda_formacao_1')
+            ultima_colheita=$(echo "$item" | jq -r '.inicio_colheita')
+
+            mensagem="🌱 *Planta:* ${nome}
+🔢 *ID:* ${id}
+💧 Última rega: ${ultima_rega}
+✂️ Última poda: ${ultima_poda}
+🍊 Início da colheita: ${ultima_colheita}"
+
+            # 📤 Envia para Telegram
+            curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+              -d chat_id="${CHAT_ID}" \
+              -d text="${mensagem}" \
+              -d parse_mode="Markdown"
+
+            echo "📨 Notificação enviada para ${nome} (ID ${id})"
+
+            sleep 1
+        done
+
+        echo "✅ Processo finalizado."
