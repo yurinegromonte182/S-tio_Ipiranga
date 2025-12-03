@@ -1,67 +1,65 @@
-name: Notificações Automáticas de Frutíferas
+name: Telegram Notifications
 
 on:
-  schedule:
-    - cron: "0 */6 * * *"
   workflow_dispatch:
+    inputs:
+      id:
+        description: "ID da notificação"
+        required: true
+      name:
+        description: "Nome"
+        required: true
+      email:
+        description: "Email"
+        required: true
+      phone:
+        description: "Telefone"
+        required: true
+      message:
+        description: "Mensagem"
+        required: false
 
 jobs:
-  notificacoes:
+  send_telegram:
     runs-on: ubuntu-latest
-
     steps:
-    - name: 🔧 Preparar ambiente
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y jq curl
+      - name: Enviar notificação para o Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: "8054042928:AAGDlShuhpKRNtbJf-bTyoh7BkMwUOyv8c8"
+          TELEGRAM_CHAT_ID: "80665123000"
+        run: |
+          TEXT="🔔 *Nova Notificação Recebida* 🔔
 
-    - name: 🔑 Carregar variáveis dos secrets
-      run: |
-        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> $GITHUB_ENV
-        echo "SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}" >> $GITHUB_ENV
-        echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" >> $GITHUB_ENV
-        echo "CHAT_ID=${{ secrets.CHAT_ID }}" >> $GITHUB_ENV
+          🆔 *ID:* ${{ github.event.inputs.id }}
+          👤 *Nome:* ${{ github.event.inputs.name }}
+          📧 *Email:* ${{ github.event.inputs.email }}
+          📱 *Telefone:* ${{ github.event.inputs.phone }}
+          💬 *Mensagem:* ${{ github.event.inputs.message }}"
 
-    - name: 📥 Buscar dados do Supabase e enviar notificações
-      run: |
-        SUPABASE_URL="${SUPABASE_URL}"
-        SUPABASE_SERVICE_KEY="${SUPABASE_SERVICE_KEY}"
-        BOT_TOKEN="${BOT_TOKEN}"
-        CHAT_ID="${CHAT_ID}"
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            -d chat_id="$TELEGRAM_CHAT_ID" \
+            -d text="$TEXT" \
+            -d parse_mode="Markdown"
 
-        ENDPOINT="${SUPABASE_URL}/rest/v1/frutiferas?select=*"
+  notify_supabase:
+    runs-on: ubuntu-latest
+    needs: send_telegram
+    steps:
+      - name: Enviar para Supabase
+        env:
+          SUPABASE_URL: "https://erbefbnjxgpetbetlzya.supabase.co"
+          SUPABASE_SERVICE_KEY: "" # <-- coloque sua service key aqui
+        run: |
+          JSON=$(jq -n \
+            --arg id "${{ github.event.inputs.id }}" \
+            --arg name "${{ github.event.inputs.name }}" \
+            --arg email "${{ github.event.inputs.email }}" \
+            --arg phone "${{ github.event.inputs.phone }}" \
+            --arg message "${{ github.event.inputs.message }}" \
+            '{id: $id, name: $name, email: $email, phone: $phone, message: $message}')
 
-        echo "📡 Baixando dados do Supabase..."
-        dados=$(curl -s "$ENDPOINT" \
-          -H "apikey: $SUPABASE_SERVICE_KEY" \
-          -H "Authorization: Bearer $SUPABASE_SERVICE_KEY")
-
-        total=$(echo "$dados" | jq 'length')
-        echo "📌 Registros recebidos: $total"
-
-        echo "$dados" | jq -c '.[]' | while read item; do
-            id=$(echo "$item" | jq -r '.id')
-            nome=$(echo "$item" | jq -r '.nome_popular')
-            ultima_rega=$(echo "$item" | jq -r '.data_irrigacao_ordinaria')
-            ultima_poda=$(echo "$item" | jq -r '.data_poda_formacao_1')
-            inicio_colheita=$(echo "$item" | jq -r '.inicio_colheita')
-
-            mensagem=$(cat <<EOF
-🌱 *Planta:* ${nome}
-🔢 *ID:* ${id}
-💧 Última rega: ${ultima_rega}
-✂️ Última poda: ${ultima_poda}
-🍊 Início da colheita: ${inicio_colheita}
-EOF
-)
-
-            curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-              -d chat_id="${CHAT_ID}" \
-              -d text="${mensagem}" \
-              -d parse_mode="Markdown"
-
-            echo "📨 Notificação enviada: ${nome} (ID ${id})"
-            sleep 1
-        done
-
-        echo "✅ Finalizado com sucesso!"
+          curl -X POST "$SUPABASE_URL/rest/v1/notifications" \
+            -H "apikey: $SUPABASE_SERVICE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$JSON"
