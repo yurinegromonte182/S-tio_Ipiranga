@@ -15,7 +15,9 @@
   
   <!-- 🚀 CRITICAL CSS - Carrega primeiro -->
   <style>
-    /* Reset básico */
+    /* ============================================ */
+    /* ESTILOS EXISTENTES DO PWA (mantidos) */
+    /* ============================================ */
     * {
       margin: 0;
       padding: 0;
@@ -565,7 +567,195 @@
       font-weight: 700;
       margin-bottom: 1rem;
     }
+
+    /* ============================================ */
+    /* NOVOS ESTILOS PARA O MAPA INTERATIVO */
+    /* ============================================ */
+    
+    /* Layout do Mapa */
+    .map-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 9998;
+      background: white;
+      display: none;
+    }
+
+    .map-container.active {
+      display: block;
+    }
+
+    .map-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(31, 41, 55, 0.95);
+      color: white;
+      padding: 1rem;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .map-controls {
+      position: absolute;
+      bottom: 1rem;
+      left: 1rem;
+      right: 1rem;
+      z-index: 1000;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .map-control-btn {
+      background: white;
+      border: 2px solid #10b981;
+      color: #10b981;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .map-control-btn:hover {
+      background: #10b981;
+      color: white;
+    }
+
+    .map-control-btn.active {
+      background: #10b981;
+      color: white;
+    }
+
+    #fullMap {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Modal do Mapa */
+    .map-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      z-index: 9999;
+    }
+
+    .map-modal.active {
+      display: block;
+    }
+
+    .map-modal-content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .map-modal-header {
+      background: #1f2937;
+      color: white;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .map-modal-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .map-modal-body {
+      flex: 1;
+      position: relative;
+    }
+
+    /* Botão para abrir mapa na aba Frutíferas */
+    .map-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    /* Painel de camadas do mapa */
+    .map-layers-panel {
+      position: absolute;
+      top: 60px;
+      right: 1rem;
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 1000;
+      display: none;
+      max-width: 300px;
+    }
+
+    .map-layers-panel.active {
+      display: block;
+    }
+
+    .layer-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+      padding: 0.5rem;
+      border-radius: 6px;
+      background: #f9fafb;
+      cursor: pointer;
+    }
+
+    .layer-toggle:last-child {
+      margin-bottom: 0;
+    }
+
+    .layer-toggle.active {
+      background: #dbeafe;
+      border-left: 4px solid #1e40af;
+    }
+
+    .layer-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin-right: 0.75rem;
+    }
   </style>
+
+  <!-- Leaflet CSS (para mapas) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Font Awesome para ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
   <!-- 🎯 LOADING SCREEN -->
@@ -604,6 +794,7 @@
       <button class="tab active" onclick="switchTab(event, 'acoes')">📋 Ações</button>
       <button class="tab" onclick="switchTab(event, 'cadastro')">➕ Cadastro</button>
       <button class="tab" onclick="switchTab(event, 'frutiferas')">🌱 Frutíferas</button>
+      <button class="tab" onclick="switchTab(event, 'mapa')">🗺️ Mapa</button>
       <button class="tab" onclick="switchTab(event, 'historico')">📜 Histórico</button>
       <button class="tab" onclick="switchTab(event, 'stats')">📊 Stats</button>
       <button class="tab" onclick="switchTab(event, 'config')">⚙️ Config</button>
@@ -716,12 +907,79 @@
             📥 Exportar QField
           </button>
         </div>
+
+        <!-- Botão para abrir o mapa interativo -->
+        <button class="map-action-btn" onclick="abrirMapaInterativo()">
+          <i class="fas fa-map-marked-alt"></i>
+          Ver no Mapa Interativo
+        </button>
         
         <input type="file" id="fileInput" accept=".geojson,.json" onchange="importGeoJSON(event)" style="display: none;">
         
         <input type="text" class="search-box" id="searchFrutifera" placeholder="🔎 Buscar frutífera..." onkeyup="filtrarFrutiferas()">
         
         <div style="margin-top: 1rem;" id="frutiferasList"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Mapa Interativo (NOVA ABA) -->
+    <div id="mapa" class="tab-content">
+      <div class="section">
+        <div class="section-title">🗺️ Mapa Interativo das Frutíferas</div>
+        
+        <div class="info-box">
+          <i class="fas fa-info-circle"></i>
+          Visualize todas as frutíferas em um mapa interativo com diferentes camadas e filtros.
+        </div>
+
+        <!-- Botão para abrir mapa em tela cheia -->
+        <button class="btn btn-primary" onclick="abrirMapaInterativo()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <i class="fas fa-expand"></i>
+          Abrir Mapa em Tela Cheia
+        </button>
+
+        <!-- Container do Mapa (versão embutida) -->
+        <div id="miniMapContainer" style="height: 400px; margin-top: 1rem; border-radius: 8px; overflow: hidden; border: 2px solid #e5e7eb;">
+          <div id="miniMap" style="width: 100%; height: 100%;"></div>
+        </div>
+
+        <!-- Controles do Mapa -->
+        <div class="filter-group" style="margin-top: 1rem;">
+          <button class="filter-btn active" onclick="filtrarMapa('todas')">
+            <i class="fas fa-layer-group"></i> Todas
+          </button>
+          <button class="filter-btn" onclick="filtrarMapa('mangabeira')">
+            <i class="fas fa-leaf" style="color: #10b981;"></i> Mangabeira
+          </button>
+          <button class="filter-btn" onclick="filtrarMapa('cajueiro')">
+            <i class="fas fa-leaf" style="color: #f59e0b;"></i> Cajueiro
+          </button>
+          <button class="filter-btn" onclick="filtrarMapa('coqueiro')">
+            <i class="fas fa-leaf" style="color: #ef4444;"></i> Coqueiro
+          </button>
+        </div>
+
+        <!-- Estatísticas do Mapa -->
+        <div class="stats-grid" style="margin-top: 1rem;">
+          <div class="stat-card">
+            <div class="stat-value" id="mapTotal">0</div>
+            <div class="stat-label">No Mapa</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="mapComGPS">0</div>
+            <div class="stat-label">Com GPS</div>
+          </div>
+        </div>
+
+        <!-- Botões de ação -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1rem;">
+          <button class="btn btn-secondary" onclick="centralizarNoMapa()">
+            <i class="fas fa-crosshairs"></i> Centralizar
+          </button>
+          <button class="btn btn-secondary" onclick="alternarSatelite()">
+            <i class="fas fa-satellite"></i> Satélite
+          </button>
+        </div>
       </div>
     </div>
 
@@ -882,13 +1140,49 @@
       </div>
     </div>
 
+    <!-- Modal do Mapa Interativo (tela cheia) -->
+    <div id="mapModal" class="map-modal">
+      <div class="map-modal-content">
+        <div class="map-modal-header">
+          <div class="map-modal-title">
+            <i class="fas fa-map-marked-alt"></i>
+            Mapa Interativo - Frutíferas do Sítio Ipiranga
+          </div>
+          <button onclick="fecharMapaInterativo()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="map-modal-body">
+          <div id="fullMap"></div>
+          <!-- Controles do mapa -->
+          <div class="map-controls">
+            <button class="map-control-btn" onclick="alternarBaseMapa()" id="btnBaseMapa">
+              <i class="fas fa-layer-group"></i> Mapa Base
+            </button>
+            <button class="map-control-btn" onclick="alternarSateliteModal()" id="btnSatelite">
+              <i class="fas fa-satellite"></i> Satélite
+            </button>
+            <button class="map-control-btn" onclick="centralizarMapa()">
+              <i class="fas fa-crosshairs"></i> Centralizar
+            </button>
+            <button class="map-control-btn" onclick="mostrarLegenda()">
+              <i class="fas fa-info-circle"></i> Legenda
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast" class="toast"></div>
 
     <div class="footer-space"></div>
   </div>
 
-  <!-- 🚀 SCRIPT CORRIGIDO PARA CARREGAR FRUTÍFERAS -->
+  <!-- Scripts do Leaflet (para mapas) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Script principal do PWA com integração do mapa -->
   <script>
     // ============================================
     // 🔧 CONFIGURAÇÃO SUPABASE
@@ -901,6 +1195,281 @@
     let historico = [];
     let perfilAtual = localStorage.getItem('perfilAtual') || 'Default';
     let currentFilter = 'todas';
+    
+    // Variáveis para mapas
+    let miniMap = null;
+    let fullMap = null;
+    let mapMarkers = [];
+    let baseLayers = {};
+    let currentBaseLayer = 'osm';
+
+    // ============================================
+    // 🗺️ FUNÇÕES DO MAPA INTERATIVO
+    // ============================================
+
+    // Inicializar mapa embutido (mini)
+    function inicializarMiniMapa() {
+      if (miniMap) {
+        miniMap.remove();
+      }
+      
+      miniMap = L.map('miniMap').setView([-7.1195, -34.8450], 13);
+      
+      // Adicionar camada base
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(miniMap);
+      
+      // Carregar marcadores
+      carregarMarcadoresNoMapa(miniMap);
+      
+      // Atualizar estatísticas
+      atualizarEstatisticasMapa();
+    }
+
+    // Inicializar mapa em tela cheia
+    function inicializarFullMapa() {
+      if (fullMap) {
+        fullMap.remove();
+      }
+      
+      fullMap = L.map('fullMap').setView([-7.1195, -34.8450], 13);
+      
+      // Configurar camadas base
+      baseLayers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      });
+      
+      baseLayers.satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri, Maxar, Earthstar Geographics',
+        maxZoom: 19
+      });
+      
+      // Adicionar camada padrão
+      baseLayers.osm.addTo(fullMap);
+      currentBaseLayer = 'osm';
+      
+      // Carregar marcadores
+      carregarMarcadoresNoMapa(fullMap);
+      
+      // Adicionar controle de camadas
+      L.control.layers(baseLayers).addTo(fullMap);
+    }
+
+    // Carregar marcadores no mapa
+    function carregarMarcadoresNoMapa(mapa) {
+      // Limpar marcadores anteriores
+      mapMarkers.forEach(marker => {
+        if (mapa.hasLayer(marker)) {
+          mapa.removeLayer(marker);
+        }
+      });
+      mapMarkers = [];
+      
+      // Adicionar marcadores para frutíferas com coordenadas
+      const frutiferasComGPS = frutiferas.filter(f => f.coordenadas || (f.latitude && f.longitude));
+      
+      frutiferasComGPS.forEach(frutifera => {
+        let lat, lng;
+        
+        if (frutifera.coordenadas) {
+          const coords = frutifera.coordenadas.split(',').map(coord => parseFloat(coord.trim()));
+          lat = coords[0];
+          lng = coords[1];
+        } else if (frutifera.latitude && frutifera.longitude) {
+          lat = parseFloat(frutifera.latitude);
+          lng = parseFloat(frutifera.longitude);
+        } else {
+          return; // Sem coordenadas
+        }
+        
+        // Determinar cor do marcador baseado na espécie
+        const cor = obterCorPorEspecie(frutifera.especie);
+        
+        // Criar marcador
+        const marker = L.marker([lat, lng], {
+          icon: L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="background-color: ${cor}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          })
+        });
+        
+        // Adicionar popup
+        const popupContent = `
+          <div style="padding: 0.5rem; max-width: 250px;">
+            <h4 style="margin: 0 0 0.5rem 0; color: ${cor};">${frutifera.nome_popular || frutifera.especie}</h4>
+            <div style="font-size: 0.85rem;">
+              <div><strong>ID:</strong> ${frutifera.identificacao || frutifera.id}</div>
+              <div><strong>Plantio:</strong> ${formatarData(frutifera.data_plantio) || 'N/I'}</div>
+              <div><strong>Responsável:</strong> ${frutifera.responsavel || 'N/I'}</div>
+            </div>
+          </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+        
+        // Adicionar ao mapa e à lista
+        marker.addTo(mapa);
+        mapMarkers.push(marker);
+      });
+      
+      // Ajustar vista do mapa se houver marcadores
+      if (mapMarkers.length > 0) {
+        const group = new L.featureGroup(mapMarkers);
+        mapa.fitBounds(group.getBounds().pad(0.1));
+      }
+    }
+
+    // Obter cor baseada na espécie
+    function obterCorPorEspecie(especie) {
+      const especieLower = (especie || '').toLowerCase();
+      
+      if (especieLower.includes('mangabeira')) return '#10b981';
+      if (especieLower.includes('cajueiro')) return '#f59e0b';
+      if (especieLower.includes('coqueiro')) return '#ef4444';
+      if (especieLower.includes('cacau')) return '#8b5cf6';
+      
+      // Cores para outras espécies
+      const cores = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#84cc16'];
+      let hash = 0;
+      for (let i = 0; i < especie.length; i++) {
+        hash = especie.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return cores[Math.abs(hash) % cores.length];
+    }
+
+    // Atualizar estatísticas do mapa
+    function atualizarEstatisticasMapa() {
+      const totalFrutiferas = frutiferas.length;
+      const frutiferasComGPS = frutiferas.filter(f => f.coordenadas || (f.latitude && f.longitude)).length;
+      
+      if (document.getElementById('mapTotal')) {
+        document.getElementById('mapTotal').textContent = totalFrutiferas;
+      }
+      if (document.getElementById('mapComGPS')) {
+        document.getElementById('mapComGPS').textContent = frutiferasComGPS;
+      }
+    }
+
+    // Abrir mapa interativo em tela cheia
+    function abrirMapaInterativo() {
+      document.getElementById('mapModal').classList.add('active');
+      setTimeout(() => {
+        inicializarFullMapa();
+      }, 100);
+    }
+
+    // Fechar mapa interativo
+    function fecharMapaInterativo() {
+      document.getElementById('mapModal').classList.remove('active');
+      if (fullMap) {
+        fullMap.remove();
+        fullMap = null;
+      }
+    }
+
+    // Alternar entre mapa base e satélite
+    function alternarBaseMapa() {
+      if (!fullMap) return;
+      
+      if (currentBaseLayer === 'osm') {
+        baseLayers.osm.removeFrom(fullMap);
+        baseLayers.satelite.addTo(fullMap);
+        currentBaseLayer = 'satelite';
+        document.getElementById('btnBaseMapa').innerHTML = '<i class="fas fa-map"></i> Mapa';
+      } else {
+        baseLayers.satelite.removeFrom(fullMap);
+        baseLayers.osm.addTo(fullMap);
+        currentBaseLayer = 'osm';
+        document.getElementById('btnBaseMapa').innerHTML = '<i class="fas fa-satellite"></i> Satélite';
+      }
+    }
+
+    // Centralizar mapa
+    function centralizarMapa() {
+      if (!fullMap) return;
+      
+      if (mapMarkers.length > 0) {
+        const group = new L.featureGroup(mapMarkers);
+        fullMap.fitBounds(group.getBounds().pad(0.1));
+      } else {
+        fullMap.setView([-7.1195, -34.8450], 13);
+      }
+    }
+
+    // Centralizar no mapa mini
+    function centralizarNoMapa() {
+      if (!miniMap) return;
+      
+      if (mapMarkers.length > 0) {
+        const group = new L.featureGroup(mapMarkers);
+        miniMap.fitBounds(group.getBounds().pad(0.1));
+      } else {
+        miniMap.setView([-7.1195, -34.8450], 13);
+      }
+    }
+
+    // Alternar satélite no mapa mini
+    function alternarSatelite() {
+      if (!miniMap) return;
+      
+      // Simples alternância entre OSM e Satélite
+      const tileLayer = miniMap.getLayers()[0];
+      if (tileLayer._url.includes('openstreetmap')) {
+        tileLayer.setUrl('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+        mostrarToast('🌍 Modo Satélite ativado');
+      } else {
+        tileLayer.setUrl('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+        mostrarToast('🗺️ Modo Mapa ativado');
+      }
+    }
+
+    // Alternar satélite no modal
+    function alternarSateliteModal() {
+      alternarBaseMapa();
+    }
+
+    // Filtrar mapa por espécie
+    function filtrarMapa(especie) {
+      if (!miniMap) return;
+      
+      // Atualizar botões
+      document.querySelectorAll('#mapa .filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      
+      // Mostrar/ocultar marcadores baseado no filtro
+      if (especie === 'todas') {
+        mapMarkers.forEach(marker => {
+          if (miniMap.hasLayer(marker)) {
+            marker.removeFrom(miniMap);
+          }
+          marker.addTo(miniMap);
+        });
+      } else {
+        mapMarkers.forEach(marker => {
+          marker.removeFrom(miniMap);
+        });
+        
+        // Adicionar apenas marcadores da espécie selecionada
+        mapMarkers.forEach(marker => {
+          const especieMarcador = marker.getPopup().getContent().toLowerCase();
+          if (especieMarcador.includes(especie)) {
+            marker.addTo(miniMap);
+          }
+        });
+      }
+    }
+
+    // Mostrar legenda
+    function mostrarLegenda() {
+      mostrarToast('Legenda:\n🟢 Mangabeira 🟠 Cajueiro 🔴 Coqueiro 🟣 Cacau');
+    }
 
     // ============================================
     // 📥 FUNÇÃO CORRIGIDA PARA CARREGAR FRUTÍFERAS
@@ -916,6 +1485,13 @@
           frutiferas = frutiferasLocal;
           console.log(`📦 ${frutiferas.length} frutíferas do cache local`);
           atualizarTodasAbas();
+          
+          // Inicializar mapa mini depois de carregar dados
+          setTimeout(() => {
+            if (document.getElementById('miniMap')) {
+              inicializarMiniMapa();
+            }
+          }, 500);
         }
         
         // Buscar dados atualizados do Supabase (em background)
@@ -953,6 +1529,12 @@
             localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
             console.log(`✅ ${frutiferas.length} frutíferas carregadas do Supabase`);
             atualizarTodasAbas();
+            
+            // Atualizar mapa mini
+            if (miniMap) {
+              carregarMarcadoresNoMapa(miniMap);
+              atualizarEstatisticasMapa();
+            }
           } else {
             console.warn('⚠️ Erro ao buscar do Supabase:', response.status);
             // Tentar tabela direta como fallback
@@ -1000,6 +1582,12 @@
           localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
           console.log(`✅ ${frutiferas.length} frutíferas carregadas da tabela direta`);
           atualizarTodasAbas();
+          
+          // Atualizar mapa mini
+          if (miniMap) {
+            carregarMarcadoresNoMapa(miniMap);
+            atualizarEstatisticasMapa();
+          }
         }
       } catch (error2) {
         console.error('❌ Fallback também falhou:', error2);
@@ -1019,6 +1607,7 @@
       atualizarListaFrutiferas();
       carregarAcoesHoje();
       atualizarStats();
+      atualizarEstatisticasMapa();
     }
 
     // ============================================
@@ -1040,7 +1629,7 @@
       }
       
       lista.innerHTML = frutiferas.map(f => `
-        <div class="frutifera-card">
+        <div class="frutifera-card" onclick="mostrarDetalhesFrutifera('${f.id}')">
           <div class="frutifera-header">
             <div class="frutifera-name">${f.nome_popular || f.especie}</div>
             <span class="badge">${f.identificacao || f.id}</span>
@@ -1052,6 +1641,69 @@
           </div>
         </div>
       `).join('');
+    }
+
+    // Mostrar detalhes da frutífera (pode expandir para mostrar mais info)
+    function mostrarDetalhesFrutifera(id) {
+      const frutifera = frutiferas.find(f => f.id === id);
+      if (!frutifera) return;
+      
+      const popupContent = `
+        <div style="padding: 1rem;">
+          <h3 style="margin-top: 0;">${frutifera.nome_popular || frutifera.especie}</h3>
+          <div style="margin-bottom: 0.5rem;"><strong>ID:</strong> ${frutifera.identificacao || frutifera.id}</div>
+          <div style="margin-bottom: 0.5rem;"><strong>Plantio:</strong> ${formatarData(frutifera.data_plantio)}</div>
+          <div style="margin-bottom: 0.5rem;"><strong>Responsável:</strong> ${frutifera.responsavel || 'N/I'}</div>
+          ${frutifera.coordenadas ? `<div style="margin-bottom: 0.5rem;"><strong>Localização:</strong> ${frutifera.coordenadas}</div>` : ''}
+          <button onclick="localizarNoMapa('${id}')" style="width: 100%; padding: 0.5rem; background: #10b981; color: white; border: none; border-radius: 4px; margin-top: 0.5rem;">
+            <i class="fas fa-map-marker-alt"></i> Localizar no Mapa
+          </button>
+        </div>
+      `;
+      
+      mostrarToast(popupContent, 5000);
+    }
+
+    // Localizar frutífera no mapa
+    function localizarNoMapa(id) {
+      const frutifera = frutiferas.find(f => f.id === id);
+      if (!frutifera) return;
+      
+      // Verificar se tem coordenadas
+      if (!frutifera.coordenadas && (!frutifera.latitude || !frutifera.longitude)) {
+        mostrarToast('❌ Esta frutífera não tem localização GPS cadastrada.');
+        return;
+      }
+      
+      // Abrir mapa interativo
+      abrirMapaInterativo();
+      
+      // Dar um tempo para o mapa carregar e então centralizar
+      setTimeout(() => {
+        if (!fullMap) return;
+        
+        let lat, lng;
+        if (frutifera.coordenadas) {
+          const coords = frutifera.coordenadas.split(',').map(coord => parseFloat(coord.trim()));
+          lat = coords[0];
+          lng = coords[1];
+        } else {
+          lat = parseFloat(frutifera.latitude);
+          lng = parseFloat(frutifera.longitude);
+        }
+        
+        fullMap.setView([lat, lng], 16);
+        
+        // Abrir popup do marcador correspondente
+        const marker = mapMarkers.find(m => {
+          const markerLatLng = m.getLatLng();
+          return markerLatLng.lat === lat && markerLatLng.lng === lng;
+        });
+        
+        if (marker) {
+          marker.openPopup();
+        }
+      }, 1000);
     }
 
     // ============================================
@@ -1338,6 +1990,12 @@
           }
         }
         
+        // Atualizar mapa mini
+        if (miniMap) {
+          carregarMarcadoresNoMapa(miniMap);
+          atualizarEstatisticasMapa();
+        }
+        
         // Mudar para aba de frutíferas
         switchTab({ target: document.querySelector('.tab[onclick*="frutiferas"]') }, 'frutiferas');
         
@@ -1391,14 +2049,14 @@
       return 90;
     }
 
-    function mostrarToast(mensagem) {
+    function mostrarToast(mensagem, tempo = 3000) {
       const toast = document.getElementById('toast');
-      toast.textContent = mensagem;
+      toast.innerHTML = mensagem;
       toast.className = 'toast show';
       
       setTimeout(() => {
         toast.className = 'toast';
-      }, 3000);
+      }, tempo);
     }
 
     // ============================================
@@ -1412,6 +2070,13 @@
       // Adicionar active na tab clicada
       event.target.classList.add('active');
       document.getElementById(tabName).classList.add('active');
+      
+      // Inicializar mapa se for a aba de mapa
+      if (tabName === 'mapa' && !miniMap && document.getElementById('miniMap')) {
+        setTimeout(() => {
+          inicializarMiniMapa();
+        }, 300);
+      }
     }
 
     function filterAcoes(event, filtro) {
@@ -1604,6 +2269,13 @@
       document.getElementById('statusDot').className = 'status-dot offline';
       document.getElementById('statusText').textContent = 'Offline';
       mostrarToast('📡 Você está offline');
+    });
+
+    // Fechar mapa modal com ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('mapModal').classList.contains('active')) {
+        fecharMapaInterativo();
+      }
     });
 
     // Iniciar quando DOM estiver pronto
