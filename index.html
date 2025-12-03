@@ -1,577 +1,1081 @@
-// ============================================
-// 🗺️ DETECTAR AUTOMATICAMENTE GEOMETRIAS DA TABELA
-// ============================================
-async function detectarGeometriasFrutiferas() {
-  console.log('🔍 Detectando colunas geométricas na tabela frutiferas...');
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="App para gestão e monitoramento das frutíferas do Sítio Ipiranga">
+  <meta name="theme-color" content="#10b981">
+  <title>Sítio Ipiranga - Gestão de Frutíferas</title>
   
-  try {
-    // 1. Primeiro, buscar estrutura da tabela
-    const { data: estrutura, error: err1 } = await supabaseClient
-      .from('frutiferas')
-      .select('*')
-      .limit(1);
-    
-    if (err1) throw err1;
-    
-    if (!estrutura || estrutura.length === 0) {
-      console.warn('⚠️ Tabela frutiferas vazia ou sem dados');
-      return [];
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sítio Ipiranga">
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  
+  <style>
+    /* ============================================ */
+    /* VARIÁVEIS CSS CUSTOMIZADAS */
+    /* ============================================ */
+    :root {
+      --sidebar-width: 380px;
+      --header-height: 64px;
+      --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ============================================ */
+    /* CONFIGURAÇÕES GLOBAIS */
+    /* ============================================ */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-family);
+      overflow: hidden;
+    }
+
+    /* ============================================ */
+    /* LOADING SCREEN */
+    /* ============================================ */
+    #appLoader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      color: white;
+      transition: opacity 0.3s;
+    }
+
+    #appLoader.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loader-icon {
+      font-size: 4rem;
+      animation: bounce 1s infinite;
+      margin-bottom: 1rem;
+    }
+
+    .loader-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .loader-progress {
+      width: 200px;
+      height: 4px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 1rem;
+    }
+
+    .loader-bar {
+      height: 100%;
+      background: white;
+      width: 0%;
+      animation: progressBar 2s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-20px); }
+    }
+
+    @keyframes progressBar {
+      0% { width: 0%; }
+      50% { width: 70%; }
+      100% { width: 100%; }
+    }
+
+    /* ============================================ */
+    /* CABEÇALHO / HEADER */
+    /* ============================================ */
+    .navbar {
+      height: var(--header-height);
+      z-index: 1000;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    /* ============================================ */
+    /* CONTAINER PRINCIPAL */
+    /* ============================================ */
+    .main-container {
+      height: 100vh;
+      padding-top: var(--header-height);
+      display: flex;
+    }
+
+    /* ============================================ */
+    /* BARRA LATERAL / SIDEBAR */
+    /* ============================================ */
+    .sidebar {
+      width: var(--sidebar-width);
+      padding: 1.5rem;
+      z-index: 100;
+      background-color: #f8f9fa;
+      overflow-y: auto;
+      border-right: 1px solid #e5e7eb;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+      background: #f3f4f6;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 3px;
+    }
+
+    /* ============================================ */
+    /* PAINÉIS DE CARDS */
+    /* ============================================ */
+    .card {
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 1rem;
+    }
+
+    .card-header {
+      padding: 1rem 1.25rem;
+      background-color: white;
+      border-bottom: 1px solid #e5e7eb;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .stat-card .number {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-card .label {
+      font-size: 0.875rem;
+      opacity: 0.9;
+    }
+
+    /* ============================================ */
+    /* MAPAS BASE */
+    /* ============================================ */
+    .basemap-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .basemap-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background-color: #f9fafb;
+      border: 2px solid #e5e7eb;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .basemap-btn:hover {
+      background-color: #dbeafe;
+      border-color: #1e40af;
+      color: #1e40af;
+    }
+
+    .basemap-btn.active {
+      background-color: #1e40af;
+      border-color: #1e3a8a;
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .basemap-btn i {
+      font-size: 1.5rem;
+    }
+
+    /* ============================================ */
+    /* ITENS DE CAMADAS */
+    /* ============================================ */
+    .layer-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      margin-bottom: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .layer-item:hover {
+      background-color: #dbeafe;
+      border-color: #1e40af;
+    }
+
+    .layer-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .layer-badge {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 3px solid currentColor;
+    }
+
+    .layer-label {
+      font-weight: 500;
+      color: #374151;
+      font-size: 0.875rem;
+    }
+
+    /* ============================================ */
+    /* SWITCH DE CAMADAS (Toggle) */
+    /* ============================================ */
+    .layer-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+
+    .layer-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .layer-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #d1d5db;
+      border-radius: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .layer-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    input:checked + .layer-slider {
+      background-color: #1e40af;
+    }
+
+    input:checked + .layer-slider:before {
+      transform: translateX(20px);
+    }
+
+    /* ============================================ */
+    /* SIMBOLOGIA */
+    /* ============================================ */
+    .symbology-section {
+      margin-top: 0.5rem;
+      padding: 0.75rem;
+      background-color: white;
+      border-radius: 0.5rem;
+      border: 1px solid #e5e7eb;
+    }
+
+    .symbology-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.813rem;
+    }
+
+    .symbology-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .symbology-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid;
+    }
+
+    /* ============================================ */
+    /* CONTAINER DO MAPA */
+    /* ============================================ */
+    .map-container {
+      position: relative;
+      flex: 1;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ============================================ */
+    /* CUSTOMIZAÇÕES DO LEAFLET */
+    /* ============================================ */
+    .leaflet-popup-content-wrapper {
+      border-radius: 0.5rem !important;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .leaflet-popup-content {
+      font-family: var(--font-family) !important;
+      line-height: 1.6 !important;
+    }
+
+    .popup-content {
+      max-width: 300px;
+      font-size: 13px;
+    }
+
+    .popup-content h3 {
+      margin: 0 0 10px 0;
+      color: #667eea;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 5px;
+    }
+
+    .popup-content .info-row {
+      margin: 8px 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .popup-content .info-label {
+      font-weight: bold;
+      color: #555;
+    }
+
+    .popup-content .info-value {
+      color: #333;
+      text-align: right;
+    }
+
+    /* ============================================ */
+    /* PAINEL DE STATUS */
+    /* ============================================ */
+    .status-panel {
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+
+    .status-panel.show {
+      display: flex !important;
+    }
+
+    .status-panel.success {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-panel.error {
+      background-color: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    .status-panel.info {
+      background-color: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #bae6fd;
+    }
+
+    /* ============================================ */
+    /* APP PRINCIPAL */
+    /* ============================================ */
+    #mainApp {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+      min-height: 100vh;
+    }
+
+    #mainApp.loaded {
+      display: block;
+      opacity: 1;
+    }
+
+    /* ============================================ */
+    /* TABS DO APP */
+    /* ============================================ */
+    .tabs {
+      display: flex;
+      background: white;
+      border-bottom: 2px solid #e5e7eb;
+      overflow-x: auto;
+      position: sticky;
+      top: 0;
+      z-index: 99;
     }
     
-    const primeiraLinha = estrutura[0];
-    const colunasGeometricas = [];
+    .tab {
+      flex: 1;
+      padding: 1rem;
+      border: none;
+      background: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+      min-width: 100px;
+    }
     
-    // 2. Identificar colunas que podem conter geometrias
-    // (geralmente são objetos ou strings JSON)
-    for (const [coluna, valor] of Object.entries(primeiraLinha)) {
-      if (valor === null || valor === undefined) continue;
+    .tab.active {
+      border-bottom-color: #10b981;
+      color: #10b981;
+      font-weight: 600;
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 1rem;
+      animation: fadeIn 0.3s;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================ */
+    /* RESPONSIVIDADE - MOBILE */
+    /* ============================================ */
+    @media (max-width: 768px) {
+      :root {
+        --header-height: auto;
+      }
       
-      // Verificar se é geometria pelos tipos comuns
-      if (
-        typeof valor === 'object' ||
-        (typeof valor === 'string' && (
-          valor.includes('POINT') ||
-          valor.includes('LINESTRING') ||
-          valor.includes('POLYGON') ||
-          valor.includes('MULTI') ||
-          valor.startsWith('{') ||
-          valor.startsWith('[')
-        ))
-      ) {
-        colunasGeometricas.push(coluna);
-        console.log(`📍 Possível coluna geométrica: ${coluna}`, typeof valor);
+      .navbar {
+        height: auto;
+        padding: 0.75rem 1rem;
+      }
+      
+      .main-container {
+        flex-direction: column;
+        padding-top: 0;
+      }
+      
+      .sidebar {
+        width: 100%;
+        order: 2;
+        max-height: 40vh;
+      }
+      
+      .map-container {
+        order: 1;
+        height: 60vh;
+      }
+
+      .basemap-grid {
+        grid-template-columns: 1fr 1fr;
       }
     }
-    
-    console.log('✅ Colunas geométricas detectadas:', colunasGeometricas);
-    return colunasGeometricas;
-    
-  } catch (error) {
-    console.error('❌ Erro ao detectar geometrias:', error);
-    return [];
-  }
-}
+  </style>
+</head>
+<body>
+  <!-- LOADING SCREEN -->
+  <div id="appLoader">
+    <div class="loader-icon">🌿</div>
+    <div class="loader-text">Sítio Ipiranga</div>
+    <div style="font-size: 0.9rem; opacity: 0.9;">Carregando frutíferas...</div>
+    <div class="loader-progress">
+      <div class="loader-bar"></div>
+    </div>
+  </div>
 
-// ============================================
-// 🗺️ CARREGAR TODAS AS GEOMETRIAS DA TABELA
-// ============================================
-async function carregarTodasGeometriasFrutiferas() {
-  console.log('🗺️ Carregando TODAS as geometrias da tabela frutiferas...');
+  <!-- APP PRINCIPAL -->
+  <div id="mainApp">
+    <!-- CABEÇALHO -->
+    <nav class="navbar navbar-dark fixed-top">
+      <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">
+          <i class="fas fa-tree"></i> Sítio Ipiranga
+        </span>
+        <span class="text-white">
+          <i class="fas fa-map-marked-alt"></i> Gestão de Frutíferas
+        </span>
+      </div>
+    </nav>
+
+    <!-- CONTAINER PRINCIPAL -->
+    <div class="main-container">
+      <!-- BARRA LATERAL -->
+      <div class="sidebar">
+        <!-- Painel de Status -->
+        <div id="statusPanel" class="status-panel">
+          <i class="fas fa-info-circle"></i>
+          <span id="statusMessage">Carregando dados...</span>
+        </div>
+
+        <!-- Card de Estatísticas -->
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-chart-bar"></i> Estatísticas
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-6">
+                <div class="stat-card">
+                  <div class="number" id="totalTrees">0</div>
+                  <div class="label">Árvores</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="stat-card">
+                  <div class="number" id="totalSpecies">0</div>
+                  <div class="label">Espécies</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card de Mapas Base -->
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-layer-group"></i> Mapas Base
+          </div>
+          <div class="card-body">
+            <div class="basemap-grid">
+              <div class="basemap-btn active" data-basemap="osm">
+                <i class="fas fa-map"></i>
+                <span>OpenStreetMap</span>
+              </div>
+              <div class="basemap-btn" data-basemap="satellite">
+                <i class="fas fa-satellite"></i>
+                <span>Satélite</span>
+              </div>
+              <div class="basemap-btn" data-basemap="topo">
+                <i class="fas fa-mountain"></i>
+                <span>Topográfico</span>
+              </div>
+              <div class="basemap-btn" data-basemap="dark">
+                <i class="fas fa-moon"></i>
+                <span>Escuro</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card de Camadas -->
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-layer-group"></i> Camadas
+          </div>
+          <div class="card-body">
+            <!-- Camada de Frutíferas -->
+            <div class="layer-item">
+              <div class="layer-left">
+                <div class="layer-badge" style="color: #10b981;"></div>
+                <span class="layer-label">Frutíferas</span>
+              </div>
+              <label class="layer-switch">
+                <input type="checkbox" id="layerFrutiferas" checked>
+                <span class="layer-slider"></span>
+              </label>
+            </div>
+            
+            <!-- Simbologia de Frutíferas -->
+            <div class="symbology-section" id="symbologyFrutiferas">
+              <div class="text-muted mb-2" style="font-size: 0.75rem; font-weight: 600;">LEGENDA POR ESPÉCIE</div>
+              <div class="symbology-item">
+                <div class="symbology-icon" style="border-color: #10b981; background-color: #10b981;"></div>
+                <span id="species1">Carregando...</span>
+              </div>
+              <div class="symbology-item">
+                <div class="symbology-icon" style="border-color: #f59e0b; background-color: #f59e0b;"></div>
+                <span id="species2">Carregando...</span>
+              </div>
+              <div class="symbology-item">
+                <div class="symbology-icon" style="border-color: #ef4444; background-color: #ef4444;"></div>
+                <span id="species3">Carregando...</span>
+              </div>
+              <div class="symbology-item">
+                <div class="symbology-icon" style="border-color: #8b5cf6; background-color: #8b5cf6;"></div>
+                <span id="species4">Carregando...</span>
+              </div>
+            </div>
+
+            <!-- Camada de Mosaico -->
+            <div class="layer-item">
+              <div class="layer-left">
+                <div class="layer-badge" style="color: #f59e0b;"></div>
+                <span class="layer-label">Mosaico Aéreo</span>
+              </div>
+              <label class="layer-switch">
+                <input type="checkbox" id="layerMosaico">
+                <span class="layer-slider"></span>
+              </label>
+            </div>
+
+            <!-- Simbologia de Mosaico -->
+            <div class="symbology-section" id="symbologyMosaico" style="display: none;">
+              <div class="text-muted mb-2" style="font-size: 0.75rem; font-weight: 600;">LEGENDA</div>
+              <div class="symbology-item">
+                <div style="width: 30px; height: 16px; background: linear-gradient(to right, #f59e0b, #ef4444); border: 1px solid #d1d5db; border-radius: 2px;"></div>
+                <span>Imagem Ortorretificada</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAPA -->
+      <div class="map-container">
+        <div id="map"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
-  try {
-    // Buscar TODOS os dados da tabela
-    const { data: todasFrutiferas, error } = await supabaseClient
-      .from('frutiferas')
-      .select('*');
+  <script>
+    // ============================================
+    // 🔧 CONFIGURAÇÃO SUPABASE
+    // ============================================
+    const SUPABASE_URL = 'https://erbefbnjxgpetbetlzya.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmVmYm5qeGdwZXRiZXRsenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzI4ODcsImV4cCI6MjA3NjYwODg4N30.d09pjgddZpNY3Z4cVZ3V4h77aAf_GVGF0sOBTZkZf2A';
     
-    if (error) throw error;
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
-    if (!todasFrutiferas || todasFrutiferas.length === 0) {
-      console.warn('⚠️ Nenhum dado encontrado na tabela frutiferas');
-      return { pontos: [], linhas: [], poligonos: [] };
-    }
-    
-    console.log(`📊 ${todasFrutiferas.length} registros carregados`);
-    
-    // Separar por tipo de geometria
-    const geometrias = {
-      pontos: [],
-      linhas: [],
-      poligonos: []
+    // Variáveis globais
+    let frutiferas = [];
+    let map;
+    let baseLayers = {};
+    let overlayLayers = {};
+    let markers = {};
+    let allTreesData = [];
+    let currentBaseLayer = 'osm';
+    let speciesColors = {
+      color1: '#10b981',
+      color2: '#f59e0b', 
+      color3: '#ef4444',
+      color4: '#8b5cf6'
     };
-    
-    todasFrutiferas.forEach(registro => {
-      // Verificar cada coluna em busca de geometrias
-      for (const [coluna, valor] of Object.entries(registro)) {
-        if (!valor) continue;
+    let speciesColorMap = {};
+
+    // ============================================
+    // 📥 FUNÇÃO PARA CARREGAR FRUTÍFERAS
+    // ============================================
+    async function carregarFrutiferas() {
+      console.log('📥 Carregando frutíferas do Supabase...');
+      
+      try {
+        // Tentar carregar do localStorage primeiro
+        const frutiferasLocal = JSON.parse(localStorage.getItem('frutiferas') || '[]');
         
-        // Determinar tipo de geometria pelo conteúdo
-        const tipo = determinarTipoGeometria(valor);
-        
-        if (tipo) {
-          const feature = {
-            type: 'Feature',
-            geometry: converterParaGeoJSON(valor, tipo),
-            properties: { ...registro, coluna_geometrica: coluna }
-          };
-          
-          if (tipo === 'point') geometrias.pontos.push(feature);
-          else if (tipo === 'linestring') geometrias.linhas.push(feature);
-          else if (tipo === 'polygon') geometrias.poligonos.push(feature);
+        if (frutiferasLocal.length > 0) {
+          frutiferas = frutiferasLocal;
+          console.log(`📦 ${frutiferas.length} frutíferas do cache local`);
+          atualizarMapa();
+          atualizarEstatisticas();
         }
+        
+        // Buscar dados atualizados do Supabase
+        if (navigator.onLine) {
+          const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/rpc/get_plantas_para_telegram`,
+            {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({})
+            }
+          );
+          
+          if (response.ok) {
+            const dados = await response.json();
+            
+            // Converter os dados da função RPC para o formato do app
+            frutiferas = dados.map(item => ({
+              id: item.id || 'S/N',
+              especie: item.nome || 'Frutífera',
+              nome_popular: item.nome || 'Frutífera',
+              identificacao: item.id || 'S/N',
+              data_plantio: item.dataPlantio || null,
+              ultima_rega: item.ultRega || null,
+              ultima_poda: item.ultPoda || null,
+              ultima_colheita: item.ultColh || null,
+              latitude: item.latitude || -7.1195,
+              longitude: item.longitude || -34.8450,
+              created_at: new Date().toISOString()
+            }));
+            
+            localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+            console.log(`✅ ${frutiferas.length} frutíferas carregadas do Supabase`);
+            atualizarMapa();
+            atualizarEstatisticas();
+          } else {
+            console.warn('⚠️ Erro ao buscar do Supabase:', response.status);
+            await tentarTabelaDireta();
+          }
+        } else {
+          console.log('📡 Offline - usando dados do cache');
+          mostrarStatus('Modo offline - usando dados locais', 'info');
+        }
+        
+      } catch (error) {
+        console.error('❌ Erro ao carregar frutíferas:', error);
+        mostrarStatus('⚠️ Erro ao carregar. Usando dados locais.', 'error');
       }
-    });
-    
-    console.log(`📍 ${geometrias.pontos.length} pontos encontrados`);
-    console.log(`🔄 ${geometrias.linhas.length} linhas encontradas`);
-    console.log(`📐 ${geometrias.poligonos.length} polígonos encontradas`);
-    
-    return geometrias;
-    
-  } catch (error) {
-    console.error('❌ Erro ao carregar geometrias:', error);
-    return { pontos: [], linhas: [], poligonos: [] };
-  }
-}
-
-// ============================================
-// 🔧 FUNÇÕES AUXILIARES PARA GEOMETRIAS
-// ============================================
-function determinarTipoGeometria(valor) {
-  const str = JSON.stringify(valor).toLowerCase();
-  
-  if (str.includes('point') || (typeof valor === 'object' && valor.x && valor.y)) {
-    return 'point';
-  }
-  if (str.includes('linestring')) {
-    return 'linestring';
-  }
-  if (str.includes('polygon')) {
-    return 'polygon';
-  }
-  
-  return null;
-}
-
-function converterParaGeoJSON(valor, tipo) {
-  // Se já for objeto com coordenadas
-  if (typeof valor === 'object' && valor.coordinates) {
-    return {
-      type: tipo === 'point' ? 'Point' : 
-            tipo === 'linestring' ? 'LineString' : 'Polygon',
-      coordinates: valor.coordinates
-    };
-  }
-  
-  // Se for string WKT (Well-Known Text)
-  if (typeof valor === 'string') {
-    return converterWKTparaGeoJSON(valor);
-  }
-  
-  // Se for objeto simples com lat/lng
-  if (typeof valor === 'object' && valor.latitude && valor.longitude) {
-    return {
-      type: 'Point',
-      coordinates: [valor.longitude, valor.latitude]
-    };
-  }
-  
-  // Default: ponto com coordenadas 0,0
-  return {
-    type: 'Point',
-    coordinates: [0, 0]
-  };
-}
-
-function converterWKTparaGeoJSON(wkt) {
-  // Simplificado - para produção use biblioteca como terraformer-wkt
-  const upperWKT = wkt.toUpperCase();
-  
-  if (upperWKT.includes('POINT')) {
-    const coords = wkt.match(/POINT\s*\(([^)]+)\)/i);
-    if (coords && coords[1]) {
-      const [lng, lat] = coords[1].trim().split(/\s+/).map(parseFloat);
-      return {
-        type: 'Point',
-        coordinates: [lng, lat]
-      };
     }
-  }
-  
-  // Para outros tipos, retorna null (precisa de parser completo)
-  return null;
-}
 
-// ============================================
-// 🎨 CRIAR CAMADAS LEAFLET COM ESTILOS
-// ============================================
-function criarCamadasLeaflet(geometrias) {
-  const camadas = {};
-  
-  // 1. Camada de Pontos (frutíferas individuais)
-  if (geometrias.pontos.length > 0) {
-    camadas.pontos = L.geoJSON({
-      type: 'FeatureCollection',
-      features: geometrias.pontos
-    }, {
-      pointToLayer: (feature, latlng) => {
-        // Estilo baseado na espécie
-        const especie = feature.properties.nome_popular || 
-                       feature.properties.especie || 
-                       feature.properties.nome_cientifico || 
-                       'Desconhecida';
-        
-        const cor = obterCorPorEspecie(especie);
-        
-        return L.circleMarker(latlng, {
-          radius: 8,
-          fillColor: cor,
-          color: '#fff',
-          weight: 2,
-          opacity: 1,
-          fillOpacity: 0.8
-        });
-      },
-      onEachFeature: (feature, layer) => {
-        const props = feature.properties;
-        const popupContent = criarPopupFrutifera(props);
-        layer.bindPopup(popupContent);
-        
-        // Eventos hover
-        layer.on({
-          mouseover: (e) => {
-            e.target.setStyle({ radius: 10, fillOpacity: 1 });
-          },
-          mouseout: (e) => {
-            e.target.setStyle({ radius: 8, fillOpacity: 0.8 });
+    // ============================================
+    // 🗺️ FUNÇÕES DO MAPA
+    // ============================================
+    function initMap() {
+      map = L.map('map').setView([-7.1195, -34.8450], 13);
+      
+      // Mapas Base
+      baseLayers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+
+      baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri, Maxar, Earthstar Geographics',
+        maxZoom: 19
+      });
+
+      baseLayers.topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenTopoMap contributors',
+        maxZoom: 17
+      });
+
+      baseLayers.dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© CARTO',
+        maxZoom: 19
+      });
+
+      // Layer group para marcadores
+      overlayLayers.frutiferas = L.layerGroup().addTo(map);
+
+      // Event listeners para mapas base
+      document.querySelectorAll('.basemap-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const basemapType = this.dataset.basemap;
+          
+          // Remove active de todos
+          document.querySelectorAll('.basemap-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Remove camada atual
+          if (baseLayers[currentBaseLayer]) {
+            map.removeLayer(baseLayers[currentBaseLayer]);
+          }
+          
+          // Adiciona nova camada
+          if (baseLayers[basemapType]) {
+            baseLayers[basemapType].addTo(map);
+            currentBaseLayer = basemapType;
           }
         });
-      }
-    });
-    
-    console.log(`✅ Camada de pontos criada: ${geometrias.pontos.length} features`);
-  }
-  
-  // 2. Camada de Linhas (cercas, divisórias)
-  if (geometrias.linhas.length > 0) {
-    camadas.linhas = L.geoJSON({
-      type: 'FeatureCollection',
-      features: geometrias.linhas
-    }, {
-      style: {
-        color: '#f59e0b',
-        weight: 3,
-        opacity: 0.8,
-        dashArray: '5, 5'
-      },
-      onEachFeature: (feature, layer) => {
-        const props = feature.properties;
-        const popupContent = criarPopupGenerico(props, 'Linha/Divisória');
-        layer.bindPopup(popupContent);
-      }
-    });
-    
-    console.log(`✅ Camada de linhas criada: ${geometrias.linhas.length} features`);
-  }
-  
-  // 3. Camada de Polígonos (talhões, áreas)
-  if (geometrias.poligonos.length > 0) {
-    camadas.poligonos = L.geoJSON({
-      type: 'FeatureCollection',
-      features: geometrias.poligonos
-    }, {
-      style: {
-        color: '#8b5cf6',
-        weight: 2,
-        fillColor: '#8b5cf6',
-        fillOpacity: 0.3
-      },
-      onEachFeature: (feature, layer) => {
-        const props = feature.properties;
-        const popupContent = criarPopupGenerico(props, 'Área/Talhão');
-        layer.bindPopup(popupContent);
-      }
-    });
-    
-    console.log(`✅ Camada de polígonos criada: ${geometrias.poligonos.length} features`);
-  }
-  
-  return camadas;
-}
+      });
 
-// ============================================
-// 📋 FUNÇÕES DE POPUP
-// ============================================
-function criarPopupFrutifera(props) {
-  let html = `
-    <div style="max-width: 300px; font-family: sans-serif;">
-      <div style="background: #10b981; color: white; padding: 8px 12px; border-radius: 4px 4px 0 0; margin: -10px -10px 10px -10px;">
-        <strong>🌿 ${props.nome_popular || props.especie || 'Frutífera'}</strong>
-      </div>
-  `;
-  
-  // Informações principais
-  const infoBasica = [
-    ['ID', props.fid || props.id],
-    ['Espécie', props.especie || props.nome_popular],
-    ['Nome Científico', props.nome_cientifico],
-    ['Data Plantio', formatarData(props.data_plantio)],
-    ['Responsável', props.responsavel]
-  ];
-  
-  infoBasica.forEach(([label, value]) => {
-    if (value) {
-      html += `<div style="margin-bottom: 4px;"><strong>${label}:</strong> ${value}</div>`;
+      // Event listener para camada de frutíferas
+      document.getElementById('layerFrutiferas').addEventListener('change', function() {
+        const symbology = document.getElementById('symbologyFrutiferas');
+        if (this.checked) {
+          overlayLayers.frutiferas.addTo(map);
+          symbology.style.display = 'block';
+        } else {
+          map.removeLayer(overlayLayers.frutiferas);
+          symbology.style.display = 'none';
+        }
+      });
+
+      // Event listener para camada de mosaico
+      document.getElementById('layerMosaico').addEventListener('change', function() {
+        const symbology = document.getElementById('symbologyMosaico');
+        if (this.checked) {
+          // Carregar mosaico se disponível
+          carregarMosaico();
+          symbology.style.display = 'block';
+        } else {
+          if (overlayLayers.mosaico) {
+            map.removeLayer(overlayLayers.mosaico);
+          }
+          symbology.style.display = 'none';
+        }
+      });
     }
-  });
-  
-  // Informações de localização
-  if (props.latitude && props.longitude) {
-    html += `<div style="margin: 8px 0; padding: 6px; background: #f3f4f6; border-radius: 4px;">
-      <strong>📍 Localização:</strong><br>
-      Lat: ${props.latitude}<br>
-      Lng: ${props.longitude}
-    </div>`;
-  }
-  
-  // Informações técnicas
-  const infoTecnica = [
-    ['Altura', props.altura_total, 'm'],
-    ['Diâmetro Copa', props.diametro_copa, 'm'],
-    ['Volume Colhido', props.volume_colhido, 'kg']
-  ];
-  
-  const temInfoTecnica = infoTecnica.some(([_, value]) => value);
-  if (temInfoTecnica) {
-    html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
-      <strong>📊 Dados Técnicos:</strong>`;
-    
-    infoTecnica.forEach(([label, value, unit]) => {
-      if (value) {
-        html += `<div style="margin-top: 2px;">${label}: ${value} ${unit || ''}</div>`;
+
+    function atualizarMapa() {
+      // Limpar marcadores existentes
+      overlayLayers.frutiferas.clearLayers();
+      
+      if (frutiferas.length === 0) {
+        mostrarStatus('Nenhuma frutífera cadastrada', 'info');
+        return;
       }
-    });
-    
-    html += `</div>`;
-  }
-  
-  html += `</div>`;
-  return html;
-}
 
-function criarPopupGenerico(props, tipo) {
-  let html = `
-    <div style="max-width: 300px; font-family: sans-serif;">
-      <div style="background: #6b7280; color: white; padding: 8px 12px; border-radius: 4px 4px 0 0; margin: -10px -10px 10px -10px;">
-        <strong>🗺️ ${tipo}</strong>
-      </div>
-  `;
-  
-  // Mostrar todas as propriedades (exceto geometria)
-  let count = 0;
-  for (const [key, value] of Object.entries(props)) {
-    if (key.includes('geom') || key.includes('geometry') || !value) continue;
-    
-    html += `<div style="margin-bottom: 3px;">
-      <strong>${formatarChave(key)}:</strong> ${formatarValor(value)}
-    </div>`;
-    count++;
-  }
-  
-  if (count === 0) {
-    html += `<div style="color: #9ca3af; font-style: italic;">
-      Nenhuma informação adicional disponível
-    </div>`;
-  }
-  
-  html += `</div>`;
-  return html;
-}
+      const bounds = [];
+      const species = new Set();
+      
+      // Identificar as espécies únicas
+      frutiferas.forEach(tree => {
+        if (tree.especie) {
+          species.add(tree.especie);
+        }
+      });
 
-function formatarChave(key) {
-  return key
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
+      // Mapear cores para as espécies
+      const speciesArray = Array.from(species).sort();
+      const colors = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+      speciesArray.forEach((sp, idx) => {
+        speciesColorMap[sp] = colors[idx % colors.length];
+      });
 
-function formatarValor(value) {
-  if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
-    return formatarData(value);
-  }
-  return value;
-}
+      // Atualizar legenda
+      speciesArray.forEach((sp, idx) => {
+        const element = document.getElementById(`species${idx + 1}`);
+        if (element && idx < 4) {
+          element.textContent = sp;
+        }
+      });
 
-// ============================================
-// 🗺️ FUNÇÃO PRINCIPAL DO MAPA INTERATIVO
-// ============================================
-async function inicializarMapaInterativoCompleto() {
-  console.log('🗺️ Iniciando mapa interativo completo...');
-  
-  if (fullMap) {
-    fullMap.remove();
-  }
-  
-  // Criar mapa
-  fullMap = L.map('fullMap').setView([-7.1195, -34.8450], 13);
-  
-  // Camadas base
-  baseLayers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 19
-  });
-  
-  baseLayers.satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Esri, Maxar, Earthstar Geographics',
-    maxZoom: 19
-  });
-  
-  // Adicionar camada base padrão
-  baseLayers.osm.addTo(fullMap);
-  currentBaseLayer = 'osm';
-  
-  // Mostrar loading
-  mostrarToast('🗺️ Carregando dados geoespaciais...', 'info');
-  
-  // 1. Detectar colunas geométricas
-  const colunasGeometricas = await detectarGeometriasFrutiferas();
-  
-  // 2. Carregar todas as geometrias
-  const geometrias = await carregarTodasGeometriasFrutiferas();
-  
-  // 3. Criar camadas Leaflet
-  const camadas = criarCamadasLeaflet(geometrias);
-  
-  // 4. Adicionar camadas ao mapa
-  overlayLayers = {};
-  
-  if (camadas.pontos) {
-    overlayLayers.pontos = camadas.pontos;
-    camadas.pontos.addTo(fullMap);
-    console.log('✅ Camada de pontos adicionada ao mapa');
-  }
-  
-  if (camadas.linhas) {
-    overlayLayers.linhas = camadas.linhas;
-    console.log('✅ Camada de linhas configurada');
-  }
-  
-  if (camadas.poligonos) {
-    overlayLayers.poligonos = camadas.poligonos;
-    console.log('✅ Camada de polígonos configurada');
-  }
-  
-  // 5. Adicionar controle de camadas
-  if (Object.keys(overlayLayers).length > 0) {
-    L.control.layers(baseLayers, overlayLayers).addTo(fullMap);
-  }
-  
-  // 6. Adicionar escala
-  L.control.scale({ imperial: false }).addTo(fullMap);
-  
-  // 7. Ajustar vista para todas as geometrias
-  ajustarVistaMapa(geometrias);
-  
-  // 8. Adicionar legenda
-  adicionarLegendaAoMapa();
-  
-  mostrarToast(`✅ Mapa carregado: ${geometrias.pontos.length} pontos, ${geometrias.linhas.length} linhas, ${geometrias.poligonos.length} polígonos`, 'success');
-}
+      // Ocultar legendas não utilizadas
+      for (let i = speciesArray.length; i < 4; i++) {
+        const element = document.getElementById(`species${i + 1}`);
+        if (element) {
+          element.parentElement.style.display = 'none';
+        }
+      }
 
-function ajustarVistaMapa(geometrias) {
-  const todosFeatures = [
-    ...geometrias.pontos,
-    ...geometrias.linhas,
-    ...geometrias.poligonos
-  ];
-  
-  if (todosFeatures.length === 0) {
-    fullMap.setView([-7.1195, -34.8450], 13);
-    return;
-  }
-  
-  // Calcular bounds de todas as features
-  const bounds = L.latLngBounds([]);
-  
-  todosFeatures.forEach(feature => {
-    if (feature.geometry && feature.geometry.coordinates) {
-      if (feature.geometry.type === 'Point') {
-        const [lng, lat] = feature.geometry.coordinates;
-        bounds.extend([lat, lng]);
-      } else if (feature.geometry.type === 'LineString') {
-        feature.geometry.coordinates.forEach(([lng, lat]) => {
-          bounds.extend([lat, lng]);
+      // Adicionar marcadores ao mapa
+      frutiferas.forEach(tree => {
+        const lat = tree.latitude || -7.1195;
+        const lon = tree.longitude || -34.8450;
+        
+        const marker = L.marker([lat, lon], {
+          icon: getMarkerIcon(tree.especie)
         });
-      } else if (feature.geometry.type === 'Polygon') {
-        feature.geometry.coordinates[0].forEach(([lng, lat]) => {
-          bounds.extend([lat, lng]);
-        });
+
+        marker.bindPopup(createPopupContent(tree));
+        overlayLayers.frutiferas.addLayer(marker);
+        bounds.push([lat, lon]);
+      });
+
+      // Ajustar visão do mapa para mostrar todos os marcadores
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+
+      mostrarStatus(`${frutiferas.length} frutíferas carregadas no mapa`, 'success');
+    }
+
+    function getMarkerIcon(species) {
+      const color = speciesColorMap[species] || '#10b981';
+      const colorName = {
+        '#10b981': 'green',
+        '#f59e0b': 'orange',
+        '#ef4444': 'red',
+        '#8b5cf6': 'violet'
+      }[color] || 'green';
+
+      return L.icon({
+        iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${colorName}.png`,
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+    }
+
+    function createPopupContent(tree) {
+      let content = `
+        <div class="popup-content">
+          <h3>${tree.especie || tree.nome_popular || 'Frutífera'}</h3>
+          <div class="info-row">
+            <span class="info-label">Identificação:</span>
+            <span class="info-value">${tree.identificacao || tree.id}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Data Plantio:</span>
+            <span class="info-value">${formatarData(tree.data_plantio) || 'Não informado'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Última Rega:</span>
+            <span class="info-value">${formatarData(tree.ultima_rega) || 'Nunca'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Última Poda:</span>
+            <span class="info-value">${formatarData(tree.ultima_poda) || 'Nunca'}</span>
+          </div>
+      `;
+
+      if (tree.ultima_colheita) {
+        content += `
+          <div class="info-row">
+            <span class="info-label">Última Colheita:</span>
+            <span class="info-value">${formatarData(tree.ultima_colheita)}</span>
+          </div>
+        `;
+      }
+
+      content += `</div>`;
+      return content;
+    }
+
+    function carregarMosaico() {
+      // Exemplo de carregamento de mosaico aéreo
+      // Nota: Substitua as coordenadas e URL pelo seu mosaico real
+      overlayLayers.mosaico = L.imageOverlay(
+        'https://erbefbnjxgpetbetlzya.supabase.co/storage/v1/object/public/mosaico_tiles/mosaico_tile.tif',
+        [[-7.15, -34.88], [-7.09, -34.81]],
+        {
+          opacity: 0.7,
+          attribution: 'Mosaico Aéreo'
+        }
+      ).addTo(map);
+      
+      mostrarStatus('Mosaico aéreo carregado', 'success');
+    }
+
+    // ============================================
+    // 📊 FUNÇÕES AUXILIARES
+    // ============================================
+    function atualizarEstatisticas() {
+      const total = frutiferas.length;
+      const especies = [...new Set(frutiferas.map(f => f.especie || f.nome_popular))].length;
+      
+      document.getElementById('totalTrees').textContent = total;
+      document.getElementById('totalSpecies').textContent = especies;
+    }
+
+    function mostrarStatus(message, type = 'info') {
+      const panel = document.getElementById('statusPanel');
+      const messageEl = document.getElementById('statusMessage');
+      
+      panel.className = `status-panel show ${type}`;
+      messageEl.textContent = message;
+
+      if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+          panel.classList.remove('show');
+        }, 3000);
       }
     }
-  });
-  
-  if (bounds.isValid()) {
-    fullMap.fitBounds(bounds.pad(0.1));
-  }
-}
 
-function adicionarLegendaAoMapa() {
-  const legend = L.control({ position: 'bottomright' });
-  
-  legend.onAdd = function(map) {
-    const div = L.DomUtil.create('div', 'info legend');
-    div.style.backgroundColor = 'white';
-    div.style.padding = '10px';
-    div.style.borderRadius = '5px';
-    div.style.boxShadow = '0 1px 5px rgba(0,0,0,0.4)';
-    div.style.fontSize = '12px';
-    
-    let html = '<h4 style="margin: 0 0 8px 0; color: #374151;">🌿 Legenda</h4>';
-    
-    // Pontos por espécie (cores)
-    const especiesUnicas = new Set();
-    frutiferas.forEach(f => {
-      const especie = f.especie || f.nome_popular;
-      if (especie) especiesUnicas.add(especie);
-    });
-    
-    const coresDisponiveis = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#3b82f6', '#ec4899'];
-    let i = 0;
-    
-    especiesUnicas.forEach(especie => {
-      if (i < 6) { // Limitar a 6 cores
-        const cor = coresDisponiveis[i];
-        html += `<div style="margin-bottom: 4px; display: flex; align-items: center;">
-          <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${cor}; border: 2px solid white; margin-right: 6px;"></div>
-          <span>${especie}</span>
-        </div>`;
-        i++;
+    function formatarData(dataString) {
+      if (!dataString) return null;
+      const data = new Date(dataString);
+      return data.toLocaleDateString('pt-BR');
+    }
+
+    // ============================================
+    // 🚀 INICIALIZAÇÃO
+    // ============================================
+    async function inicializarApp() {
+      console.log('🚀 Inicializando app...');
+      
+      const loader = document.getElementById('appLoader');
+      const mainApp = document.getElementById('mainApp');
+      
+      try {
+        // Inicializar mapa
+        initMap();
+        
+        // Carregar frutíferas
+        await carregarFrutiferas();
+        
+        // Aguardar mínimo para UX
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Remover loader
+        if (loader) {
+          loader.classList.add('hidden');
+          setTimeout(() => loader.remove(), 300);
+        }
+        
+        if (mainApp) {
+          mainApp.classList.add('loaded');
+        }
+        
+        console.log('✅ App inicializado com sucesso!');
+        
+      } catch (error) {
+        console.error('❌ Erro na inicialização:', error);
+        if (loader) loader.classList.add('hidden');
+        if (mainApp) mainApp.classList.add('loaded');
+        mostrarStatus('Erro ao inicializar o aplicativo', 'error');
       }
-    });
-    
-    // Linhas
-    html += `<div style="margin-top: 8px; border-top: 1px solid #e5e7eb; padding-top: 8px;">
-      <div style="margin-bottom: 4px; display: flex; align-items: center;">
-        <div style="width: 20px; height: 3px; background-color: #f59e0b; margin-right: 6px;"></div>
-        <span>Linhas/Divisórias</span>
-      </div>
-      <div style="margin-bottom: 4px; display: flex; align-items: center;">
-        <div style="width: 20px; height: 20px; border: 2px solid #8b5cf6; background-color: rgba(139, 92, 246, 0.3); margin-right: 6px;"></div>
-        <span>Áreas/Polígonos</span>
-      </div>
-    </div>`;
-    
-    div.innerHTML = html;
-    return div;
-  };
-  
-  legend.addTo(fullMap);
-}
+    }
 
-// ============================================
-// 🔄 ATUALIZAR NO ARQUIVO PRINCIPAL
-// ============================================
-
-// Substituir a função abrirMapaInterativo() por:
-function abrirMapaInterativo() {
-  document.getElementById('mapModal').classList.add('active');
-  setTimeout(() => {
-    inicializarMapaInterativoCompleto();
-  }, 100);
-}
-
-// Adicionar botão para recarregar camadas
-function adicionarBotaoRecarregar() {
-  const controls = document.querySelector('.map-controls');
-  if (!controls) return;
-  
-  const botaoRecarregar = document.createElement('button');
-  botaoRecarregar.className = 'map-control-btn';
-  botaoRecarregar.innerHTML = '<i class="fas fa-sync-alt"></i> Recarregar';
-  botaoRecarregar.onclick = async () => {
-    mostrarToast('🔄 Recarregando dados...', 'info');
-    await inicializarMapaInterativoCompleto();
-  };
-  
-  controls.appendChild(botaoRecarregar);
-}
+    // Iniciar quando DOM estiver pronto
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', inicializarApp);
+    } else {
+      inicializarApp();
+    }
+  </script>
+</body>
+</html>
