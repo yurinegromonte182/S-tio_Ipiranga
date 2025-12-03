@@ -2,7 +2,7 @@ name: Notificações Automáticas de Frutíferas
 
 on:
   schedule:
-    - cron: "0 */6 * * *"  # a cada 6 horas
+    - cron: "0 */6 * * *"
   workflow_dispatch:
 
 jobs:
@@ -29,7 +29,6 @@ jobs:
         BOT_TOKEN="${BOT_TOKEN}"
         CHAT_ID="${CHAT_ID}"
 
-        # Endpoint REST direto da tabela frutiferas
         ENDPOINT="${SUPABASE_URL}/rest/v1/frutiferas?select=*"
 
         echo "📡 Baixando dados do Supabase..."
@@ -40,9 +39,7 @@ jobs:
         total=$(echo "$dados" | jq 'length')
         echo "📌 Registros recebidos: $total"
 
-        # Loop por cada planta do banco
         echo "$dados" | jq -c '.[]' | while read item; do
-
             id=$(echo "$item" | jq -r '.id')
             nome=$(echo "$item" | jq -r '.nome_popular')
             ultima_rega=$(echo "$item" | jq -r '.data_irrigacao_ordinaria')
@@ -55,7 +52,6 @@ jobs:
 ✂️ Última poda: ${ultima_poda}
 🍊 Início da colheita: ${inicio_colheita}"
 
-            # Envia mensagem ao Telegram
             curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
               -d chat_id="${CHAT_ID}" \
               -d text="${mensagem}" \
