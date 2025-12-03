@@ -15,7 +15,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y jq curl
 
-    - name: 🔑 Configurar variáveis
+    - name: 🔑 Carregar variáveis dos secrets
       run: |
         echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> $GITHUB_ENV
         echo "SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}" >> $GITHUB_ENV
@@ -29,7 +29,7 @@ jobs:
         BOT_TOKEN="${BOT_TOKEN}"
         CHAT_ID="${CHAT_ID}"
 
-        # Endpoint REST da tabela
+        # Endpoint REST direto da tabela frutiferas
         ENDPOINT="${SUPABASE_URL}/rest/v1/frutiferas?select=*"
 
         echo "📡 Baixando dados do Supabase..."
@@ -40,30 +40,29 @@ jobs:
         total=$(echo "$dados" | jq 'length')
         echo "📌 Registros recebidos: $total"
 
-        # 🔄 Loop pelos registros
+        # Loop por cada planta do banco
         echo "$dados" | jq -c '.[]' | while read item; do
 
             id=$(echo "$item" | jq -r '.id')
             nome=$(echo "$item" | jq -r '.nome_popular')
             ultima_rega=$(echo "$item" | jq -r '.data_irrigacao_ordinaria')
             ultima_poda=$(echo "$item" | jq -r '.data_poda_formacao_1')
-            ultima_colheita=$(echo "$item" | jq -r '.inicio_colheita')
+            inicio_colheita=$(echo "$item" | jq -r '.inicio_colheita')
 
             mensagem="🌱 *Planta:* ${nome}
 🔢 *ID:* ${id}
 💧 Última rega: ${ultima_rega}
 ✂️ Última poda: ${ultima_poda}
-🍊 Início da colheita: ${ultima_colheita}"
+🍊 Início da colheita: ${inicio_colheita}"
 
-            # 📤 Envia para Telegram
+            # Envia mensagem ao Telegram
             curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
               -d chat_id="${CHAT_ID}" \
               -d text="${mensagem}" \
               -d parse_mode="Markdown"
 
-            echo "📨 Notificação enviada para ${nome} (ID ${id})"
-
+            echo "📨 Notificação enviada: ${nome} (ID ${id})"
             sleep 1
         done
 
-        echo "✅ Processo finalizado."
+        echo "✅ Finalizado com sucesso!"
