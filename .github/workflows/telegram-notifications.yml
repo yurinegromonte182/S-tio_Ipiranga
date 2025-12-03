@@ -46,11 +46,14 @@ jobs:
             ultima_poda=$(echo "$item" | jq -r '.data_poda_formacao_1')
             inicio_colheita=$(echo "$item" | jq -r '.inicio_colheita')
 
-            mensagem="🌱 *Planta:* ${nome}
+            mensagem=$(cat <<EOF
+🌱 *Planta:* ${nome}
 🔢 *ID:* ${id}
 💧 Última rega: ${ultima_rega}
 ✂️ Última poda: ${ultima_poda}
-🍊 Início da colheita: ${inicio_colheita}"
+🍊 Início da colheita: ${inicio_colheita}
+EOF
+)
 
             curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
               -d chat_id="${CHAT_ID}" \
