@@ -500,11 +500,11 @@
     /* ESTILOS DO MAPA */
     #mapContainer {
       width: 100%;
-      height: calc(100vh - 180px);
-      min-height: 400px;
+      height: 400px;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
     }
 
     .map-controls {
@@ -645,7 +645,7 @@
 
     @media (max-width: 768px) {
       #mapContainer {
-        height: calc(100vh - 220px);
+        height: 350px;
       }
       
       .map-controls {
@@ -684,9 +684,8 @@
     
     <div class="tabs">
       <button class="tab active" onclick="switchTab(event, 'acoes')">📋 Ações</button>
-      <button class="tab" onclick="switchTab(event, 'cadastro')">➕ Cadastro</button>
-      <button class="tab" onclick="switchTab(event, 'frutiferas')">🌱 Frutíferas</button>
       <button class="tab" onclick="switchTab(event, 'mapa')">🗺️ Mapa</button>
+      <button class="tab" onclick="switchTab(event, 'frutiferas')">🌱 Frutíferas</button>
       <button class="tab" onclick="switchTab(event, 'historico')">📜 Histórico</button>
       <button class="tab" onclick="switchTab(event, 'stats')">📊 Stats</button>
       <button class="tab" onclick="switchTab(event, 'config')">⚙️ Config</button>
@@ -698,8 +697,8 @@
         <div class="section-title">📋 Ações Necessárias Hoje</div>
         
         <div id="autoSyncInfo" class="info-box">
-          <span>📡 Enviando ações para Supabase</span><br>
-          <small>As ações são salvas localmente e enviadas para o banco de dados</small>
+          <span>📡 Conectado ao Supabase</span><br>
+          <small>As ações são sincronizadas automaticamente com o banco de dados</small>
         </div>
         
         <div class="filter-group">
@@ -710,18 +709,72 @@
           <button class="filter-btn" onclick="filterAcoes(event, 'colheita')">🍊 Colheita</button>
         </div>
         <div id="acoesHoje">
-          <div class="loading">Carregando dados...</div>
+          <div class="loading">Carregando ações do Supabase...</div>
         </div>
       </div>
     </div>
 
-    <!-- Tab: Cadastro -->
-    <div id="cadastro" class="tab-content">
+    <!-- Tab: Mapa + Cadastro -->
+    <div id="mapa" class="tab-content">
+      <div class="section">
+        <div class="section-title">🗺️ Mapa de Frutíferas</div>
+        
+        <div class="info-box">
+          📍 Visualize e cadastre frutíferas no mapa
+        </div>
+
+        <div class="map-controls">
+          <button class="map-btn active" data-basemap="osm" onclick="changeBasemap('osm', event)">
+            🗺️ OpenStreetMap
+          </button>
+          <button class="map-btn" data-basemap="satellite" onclick="changeBasemap('satellite', event)">
+            🛰️ Satélite
+          </button>
+        </div>
+
+        <div class="layer-toggle">
+          <div class="layer-label">
+            <div class="layer-badge" style="color: #10b981;"></div>
+            <span>Frutíferas</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleFrutiferas" checked onchange="toggleFrutiferasLayer()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Legenda de Espécies -->
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #6b7280; margin-bottom: 0.5rem;">LEGENDA POR ESPÉCIE</div>
+          <div id="mapLegend">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
+              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #10b981; border: 2px solid #fff;"></div>
+              <span>🥭 Mangabeira</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
+              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #f59e0b; border: 2px solid #fff;"></div>
+              <span>🌰 Cajueiro</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
+              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #ef4444; border: 2px solid #fff;"></div>
+              <span>🥥 Coqueiro</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #8b5cf6; border: 2px solid #fff;"></div>
+              <span>🍫 Cacau</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="mapContainer"></div>
+      </div>
+
+      <!-- Formulário de Cadastro -->
       <div class="section">
         <div class="section-title">➕ Cadastrar Nova Frutífera</div>
         
         <div class="info-box">
-          🌱 Frutíferas são salvas localmente no seu dispositivo
+          🌱 Cadastre e visualize no mapa em tempo real
         </div>
 
         <form onsubmit="cadastrarFrutifera(event)">
@@ -787,68 +840,12 @@
         <div class="section-title">🌱 Minhas Frutíferas</div>
         
         <div class="info-box">
-          💾 Todos os dados são salvos localmente no seu dispositivo
+          📡 Dados sincronizados com o Supabase
         </div>
         
         <input type="text" class="search-box" id="searchFrutifera" placeholder="🔎 Buscar frutífera..." onkeyup="filtrarFrutiferas()">
         
         <div style="margin-top: 1rem;" id="frutiferasList"></div>
-      </div>
-    </div>
-
-    <!-- Tab: Mapa -->
-    <div id="mapa" class="tab-content">
-      <div class="section">
-        <div class="section-title">🗺️ Mapa de Frutíferas</div>
-        
-        <div class="info-box">
-          📍 Visualize todas as frutíferas georeferenciadas no mapa
-        </div>
-
-        <div class="map-controls">
-          <button class="map-btn active" data-basemap="osm" onclick="changeBasemap('osm', event)">
-            🗺️ OpenStreetMap
-          </button>
-          <button class="map-btn" data-basemap="satellite" onclick="changeBasemap('satellite', event)">
-            🛰️ Satélite
-          </button>
-        </div>
-
-        <div class="layer-toggle">
-          <div class="layer-label">
-            <div class="layer-badge" style="color: #10b981;"></div>
-            <span>Frutíferas</span>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggleFrutiferas" checked onchange="toggleFrutiferasLayer()">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-
-        <!-- Legenda de Espécies -->
-        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
-          <div style="font-size: 0.75rem; font-weight: 600; color: #6b7280; margin-bottom: 0.5rem;">LEGENDA POR ESPÉCIE</div>
-          <div id="mapLegend">
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
-              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #10b981; border: 2px solid #fff;"></div>
-              <span>🥭 Mangabeira</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
-              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #f59e0b; border: 2px solid #fff;"></div>
-              <span>🌰 Cajueiro</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
-              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #ef4444; border: 2px solid #fff;"></div>
-              <span>🥥 Coqueiro</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
-              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #8b5cf6; border: 2px solid #fff;"></div>
-              <span>🍫 Cacau</span>
-            </div>
-          </div>
-        </div>
-
-        <div id="mapContainer"></div>
       </div>
     </div>
 
@@ -993,7 +990,6 @@
 
     let frutiferas = [];
     let historico = [];
-    let perfilAtual = localStorage.getItem('perfilAtual') || 'Default';
     let currentFilter = 'todas';
     
     // Variáveis do mapa
@@ -1086,7 +1082,7 @@
           <div class="empty-state">
             <div class="empty-state-icon">🌱</div>
             <p>Nenhuma frutífera cadastrada ainda.</p>
-            <p><small>Vá para a aba "Cadastro" para adicionar sua primeira frutífera!</small></p>
+            <p><small>Vá para a aba "Mapa" para adicionar sua primeira frutífera!</small></p>
           </div>
         `;
         return;
@@ -1251,7 +1247,7 @@
     }
 
     async function registrarAcao(tipo, frutiferaId) {
-      console.log(`📝 Registrando ${tipo} para frutífera ${frutiferaId}`);
+      console.log(`📝 Registrando ${tipo} para frutífera ${frutiferaId} no Supabase`);
       
       try {
         const campo = tipo === 'rega' ? 'ultima_rega' : 
@@ -1259,6 +1255,7 @@
         
         const dataHoje = new Date().toISOString().split('T')[0];
         
+        // Atualizar localmente
         const index = frutiferas.findIndex(f => f.id === frutiferaId);
         if (index >= 0) {
           frutiferas[index][campo] = dataHoje;
@@ -1268,12 +1265,13 @@
         atualizarTodasAbas();
         mostrarToast(`✅ ${tipo.charAt(0).toUpperCase() + tipo.slice(1)} registrada!`);
         
+        // Sincronizar com Supabase
         if (navigator.onLine) {
           const campoSupabase = campo === 'ultima_rega' ? 'data_irrigacao_ordinaria' : 
                                 campo === 'ultima_poda' ? 'data_poda_formacao_1' : 
                                 'inicio_colheita';
           
-          await fetch(
+          const response = await fetch(
             `${SUPABASE_URL}/rest/v1/frutiferas?fid=eq.${frutiferaId}`,
             {
               method: 'PATCH',
@@ -1286,10 +1284,18 @@
               body: JSON.stringify({ [campoSupabase]: dataHoje })
             }
           );
+
+          if (response.ok) {
+            console.log('✅ Ação sincronizada com Supabase');
+            mostrarToast('☁️ Sincronizado com Supabase');
+          } else {
+            console.error('❌ Erro ao sincronizar com Supabase');
+          }
         }
         
       } catch (error) {
         console.error('❌ Erro ao registrar ação:', error);
+        mostrarToast('⚠️ Ação salva localmente');
       }
     }
 
@@ -1310,10 +1316,13 @@
         lon = coords[1];
       }
       
+      const especieFinal = especie === 'Outra' ? outraEspecie : especie;
+      const novoId = 'FRT-' + Date.now();
+      
       const novaFrutifera = {
-        id: 'FRT-' + Date.now(),
-        especie: especie === 'Outra' ? outraEspecie : especie,
-        nome_popular: especie === 'Outra' ? outraEspecie : especie,
+        id: novoId,
+        especie: especieFinal,
+        nome_popular: especieFinal,
         identificacao: identificacao,
         data_plantio: dataPlantio,
         latitude: lat,
@@ -1326,6 +1335,7 @@
       };
       
       try {
+        // Adicionar localmente
         frutiferas.push(novaFrutifera);
         localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
         
@@ -1335,8 +1345,9 @@
         event.target.reset();
         document.getElementById('coordDisplay').style.display = 'none';
         
+        // Sincronizar com Supabase
         if (navigator.onLine) {
-          await fetch(
+          const response = await fetch(
             `${SUPABASE_URL}/rest/v1/frutiferas`,
             {
               method: 'POST',
@@ -1347,17 +1358,26 @@
                 'Prefer': 'return=representation'
               },
               body: JSON.stringify({
-                fid: novaFrutifera.id,
-                nome_popular: novaFrutifera.especie,
-                data_plantio: novaFrutifera.data_plantio,
+                fid: identificacao,
+                nome_popular: especieFinal,
+                data_plantio: dataPlantio,
                 latitude: lat,
                 longitude: lon
               })
             }
           );
+
+          if (response.ok) {
+            console.log('✅ Frutífera sincronizada com Supabase');
+            mostrarToast('☁️ Sincronizado com Supabase');
+            await carregarFrutiferas();
+          }
         }
         
-        switchTab({ target: document.querySelector('.tab[onclick*="frutiferas"]') }, 'frutiferas');
+        // Atualizar mapa
+        if (map) {
+          atualizarMapa();
+        }
         
       } catch (error) {
         console.error('❌ Erro ao cadastrar frutífera:', error);
@@ -1457,211 +1477,3 @@
       } else {
         map.removeLayer(frutiferasLayer);
       }
-    }
-
-    // FUNÇÕES AUXILIARES
-    function calcularDias(dataString) {
-      if (!dataString) return 999;
-      const data = new Date(dataString);
-      const hoje = new Date();
-      const diff = hoje - data;
-      return Math.floor(diff / (1000 * 60 * 60 * 24));
-    }
-
-    function formatarData(dataString) {
-      if (!dataString) return null;
-      const data = new Date(dataString);
-      return data.toLocaleDateString('pt-BR');
-    }
-
-    function obterIntervaloRega(frutifera) {
-      const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-      if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_rega') || '5');
-      if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_rega') || '3');
-      if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_rega') || '7');
-      if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_rega') || '10');
-      return 7;
-    }
-
-    function obterIntervaloPoda(frutifera) {
-      const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-      if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_poda') || '730');
-      if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_poda') || '180');
-      if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_poda') || '180');
-      if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_poda') || '365');
-      return 180;
-    }
-
-    function obterIntervaloColheita(frutifera) {
-      const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-      if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_colh') || '30');
-      if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_colh') || '120');
-      if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_colh') || '90');
-      if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_colh') || '60');
-      return 90;
-    }
-
-    function mostrarToast(mensagem) {
-      const toast = document.getElementById('toast');
-      toast.textContent = mensagem;
-      toast.className = 'toast show';
-      
-      setTimeout(() => {
-        toast.className = 'toast';
-      }, 3000);
-    }
-
-    // FUNÇÕES DE UI
-    function switchTab(event, tabName) {
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-      
-      event.target.classList.add('active');
-      document.getElementById(tabName).classList.add('active');
-      
-      // Inicializar mapa quando a aba for aberta
-      if (tabName === 'mapa') {
-        setTimeout(() => {
-          if (!map) {
-            inicializarMapa();
-          } else {
-            map.invalidateSize();
-            atualizarMapa();
-          }
-        }, 100);
-      }
-    }
-
-    function filterAcoes(event, filtro) {
-      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-      
-      currentFilter = filtro;
-      carregarAcoesHoje();
-    }
-
-    function filtrarFrutiferas() {
-      const query = document.getElementById('searchFrutifera').value.toLowerCase();
-      const cards = document.querySelectorAll('.frutifera-card');
-      
-      cards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(query) ? 'block' : 'none';
-      });
-    }
-
-    function filterHistorico(event, periodo) {
-      document.querySelectorAll('#historico .filter-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-    }
-
-    function obterLocalizacao() {
-      if (!navigator.geolocation) {
-        mostrarToast('❌ Geolocalização não suportada');
-        return;
-      }
-      
-      mostrarToast('📍 Obtendo localização...');
-      
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude.toFixed(6);
-          const lon = position.coords.longitude.toFixed(6);
-          document.getElementById('coordenadas').value = `${lat}, ${lon}`;
-          document.getElementById('coordDisplay').style.display = 'block';
-          document.getElementById('coordDisplay').textContent = `✅ Localização obtida: ${lat}, ${lon}`;
-          mostrarToast('✅ Localização obtida!');
-        },
-        (error) => {
-          console.error('Erro ao obter localização:', error);
-          mostrarToast('❌ Erro ao obter localização');
-        }
-      );
-    }
-
-    function saveConfig() {
-      ['mang', 'caju', 'coq', 'cac'].forEach(prefixo => {
-        ['rega', 'poda', 'colh'].forEach(tipo => {
-          const valor = document.getElementById(`${prefixo}_${tipo}`).value;
-          localStorage.setItem(`${prefixo}_${tipo}`, valor);
-        });
-      });
-      
-      mostrarToast('✅ Configurações salvas!');
-      atualizarTodasAbas();
-    }
-
-    document.getElementById('novaEspecie')?.addEventListener('change', function() {
-      const outraGroup = document.getElementById('outraEspecieGroup');
-      if (this.value === 'Outra') {
-        outraGroup.style.display = 'block';
-        document.getElementById('outraEspecieNome').required = true;
-      } else {
-        outraGroup.style.display = 'none';
-        document.getElementById('outraEspecieNome').required = false;
-      }
-    });
-
-    // INICIALIZAÇÃO
-    async function inicializarApp() {
-      console.log('🚀 Inicializando app...');
-      
-      const loader = document.getElementById('appLoader');
-      const mainApp = document.getElementById('mainApp');
-      
-      try {
-        await carregarFrutiferas();
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        if (loader) {
-          loader.classList.add('hidden');
-          setTimeout(() => loader.remove(), 300);
-        }
-        
-        if (mainApp) {
-          mainApp.classList.add('loaded');
-        }
-        
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        
-        if (navigator.onLine) {
-          if (statusDot) statusDot.className = 'status-dot';
-          if (statusText) statusText.textContent = 'Online';
-        } else {
-          if (statusDot) statusDot.className = 'status-dot offline';
-          if (statusText) statusText.textContent = 'Offline';
-        }
-        
-        console.log('✅ App inicializado com sucesso!');
-        
-      } catch (error) {
-        console.error('❌ Erro na inicialização:', error);
-        if (loader) loader.classList.add('hidden');
-        if (mainApp) mainApp.classList.add('loaded');
-      }
-    }
-
-    window.addEventListener('online', () => {
-      document.getElementById('statusDot').className = 'status-dot';
-      document.getElementById('statusText').textContent = 'Online';
-      mostrarToast('🌐 Você voltou online!');
-      carregarFrutiferas();
-    });
-
-    window.addEventListener('offline', () => {
-      document.getElementById('statusDot').className = 'status-dot offline';
-      document.getElementById('statusText').textContent = 'Offline';
-      mostrarToast('📡 Você está offline');
-    });
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', inicializarApp);
-    } else {
-      inicializarApp();
-    }
-  </script>
-
-</body>
-</html>
