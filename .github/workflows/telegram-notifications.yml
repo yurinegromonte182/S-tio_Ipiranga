@@ -1,220 +1,177 @@
-name: Telegram Notifications - Supabase
+name: Notificações Telegram - Sincronização Automática
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dados.geojson'
   schedule:
-    # 06:00 BR = 09:00 UTC
     - cron: '0 9 * * *'
-    # 12:00 BR = 15:00 UTC
     - cron: '0 15 * * *'
-    # 18:00 BR = 21:00 UTC
     - cron: '0 21 * * *'
   workflow_dispatch:
-    inputs:
-      tipo_relatorio:
-        description: 'Tipo de relatório'
-        required: true
-        default: 'diario'
-        type: choice
-        options:
-          - diario
-          - completo
-          - urgente
 
 jobs:
-  fetch-supabase-data:
+  notify-telegram:
     runs-on: ubuntu-latest
-    outputs:
-      total_frutiferas: ${{ steps.count-data.outputs.total_frutiferas }}
-      total_species: ${{ steps.count-data.outputs.total_species }}
-      pending_actions: ${{ steps.count-data.outputs.pending_actions }}
+    
     steps:
-      - name: Buscar dados do Supabase
-        id: count-data
-        env:
-          SUPABASE_URL: "https://erbefbnjxgpetbetlzya.supabase.co"
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: |
-          set -e
-          
-          echo "🔍 Testando conexão com Supabase..."
-          
-          # Teste de conexão
-          TEST_RESPONSE=$(curl -s -w "\n%{http_code}" "$SUPABASE_URL/rest/v1/" \
-            -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
-          
-          TEST_CODE=$(echo "$TEST_RESPONSE" | tail -n1)
-          echo "Status da conexão: $TEST_CODE"
-          
-          if [ "$TEST_CODE" != "200" ]; then
-            echo "❌ Erro na conexão com Supabase"
-            exit 1
-          fi
-          
-          echo "✅ Conexão OK"
-          echo ""
-          
-          # 1. Contar total de frutíferas
-          echo "📊 Contando frutíferas..."
-          RESPONSE=$(curl -s "$SUPABASE_URL/rest/v1/frutiferas?select=id" \
-            -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
-          
-          echo "Response: $RESPONSE"
-          TOTAL_FRUTIFERAS=$(echo "$RESPONSE" | jq '. | length')
-          echo "Total de frutíferas: $TOTAL_FRUTIFERAS"
-          
-          # 2. Contar espécies únicas
-          echo "📊 Contando espécies..."
-          RESPONSE=$(curl -s "$SUPABASE_URL/rest/v1/frutiferas?select=nome_popular" \
-            -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
-          
-          echo "Response: $RESPONSE"
-          TOTAL_SPECIES=$(echo "$RESPONSE" | jq '[.[] | .nome_popular] | unique | length')
-          echo "Total de espécies: $TOTAL_SPECIES"
-          
-          # 3. Verificar ações pendentes (ultima_rega > 7 dias)
-          echo "📊 Verificando ações pendentes..."
-          DAYS_AGO=$(date -u -d "7 days ago" +%Y-%m-%d)
-          echo "Data de referência: $DAYS_AGO"
-          
-          RESPONSE=$(curl -s "$SUPABASE_URL/rest/v1/frutiferas?select=id&ultima_rega=lt.$DAYS_AGO" \
-            -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
-          
-          echo "Response: $RESPONSE"
-          PENDING_ACTIONS=$(echo "$RESPONSE" | jq '. | length')
-          echo "Ações pendentes: $PENDING_ACTIONS"
-          
-          # Garantir valores válidos
-          TOTAL_FRUTIFERAS=${TOTAL_FRUTIFERAS:-0}
-          TOTAL_SPECIES=${TOTAL_SPECIES:-0}
-          PENDING_ACTIONS=${PENDING_ACTIONS:-0}
-          
-          # Salvar outputs
-          echo "total_frutiferas=$TOTAL_FRUTIFERAS" >> $GITHUB_OUTPUT
-          echo "total_species=$TOTAL_SPECIES" >> $GITHUB_OUTPUT
-          echo "pending_actions=$PENDING_ACTIONS" >> $GITHUB_OUTPUT
-          
-          echo ""
-          echo "✅ Dados coletados com sucesso!"
-          echo "  🌳 Frutíferas: $TOTAL_FRUTIFERAS"
-          echo "  🏷️ Espécies: $TOTAL_SPECIES"
-          echo "  ⚠️ Pendentes: $PENDING_ACTIONS"
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  send-telegram-report:
-    runs-on: ubuntu-latest
-    needs: fetch-supabase-data
-    steps:
-      - name: Enviar relatório para Telegram
+      - name: Instalar dependências do sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq postgis postgresql-client
+
+      - name: Baixar dados do Supabase (PostGIS → GeoJSON)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_CONNECTION: ${{ secrets.SUPABASE_CONNECTION }}
+        run: |
+          echo "Baixando dados do Supabase..."
+
+          # CONSULTA — ajuste a tabela/colunas se necessário
+          SQL="SELECT jsonb_build_object(
+                  'type','FeatureCollection',
+                  'features', jsonb_agg(
+                    jsonb_build_object(
+                      'type','Feature',
+                      'geometry', ST_AsGeoJSON(geom)::jsonb,
+                      'properties', to_jsonb(row) - 'geom'
+                    )
+                  )
+                )
+                FROM (SELECT * FROM arvores) row;"
+
+          psql "$SUPABASE_CONNECTION" -t -A -c "$SQL" > dados.geojson
+
+          echo "Dados baixados com sucesso!"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Processar ações e notificar Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          set -e
+          # Instalar jq
+          sudo apt-get update
+          sudo apt-get install -y jq
           
-          echo "📱 Preparando mensagem para Telegram..."
+          export TZ='America/Sao_Paulo'
           
-          # Definir tipo de relatório
-          TIPO_RELATORIO="${{ github.event.inputs.tipo_relatorio }}"
-          if [ -z "$TIPO_RELATORIO" ]; then
-            TIPO_RELATORIO="Automático"
+          HOJE=$(date +%Y-%m-%d)
+          DATA_EXIBICAO=$(date +%d/%m/%Y)
+          HORA_EXIBICAO=$(date +%H:%M)
+          HORA_NUM=$(date +%H)
+
+          # Intervalos
+          declare -A REGA_INT=( ["Mangabeira"]=7 ["Cajueiro"]=10 ["Coqueiro"]=5 ["Cacau"]=3 ["default"]=7 )
+          declare -A PODA_INT=( ["Mangabeira"]=180 ["Cajueiro"]=365 ["Coqueiro"]=730 ["Cacau"]=180 ["default"]=180 )
+          declare -A COLH_INT=( ["Mangabeira"]=90 ["Cajueiro"]=60 ["Coqueiro"]=30 ["Cacau"]=120 ["default"]=90 )
+
+          # Função dias desde
+          dias_desde() {
+            if [ -z "$1" ] || [ "$1" = "null" ]; then
+              echo "999"
+            else
+              echo $(( ( $(date -d "$HOJE" +%s) - $(date -d "$1" +%s) ) / 86400 ))
+            fi
+          }
+
+          # Função intervalo
+          get_intervalo() {
+            local especie=$1
+            local tipo=$2
+            case "$tipo" in
+              "rega")
+                case "$especie" in
+                  *"Mangabeira"*) echo 7 ;;
+                  *"Caju"*) echo 10 ;;
+                  *"Coq"*) echo 5 ;;
+                  *"Cacau"*) echo 3 ;;
+                  *) echo 7 ;;
+                esac ;;
+              "poda")
+                case "$especie" in
+                  *"Mangabeira"*) echo 180 ;;
+                  *"Caju"*) echo 365 ;;
+                  *"Coq"*) echo 730 ;;
+                  *"Cacau"*) echo 180 ;;
+                  *) echo 180 ;;
+                esac ;;
+              "colheita")
+                case "$especie" in
+                  *"Mangabeira"*) echo 90 ;;
+                  *"Caju"*) echo 60 ;;
+                  *"Coq"*) echo 30 ;;
+                  *"Cacau"*) echo 120 ;;
+                  *) echo 90 ;;
+                esac ;;
+            esac
+          }
+
+          # Processar plantas
+          jq -c '.features[]' dados.geojson | while read -r feature; do
+            ID=$(echo "$feature" | jq -r '.properties.id // .properties.ID // "S/N"')
+            NOME=$(echo "$feature" | jq -r '.properties.nome_popular // .properties.NOME_POPULAR // "Planta"')
+            ULT_REGA=$(echo "$feature" | jq -r '.properties.ultima_rega // .properties.ULTIMA_REGA // "null"')
+            ULT_PODA=$(echo "$feature" | jq -r '.properties.ultima_poda // .properties.ULTIMA_PODA // "null"')
+            ULT_COLH=$(echo "$feature" | jq -r '.properties.ultima_colheita // .properties.ULTIMA_COLHEITA // "null"')
+
+            INT_R=$(get_intervalo "$NOME" "rega")
+            DIAS_R=$(dias_desde "$ULT_REGA")
+
+            if [ "$DIAS_R" -ge $((INT_R+2)) ]; then
+              echo "REGA_URG:$NOME #$ID - Atrasada $DIAS_R dias" >> /tmp/acoes.txt
+            elif [ "$DIAS_R" -ge "$INT_R" ]; then
+              echo "REGA_NORM:$NOME #$ID - Há $DIAS_R dias" >> /tmp/acoes.txt
+            fi
+
+            INT_P=$(get_intervalo "$NOME" "poda")
+            DIAS_P=$(dias_desde "$ULT_PODA")
+            [ "$DIAS_P" -ge "$INT_P" ] && echo "PODA:$NOME #$ID" >> /tmp/acoes.txt
+
+            INT_C=$(get_intervalo "$NOME" "colheita")
+            DIAS_C=$(dias_desde "$ULT_COLH")
+            [ "$DIAS_C" -ge "$INT_C" ] && echo "COLHEITA:$NOME #$ID" >> /tmp/acoes.txt
+          done
+
+          # Montar mensagem
+          TOTAL=$(jq '.features | length' dados.geojson)
+
+          if [ "$HORA_NUM" -lt 12 ]; then SAUD="☀️ Bom dia"
+          elif [ "$HORA_NUM" -lt 18 ]; then SAUD="⛅ Boa tarde"
+          else SAUD="🌙 Boa noite"; fi
+
+          MESSAGE="${SAUD}!%0A📅 ${DATA_EXIBICAO} às ${HORA_EXIBICAO}%0A%0A"
+
+          if [ -f /tmp/acoes.txt ]; then
+            TOTAL_AC=$(wc -l < /tmp/acoes.txt)
+          else
+            TOTAL_AC=0
           fi
-          
-          # Criar mensagem
-          MESSAGE="🌿 *RELATÓRIO SÍTIO IPIRANGA* 🌿
 
-📊 *Dados do Sistema:*
-🌳 *Frutíferas:* ${{ needs.fetch-supabase-data.outputs.total_frutiferas }}
-🏷️ *Espécies:* ${{ needs.fetch-supabase-data.outputs.total_species }}
-⚠️ *Ações Pendentes:* ${{ needs.fetch-supabase-data.outputs.pending_actions }}
+          if [ "$TOTAL_AC" -eq 0 ]; then
+            MESSAGE="${MESSAGE}✅ *Tudo em dia!*%0A🌿 Nenhuma ação necessária."
+          else
+            MESSAGE="${MESSAGE}📋 *Ações pendentes: ${TOTAL_AC}*%0A%0A"
+            while read linha; do
+              MESSAGE="${MESSAGE}• ${linha}%0A"
+            done < /tmp/acoes.txt
+          fi
 
-⏰ *Horário:* $(TZ='America/Fortaleza' date '+%d/%m/%Y %H:%M')
-🔄 *Tipo:* $TIPO_RELATORIO
+          rm -f /tmp/acoes.txt
 
-📡 *Status:* ✅ Conectado ao Supabase
-🗺️ *SIGWEB:* Operacional"
-          
-          echo "Mensagem preparada:"
-          echo "$MESSAGE"
-          echo ""
-          
-          # Enviar para Telegram
-          echo "📤 Enviando para Telegram..."
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
-            --data-urlencode text="$MESSAGE" \
-            -d parse_mode="Markdown")
-          
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          RESPONSE_BODY=$(echo "$RESPONSE" | head -n-1)
-          
-          echo "Status HTTP: $HTTP_CODE"
-          echo "Response: $RESPONSE_BODY"
-          
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Relatório enviado para Telegram com sucesso!"
-          else
-            echo "❌ Erro ao enviar para Telegram"
-            echo "$RESPONSE_BODY"
-            exit 1
-          fi
+            -d text="${MESSAGE}" \
+            -d parse_mode="Markdown"
 
-  log-to-supabase:
-    runs-on: ubuntu-latest
-    needs: [fetch-supabase-data, send-telegram-report]
-    if: always()
-    steps:
-      - name: Registrar execução no Supabase
-        env:
-          SUPABASE_URL: "https://erbefbnjxgpetbetlzya.supabase.co"
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: |
-          echo "📝 Registrando log no Supabase..."
-          
-          # Preparar dados
-          TIPO_RELATORIO="${{ github.event.inputs.tipo_relatorio }}"
-          if [ -z "$TIPO_RELATORIO" ]; then
-            TIPO_RELATORIO="automático"
-          fi
-          
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
-          
-          # Criar JSON
-          JSON_DATA=$(cat <<EOF
-{
-  "tipo": "$TIPO_RELATORIO",
-  "total_frutiferas": ${{ needs.fetch-supabase-data.outputs.total_frutiferas }},
-  "especies": ${{ needs.fetch-supabase-data.outputs.total_species }},
-  "acoes_pendentes": ${{ needs.fetch-supabase-data.outputs.pending_actions }},
-  "executado_em": "$TIMESTAMP"
-}
-EOF
-)
-          
-          echo "JSON a ser enviado:"
-          echo "$JSON_DATA"
-          echo ""
-          
-          # Inserir no Supabase
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            "$SUPABASE_URL/rest/v1/telegram_logs" \
-            -H "apikey: $SUPABASE_SERVICE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
-            -H "Content-Type: application/json" \
-            -H "Prefer: return=minimal" \
-            -d "$JSON_DATA")
-          
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          RESPONSE_BODY=$(echo "$RESPONSE" | head -n-1)
-          
-          echo "Status HTTP: $HTTP_CODE"
-          
-          if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Log registrado no Supabase com sucesso!"
-          else
-            echo "⚠️ Erro ao registrar log (HTTP $HTTP_CODE)"
-            echo "Response: $RESPONSE_BODY"
-          fi
+          echo "Notificação enviada!"
+
