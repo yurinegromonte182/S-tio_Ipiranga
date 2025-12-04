@@ -1,9 +1,11 @@
-name: Notificações Telegram - Sincronização Automática (PostgreSQL)
+name: Notificações Telegram - Sincronização Automática
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'dados.geojson'
   schedule:
     # 06:00 BR = 09:00 UTC
     - cron: '0 9 * * *'
@@ -21,17 +23,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Setup PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client jq
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
           
       - name: Processar ações e notificar Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          # Instalar jq para processar JSON
+          sudo apt-get update
+          sudo apt-get install -y jq
+          
           # Configurar fuso horário de Brasília
           export TZ='America/Sao_Paulo'
           
@@ -40,6 +45,11 @@ jobs:
           DATA_EXIBICAO=$(date +%d/%m/%Y)
           HORA_EXIBICAO=$(date +%H:%M)
           HORA_NUM=$(date +%H)
+          
+          # Intervalos por espécie (dias)
+          declare -A REGA_INT=( ["Mangabeira"]=7 ["Cajueiro"]=10 ["Coqueiro"]=5 ["Cacau"]=3 ["default"]=7 )
+          declare -A PODA_INT=( ["Mangabeira"]=180 ["Cajueiro"]=365 ["Coqueiro"]=730 ["Cacau"]=180 ["default"]=180 )
+          declare -A COLH_INT=( ["Mangabeira"]=90 ["Cajueiro"]=60 ["Coqueiro"]=30 ["Cacau"]=120 ["default"]=90 )
           
           # Função para calcular dias
           dias_desde() {
@@ -89,25 +99,20 @@ jobs:
             echo "$valor"
           }
           
-          # Buscar dados do banco
-          echo "Conectando ao PostgreSQL..."
-          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -A -F"," \
-            -c "SELECT 
-                  COALESCE(id::text, fid::text, 'S/N') as id,
-                  COALESCE(nome_popular, 'Planta') as nome,
-                  COALESCE(ultima_rega::text, 'null') as ultima_rega,
-                  COALESCE(ultima_poda::text, 'null') as ultima_poda,
-                  COALESCE(ultima_colheita::text, 'null') as ultima_colheita
-                FROM frutiferas
-                ORDER BY id;" > /tmp/plantas.csv
-          
-          if [ ! -s /tmp/plantas.csv ]; then
-            echo "Erro: Não foi possível buscar dados do banco"
-            exit 1
-          fi
+          # Arrays de ações
+          REGA_URG=""
+          REGA_NORM=""
+          PODA=""
+          COLHEITA=""
           
           # Processar cada planta
-          while IFS=',' read -r ID NOME ULT_REGA ULT_PODA ULT_COLH; do
+          jq -c '.features[]' dados.geojson | while read -r feature; do
+            ID=$(echo "$feature" | jq -r '.properties.ID // .properties.fid // "S/N"')
+            NOME=$(echo "$feature" | jq -r '.properties.NOME_POPULAR // .properties.nome_popular // "Planta"')
+            ULT_REGA=$(echo "$feature" | jq -r '.properties.ULTIMA_REGA // .properties.ultima_rega // "null"')
+            ULT_PODA=$(echo "$feature" | jq -r '.properties.ULTIMA_PODA // .properties.ultima_poda // "null"')
+            ULT_COLH=$(echo "$feature" | jq -r '.properties.ULTIMA_COLHEITA // .properties.ultima_colheita // "null"')
+            
             # Verificar rega
             INT_R=$(get_intervalo "$NOME" "rega")
             DIAS_R=$(dias_desde "$ULT_REGA")
@@ -145,10 +150,10 @@ jobs:
                 echo "COLHEITA:$NOME #$ID - Há $DIAS_C dias sem colheita" >> /tmp/acoes.txt
               fi
             fi
-          done < /tmp/plantas.csv
+          done
           
-          # Contar total de plantas
-          TOTAL=$(wc -l < /tmp/plantas.csv)
+          # Montar mensagem
+          TOTAL=$(jq '.features | length' dados.geojson)
           
           # Saudação por horário (horário de Brasília)
           if [ "$HORA_NUM" -lt 12 ]; then
@@ -171,8 +176,9 @@ jobs:
           
           # Detectar se foi acionado por commit (push)
           if [ "${{ github.event_name }}" = "push" ]; then
-            MESSAGE="${MESSAGE}📄 *Atualização automática*%0A"
-            MESSAGE="${MESSAGE}Dados sincronizados do banco%0A%0A"
+            COMMIT_MSG=$(git log -1 --pretty=%B)
+            MESSAGE="${MESSAGE}🔄 *Atualização automática*%0A"
+            MESSAGE="${MESSAGE}Dados sincronizados do PWA%0A%0A"
           fi
           
           if [ "$TOTAL_ACOES" -eq 0 ]; then
@@ -248,8 +254,8 @@ jobs:
             fi
           fi
           
-          # Limpar arquivos temporários
-          rm -f /tmp/acoes.txt /tmp/plantas.csv
+          # Limpar arquivo temporário
+          rm -f /tmp/acoes.txt
           
           # Enviar notificação
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
@@ -265,30 +271,25 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           # Configurar fuso horário de Brasília
           export TZ='America/Sao_Paulo'
           
           # Estatísticas gerais
-          STATS=$(psql "$DATABASE_URL" -t -A -c "SELECT 
-            COUNT(*) as total,
-            COUNT(*) FILTER (WHERE nome_popular = 'Coqueiro') as coqueiros,
-            COUNT(*) FILTER (WHERE nome_popular = 'Cajueiro') as cajueiros,
-            COUNT(*) FILTER (WHERE nome_popular = 'Cacau') as cacau,
-            COUNT(*) FILTER (WHERE nome_popular = 'Mangabeira') as mangabeira
-          FROM frutiferas;")
+          TOTAL=$(jq '.features | length' dados.geojson)
+          COQUEIROS=$(jq '[.features[] | select(.properties.NOME_POPULAR == "Coqueiro")] | length' dados.geojson)
+          CAJUEIROS=$(jq '[.features[] | select(.properties.NOME_POPULAR == "Cajueiro")] | length' dados.geojson)
+          CACAU=$(jq '[.features[] | select(.properties.NOME_POPULAR == "Cacau")] | length' dados.geojson)
+          MANGABEIRA=$(jq '[.features[] | select(.properties.NOME_POPULAR == "Mangabeira")] | length' dados.geojson)
           
-          IFS='|' read -r TOTAL COQUEIROS CAJUEIROS CACAU MANGABEIRA <<< "$STATS"
-          
-          MESSAGE="📊 *Resumo do Sítio:*%0A"
-          MESSAGE="${MESSAGE}🌳 Total: ${TOTAL} plantas%0A"
-          [ "$COQUEIROS" -gt 0 ] && MESSAGE="${MESSAGE}🥥 Coqueiros: ${COQUEIROS}%0A"
-          [ "$CAJUEIROS" -gt 0 ] && MESSAGE="${MESSAGE}🌰 Cajueiros: ${CAJUEIROS}%0A"
-          [ "$CACAU" -gt 0 ] && MESSAGE="${MESSAGE}🍫 Cacau: ${CACAU}%0A"
-          [ "$MANGABEIRA" -gt 0 ] && MESSAGE="${MESSAGE}🥭 Mangabeira: ${MANGABEIRA}%0A"
+          STATS="📊 *Resumo do Sítio:*%0A"
+          STATS="${STATS}🌳 Total: ${TOTAL} plantas%0A"
+          [ "$COQUEIROS" -gt 0 ] && STATS="${STATS}🥥 Coqueiros: ${COQUEIROS}%0A"
+          [ "$CAJUEIROS" -gt 0 ] && STATS="${STATS}🌰 Cajueiros: ${CAJUEIROS}%0A"
+          [ "$CACAU" -gt 0 ] && STATS="${STATS}🍫 Cacau: ${CACAU}%0A"
+          [ "$MANGABEIRA" -gt 0 ] && STATS="${STATS}🥭 Mangabeira: ${MANGABEIRA}%0A"
           
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d text="${MESSAGE}" \
+            -d text="${STATS}" \
             -d parse_mode="Markdown"
