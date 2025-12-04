@@ -47,7 +47,7 @@ jobs:
           export PGPASSWORD="$SUPABASE_PASSWORD"
 
           psql -h "$SUPABASE_HOST" \
-               -p "${SUPABASE_PORT:-5432}" \
+               -p "${SUPABASE_PORT:-6543}" \
                -U "$SUPABASE_USER" \
                -d "$SUPABASE_DB" \
                -t -A -c "$SQL" > dados.geojson
