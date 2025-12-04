@@ -10,10 +10,6 @@ on:
 jobs:
   notify-telegram:
     runs-on: ubuntu-latest
-    env:
-      # Não colocar host/port separados aqui para evitar mascaramento ambíguo.
-      # Usaremos a URL completa em SUPABASE_DB_URL (secret).
-      TZ: 'America/Sao_Paulo'
 
     steps:
       - name: Checkout repository
@@ -22,58 +18,52 @@ jobs:
       - name: Instalar dependências do sistema
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq postgresql-client
+          sudo apt-get install -y jq postgis postgresql-client
 
-      - name: Verificar se secrets existem (debug seguro)
-        run: |
-          if [ -z "${{ secrets.SUPABASE_DB_URL }}" ]; then
-            echo "ERROR: SUPABASE_DB_URL não encontrado. Crie o secret e rode novamente."
-            exit 1
-          fi
-          if [ -z "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] || [ -z "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
-            echo "ERROR: Secrets do Telegram faltando. Crie TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID."
-            exit 1
-          fi
-          echo "Secrets mínimos encontrados."
-          # Mostrar a URL mascarada para confirmar formato (senha escondida)
-          echo "${{ secrets.SUPABASE_DB_URL }}" | sed -E 's#://([^:]+):([^@]+)@#://\1:*****@#'
+      #######################################################################
+      #     CONEXÃO SUPABASE VIA POOLER 6543  (FUNCIONA NO GITHUB)         #
+      #######################################################################
+      - name: Baixar dados do Supabase
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-
-      - name: Baixar dados do Supabase (PostGIS → GeoJSON)
+          SUPABASE_HOST: ${{ secrets.SUPABASE_HOST }}
+          SUPABASE_PORT: ${{ secrets.SUPABASE_PORT }}
+          SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
+          SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
+          SUPABASE_DB: ${{ secrets.SUPABASE_DB }}
         run: |
           set -euo pipefail
-          echo "Baixando dados do Supabase e criando dados.geojson..."
+          echo "Conectando ao Supabase via Pooler (porta 6543)..."
 
-          SQL="SELECT jsonb_build_object(
-                  'type','FeatureCollection',
-                  'features', COALESCE(jsonb_agg(
-                    jsonb_build_object(
-                      'type','Feature',
-                      'geometry', ST_AsGeoJSON(geom)::jsonb,
-                      'properties', to_jsonb(row) - 'geom'
-                    )
-                  ), '[]'::jsonb)
-                ) FROM (SELECT * FROM arvores) row;"
+          # Escapar senha contendo @
+          ESCAPED_PASS=$(printf '%s' "$SUPABASE_PASSWORD" | sed 's/@/%40/g')
 
-          # Executa o psql usando a URL completa armazenada no secret.
-          # A saída pode vir com espaços/novas linhas → removemos leading/trailing.
-          resultado=$(psql "${{ secrets.SUPABASE_DB_URL }}" -t -A -c "$SQL" || true)
+          SQL="
+            SELECT jsonb_build_object(
+              'type','FeatureCollection',
+              'features', jsonb_agg(
+                jsonb_build_object(
+                  'type','Feature',
+                  'geometry', ST_AsGeoJSON(geom)::jsonb,
+                  'properties', to_jsonb(row) - 'geom'
+                )
+              )
+            )
+            FROM (SELECT * FROM arvores) row;
+          "
 
-          if [ -z "$resultado" ] || [ "$resultado" = "NULL" ]; then
-            echo "Nenhum dado retornado ou falha na query. Saindo com erro."
-            echo "Saída do comando psql (mas não mostramos secrets):"
-            echo "$resultado"
-            exit 1
-          fi
+          export PGPASSWORD="$ESCAPED_PASS"
 
-          # Normalizar e gravar em arquivo .geojson
-          echo "$resultado" > dados.geojson
-          echo "Arquivo dados.geojson gerado (tamanho: $(wc -c < dados.geojson) bytes)."
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          psql "host=$SUPABASE_HOST port=$SUPABASE_PORT user=$SUPABASE_USER dbname=$SUPABASE_DB" \
+            -t -A -c "$SQL" > dados.geojson || {
+              echo "Erro ao baixar GeoJSON."
+              exit 1
+            }
 
-      - name: Setup Node.js (necessário por compatibilidade do seu script)
+          echo "GeoJSON gerado com sucesso!"
+
+      #######################################################################
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -83,18 +73,22 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          set -euo pipefail
-          # instalar jq caso não exista (passo anterior já instalou)
+          echo "Processando ações e enviando notificações..."
+
           sudo apt-get update
           sudo apt-get install -y jq
 
           export TZ='America/Sao_Paulo'
+
           HOJE=$(date +%Y-%m-%d)
           DATA_EXIBICAO=$(date +%d/%m/%Y)
           HORA_EXIBICAO=$(date +%H:%M)
           HORA_NUM=$(date +%H)
 
-          # Funções e intervalos (mesma lógica que você tinha)
+          declare -A REGA_INT=( ["Mangabeira"]=7 ["Cajueiro"]=10 ["Coqueiro"]=5 ["Cacau"]=3 ["default"]=7 )
+          declare -A PODA_INT=( ["Mangabeira"]=180 ["Cajueiro"]=365 ["Coqueiro"]=730 ["Cacau"]=180 ["default"]=180 )
+          declare -A COLH_INT=( ["Mangabeira"]=90 ["Cajueiro"]=60 ["Coqueiro"]=30 ["Cacau"]=120 ["default"]=90 )
+
           dias_desde() {
             if [ -z "$1" ] || [ "$1" = "null" ]; then
               echo "999"
@@ -109,10 +103,10 @@ jobs:
             case "$tipo" in
               "rega")
                 case "$especie" in
-                  *"Mangabeira"*) echo 7 ;;
-                  *"Caju"*) echo 10 ;;
-                  *"Coq"*) echo 5 ;;
-                  *"Cacau"*) echo 3 ;;
+                  *"Mangabeira"*) echo 7 ;; 
+                  *"Caju"*) echo 10 ;; 
+                  *"Coq"*) echo 5 ;; 
+                  *"Cacau"*) echo 3 ;; 
                   *) echo 7 ;;
                 esac ;;
               "poda")
@@ -134,144 +128,57 @@ jobs:
             esac
           }
 
-          # Limpa arquivo temporário anterior
-          rm -f /tmp/acoes.txt || true
-
-          # Processar cada feature do GeoJSON
-          if [ ! -f dados.geojson ]; then
-            echo "dados.geojson não encontrado — abortando."
-            exit 1
-          fi
-
           jq -c '.features[]' dados.geojson | while read -r feature; do
-            ID=$(echo "$feature" | jq -r '.properties.ID // .properties.id // "S/N"')
-            NOME=$(echo "$feature" | jq -r '.properties.NOME_POPULAR // .properties.nome_popular // "Planta"')
-            ULT_REGA=$(echo "$feature" | jq -r '.properties.ULTIMA_REGA // .properties.ultima_rega // "null"')
-            ULT_PODA=$(echo "$feature" | jq -r '.properties.ULTIMA_PODA // .properties.ultima_poda // "null"')
-            ULT_COLH=$(echo "$feature" | jq -r '.properties.ULTIMA_COLHEITA // .properties.ultima_colheita // "null"')
+            ID=$(echo "$feature" | jq -r '.properties.id // .properties.ID // "S/N"')
+            NOME=$(echo "$feature" | jq -r '.properties.nome_popular // .properties.NOME_POPULAR // "Planta"')
+
+            ULT_REGA=$(echo "$feature" | jq -r '.properties.ultima_rega // "null"')
+            ULT_PODA=$(echo "$feature" | jq -r '.properties.ultima_poda // "null"')
+            ULT_COLH=$(echo "$feature" | jq -r '.properties.ultima_colheita // "null"')
 
             INT_R=$(get_intervalo "$NOME" "rega")
             DIAS_R=$(dias_desde "$ULT_REGA")
 
-            if [ "$DIAS_R" -ge $((INT_R + 2)) ]; then
+            if [ "$DIAS_R" -ge $((INT_R+2)) ]; then
               echo "REGA_URG:$NOME #$ID - Atrasada $DIAS_R dias" >> /tmp/acoes.txt
             elif [ "$DIAS_R" -ge "$INT_R" ]; then
-              if [ "$ULT_REGA" = "null" ]; then
-                echo "REGA_NORM:$NOME #$ID - Nunca foi regada" >> /tmp/acoes.txt
-              else
-                echo "REGA_NORM:$NOME #$ID - Há $DIAS_R dias sem regar" >> /tmp/acoes.txt
-              fi
+              echo "REGA_NORM:$NOME #$ID - Há $DIAS_R dias" >> /tmp/acoes.txt
             fi
 
             INT_P=$(get_intervalo "$NOME" "poda")
             DIAS_P=$(dias_desde "$ULT_PODA")
-            if [ "$DIAS_P" -ge "$INT_P" ]; then
-              if [ "$ULT_PODA" = "null" ]; then
-                echo "PODA:$NOME #$ID - Nunca foi podada" >> /tmp/acoes.txt
-              else
-                echo "PODA:$NOME #$ID - Há $DIAS_P dias sem poda" >> /tmp/acoes.txt
-              fi
-            fi
+            [ "$DIAS_P" -ge "$INT_P" ] && echo "PODA:$NOME #$ID" >> /tmp/acoes.txt
 
             INT_C=$(get_intervalo "$NOME" "colheita")
             DIAS_C=$(dias_desde "$ULT_COLH")
-            if [ "$DIAS_C" -ge "$INT_C" ]; then
-              if [ "$ULT_COLH" = "null" ]; then
-                echo "COLHEITA:$NOME #$ID - Verificar frutos" >> /tmp/acoes.txt
-              else
-                echo "COLHEITA:$NOME #$ID - Há $DIAS_C dias sem colheita" >> /tmp/acoes.txt
-              fi
-            fi
+            [ "$DIAS_C" -ge "$INT_C" ] && echo "COLHEITA:$NOME #$ID" >> /tmp/acoes.txt
           done
 
-          # Montar mensagem
-          TOTAL=$(jq '.features | length' dados.geojson 2>/dev/null || echo 0)
+          TOTAL=$(jq '.features | length' dados.geojson)
+
+          if [ "$HORA_NUM" -lt 12 ]; then SAUD="☀️ Bom dia"
+          elif [ "$HORA_NUM" -lt 18 ]; then SAUD="⛅ Boa tarde"
+          else SAUD="🌙 Boa noite"; fi
+
+          MESSAGE="${SAUD}!%0A📅 ${DATA_EXIBICAO} às ${HORA_EXIBICAO}%0A%0A"
 
           if [ -f /tmp/acoes.txt ]; then
-            TOTAL_ACOES=$(wc -l < /tmp/acoes.txt)
+            TOTAL_AC=$(wc -l < /tmp/acoes.txt)
           else
-            TOTAL_ACOES=0
+            TOTAL_AC=0
           fi
 
-          if [ "$HORA_NUM" -lt 12 ]; then
-            SAUDACAO="☀️ Bom dia"
-          elif [ "$HORA_NUM" -lt 18 ]; then
-            SAUDACAO="⛅ Boa tarde"
+          if [ "$TOTAL_AC" -eq 0 ]; then
+            MESSAGE="${MESSAGE}✅ *Tudo em dia!*%0A🌿 Nenhuma ação necessária."
           else
-            SAUDACAO="🌙 Boa noite"
-          fi
-
-          MESSAGE="${SAUDACAO}!%0A"
-          MESSAGE="${MESSAGE}📅 ${DATA_EXIBICAO} às ${HORA_EXIBICAO}%0A%0A"
-
-          if [ "$TOTAL_ACOES" -eq 0 ]; then
-            MESSAGE="${MESSAGE}✅ *Tudo em dia!*%0A"
-            MESSAGE="${MESSAGE}Nenhuma ação necessária. 🌿%0A%0A"
-            MESSAGE="${MESSAGE}📊 Total: ${TOTAL} plantas cadastradas"
-          else
-            MESSAGE="${MESSAGE}📋 *Ações: ${TOTAL_ACOES}*%0A%0A"
-
-            URG_COUNT=$(grep -c "^REGA_URG:" /tmp/acoes.txt 2>/dev/null || echo 0)
-            NORM_COUNT=$(grep -c "^REGA_NORM:" /tmp/acoes.txt 2>/dev/null || echo 0)
-            PODA_COUNT=$(grep -c "^PODA:" /tmp/acoes.txt 2>/dev/null || echo 0)
-            COLH_COUNT=$(grep -c "^COLHEITA:" /tmp/acoes.txt 2>/dev/null || echo 0)
-
-            if [ "$TOTAL_ACOES" -gt 15 ]; then
-              [ "$URG_COUNT" -gt 0 ] && MESSAGE="${MESSAGE}🚨 URGENTE: ${URG_COUNT} rega(s) atrasada(s)%0A"
-              [ "$NORM_COUNT" -gt 0 ] && MESSAGE="${MESSAGE}💧 Rega: ${NORM_COUNT} planta(s)%0A"
-              [ "$PODA_COUNT" -gt 0 ] && MESSAGE="${MESSAGE}✂️ Poda: ${PODA_COUNT} planta(s)%0A"
-              [ "$COLH_COUNT" -gt 0 ] && MESSAGE="${MESSAGE}🍊 Colheita: ${COLH_COUNT} planta(s)%0A"
-              MESSAGE="${MESSAGE}%0A💡 Veja detalhes no app"
-            else
-              CONTADOR=0
-              if [ "$URG_COUNT" -gt 0 ]; then
-                MESSAGE="${MESSAGE}🚨 *URGENTE:*%0A"
-                while IFS=: read -r tipo texto; do
-                  if [ "$tipo" = "REGA_URG" ]; then
-                    MESSAGE="${MESSAGE}• ${texto}%0A"
-                    CONTADOR=$((CONTADOR + 1))
-                  fi
-                done < /tmp/acoes.txt
-                MESSAGE="${MESSAGE}%0A"
-              fi
-
-              if [ "$NORM_COUNT" -gt 0 ] && [ "$CONTADOR" -lt 15 ]; then
-                MESSAGE="${MESSAGE}💧 *Rega:*%0A"
-                while IFS=: read -r tipo texto; do
-                  if [ "$tipo" = "REGA_NORM" ] && [ "$CONTADOR" -lt 15 ]; then
-                    MESSAGE="${MESSAGE}• ${texto}%0A"
-                    CONTADOR=$((CONTADOR + 1))
-                  fi
-                done < /tmp/acoes.txt
-                MESSAGE="${MESSAGE}%0A"
-              fi
-
-              if [ "$PODA_COUNT" -gt 0 ] && [ "$CONTADOR" -lt 15 ]; then
-                MESSAGE="${MESSAGE}✂️ *Poda:*%0A"
-                while IFS=: read -r tipo texto; do
-                  if [ "$tipo" = "PODA" ] && [ "$CONTADOR" -lt 15 ]; then
-                    MESSAGE="${MESSAGE}• ${texto}%0A"
-                    CONTADOR=$((CONTADOR + 1))
-                  fi
-                done < /tmp/acoes.txt
-                MESSAGE="${MESSAGE}%0A"
-              fi
-
-              if [ "$COLH_COUNT" -gt 0 ] && [ "$CONTADOR" -lt 15 ]; then
-                MESSAGE="${MESSAGE}🍊 *Colheita:*%0A"
-                while IFS=: read -r tipo texto; do
-                  if [ "$tipo" = "COLHEITA" ] && [ "$CONTADOR" -lt 15 ]; then
-                    MESSAGE="${MESSAGE}• ${texto}%0A"
-                    CONTADOR=$((CONTADOR + 1))
-                  fi
-                done < /tmp/acoes.txt
-              fi
-            fi
+            MESSAGE="${MESSAGE}📋 *Ações pendentes: ${TOTAL_AC}*%0A%0A"
+            while read linha; do
+              MESSAGE="${MESSAGE}• ${linha}%0A"
+            done < /tmp/acoes.txt
           fi
 
           rm -f /tmp/acoes.txt
 
-          # Enviar notificação via Telegram
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d text="${MESSAGE}" \
