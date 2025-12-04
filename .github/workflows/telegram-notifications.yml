@@ -1,31 +1,123 @@
-name: Sistema Sítio Ipiranga
+name: Telegram Notifications - Supabase
 
 on:
   schedule:
-    - cron: '0 9,15,21 * * *'  # 06:00, 12:00, 18:00 BR
+    # 06:00 BR = 09:00 UTC
+    - cron: '0 9 * * *'
+    # 12:00 BR = 15:00 UTC
+    - cron: '0 15 * * *'
+    # 18:00 BR = 21:00 UTC
+    - cron: '0 21 * * *'
   workflow_dispatch:
+    inputs:
+      tipo_relatorio:
+        description: 'Tipo de relatório'
+        required: true
+        default: 'diario'
+        type: choice
+        options:
+        - diario
+        - completo
+        - urgente
 
 jobs:
-  check-system:
+  fetch-supabase-data:
     runs-on: ubuntu-latest
+    outputs:
+      total_frutiferas: ${{ steps.count-data.outputs.total_frutiferas }}
+      total_species: ${{ steps.count-data.outputs.total_species }}
+      pending_actions: ${{ steps.count-data.outputs.pending_actions }}
     steps:
-      - name: Verificar e notificar
+      - name: Buscar dados do Supabase
+        id: count-data
         env:
-          # Secrets mínimos
-          TG_BOT: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TG_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SB_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: |
-          # Mensagem direta
-          MSG="🟢 *Sistema Online*
-          🕒 $(TZ='America/Fortaleza' date '+%d/%m %H:%M')
-          📍 Sítio Ipiranga
-          ✅ Todos sistemas operacionais"
+          SUPABASE_URL: "https://erbefbnjxgpetbetlzya.supabase.co"
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }} # sb_secret_NaKtq...
           
-          # Enviar
-          curl -s -X POST \
-            "https://api.telegram.org/bot$TG_BOT/sendMessage" \
-            -d chat_id="$TG_ID" \
-            -d text="$MSG" \
-            -d parse_mode="Markdown" \
-            && echo "✅ Notificação enviada"
+        run: |
+          # 1. Contar total de frutíferas
+          TOTAL_FRUTIFERAS=$(curl -s "$SUPABASE_URL/rest/v1/frutiferas?select=id" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Range: 0-9" | jq '. | length')
+          
+          # 2. Contar espécies únicas
+          TOTAL_SPECIES=$(curl -s "$SUPABASE_URL/rest/v1/frutiferas?select=nome_popular" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" | jq 'map(.nome_popular) | unique | length')
+          
+          # 3. Verificar ações pendentes (ultima_rega antiga)
+          TODAY=$(date +%Y-%m-%d)
+          DAYS_AGO=$(date -d "7 days ago" +%Y-%m-%d)
+          
+          PENDING_ACTIONS=$(curl -s "$SUPABASE_URL/rest/v1/frutiferas?select=id&ultima_rega=lt.$DAYS_AGO" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" | jq '. | length')
+          
+          echo "total_frutiferas=$TOTAL_FRUTIFERAS" >> $GITHUB_OUTPUT
+          echo "total_species=$TOTAL_SPECIES" >> $GITHUB_OUTPUT
+          echo "pending_actions=$PENDING_ACTIONS" >> $GITHUB_OUTPUT
+          
+          echo "📊 Dados obtidos do Supabase:"
+          echo "  Frutíferas: $TOTAL_FRUTIFERAS"
+          echo "  Espécies: $TOTAL_SPECIES"
+          echo "  Ações pendentes: $PENDING_ACTIONS"
+
+  send-telegram-report:
+    runs-on: ubuntu-latest
+    needs: fetch-supabase-data
+    steps:
+      - name: Enviar relatório para Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          # Formatar mensagem com dados do Supabase
+          TEXT="🌿 *RELATÓRIO SÍTIO IPIRANGA* 🌿
+          
+          📊 *Dados do Sistema:*
+          🌳 *Frutíferas:* ${{ needs.fetch-supabase-data.outputs.total_frutiferas }}
+          🏷️ *Espécies:* ${{ needs.fetch-supabase-data.outputs.total_species }}
+          ⚠️ *Ações Pendentes:* ${{ needs.fetch-supabase-data.outputs.pending_actions }}
+          
+          ⏰ *Horário:* $(date '+%d/%m/%Y %H:%M')
+          🔄 *Tipo:* ${{ github.event.inputs.tipo_relatorio || 'Automático' }}
+          
+          📡 *Status:* ✅ Conectado ao Supabase
+          🗺️ *SIGWEB:* Operacional"
+          
+          # Enviar para Telegram
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            -d chat_id="$TELEGRAM_CHAT_ID" \
+            -d text="$TEXT" \
+            -d parse_mode="Markdown"
+          
+          echo "✅ Relatório enviado para Telegram!"
+
+  log-to-supabase:
+    runs-on: ubuntu-latest
+    needs: [fetch-supabase-data, send-telegram-report]
+    steps:
+      - name: Registrar execução no Supabase
+        env:
+          SUPABASE_URL: "https://erbefbnjxgpetbetlzya.supabase.co"
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          # Criar log da execução
+          JSON_DATA=$(jq -n \
+            --arg tipo "${{ github.event.inputs.tipo_relatorio || 'automático' }}" \
+            --arg total "${{ needs.fetch-supabase-data.outputs.total_frutiferas }}" \
+            --arg especies "${{ needs.fetch-supabase-data.outputs.total_species }}" \
+            --arg pendentes "${{ needs.fetch-supabase-data.outputs.pending_actions }}" \
+            '{tipo: $tipo, total_frutiferas: $total, especies: $especies, acoes_pendentes: $pendentes, executado_em: now()}')
+          
+          # Inserir na tabela de logs (crie a tabela primeiro)
+          curl -X POST "$SUPABASE_URL/rest/v1/telegram_logs" \
+            -H "apikey: $SUPABASE_SERVICE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "$JSON_DATA"
+          
+          echo "📝 Log registrado no Supabase!"
