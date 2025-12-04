@@ -30,11 +30,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          PGHOST: aws-1-us-east-1.pooler.supabase.com
-          PGPORT: 6543
-          PGDATABASE: postgres
-          PGUSER: postgres.erbefbnjxgpetbetlzya
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           # Configurar fuso horário de Brasília
           export TZ='America/Sao_Paulo'
@@ -269,17 +265,13 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          PGHOST: aws-1-us-east-1.pooler.supabase.com
-          PGPORT: 6543
-          PGDATABASE: postgres
-          PGUSER: postgres.erbefbnjxgpetbetlzya
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           # Configurar fuso horário de Brasília
           export TZ='America/Sao_Paulo'
           
           # Estatísticas gerais
-          STATS=$(psql -t -A -c "SELECT 
+          STATS=$(psql "$DATABASE_URL" -t -A -c "SELECT 
             COUNT(*) as total,
             COUNT(*) FILTER (WHERE nome_popular = 'Coqueiro') as coqueiros,
             COUNT(*) FILTER (WHERE nome_popular = 'Cajueiro') as cajueiros,
