@@ -1,17 +1,11 @@
 name: Notificações Telegram - Sincronização Automática
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'dados.geojson'
   schedule:
     - cron: '0 9 * * *'
     - cron: '0 15 * * *'
     - cron: '0 21 * * *'
   workflow_dispatch:
-
 jobs:
   notify-telegram:
     runs-on: ubuntu-latest
