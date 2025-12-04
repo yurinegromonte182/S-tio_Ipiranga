@@ -30,7 +30,11 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PGHOST: aws-1-us-east-1.pooler.supabase.com
+          PGPORT: 6543
+          PGDATABASE: postgres
+          PGUSER: postgres.erbefbnjxgpetbetlzya
         run: |
           # Configurar fuso horário de Brasília
           export TZ='America/Sao_Paulo'
@@ -40,13 +44,6 @@ jobs:
           DATA_EXIBICAO=$(date +%d/%m/%Y)
           HORA_EXIBICAO=$(date +%H:%M)
           HORA_NUM=$(date +%H)
-          
-          # Conexão PostgreSQL
-          export PGPASSWORD="$DB_PASSWORD"
-          DB_HOST="aws-1-us-east-1.pooler.supabase.com"
-          DB_PORT="6543"
-          DB_NAME="postgres"
-          DB_USER="postgres.erbefbnjxgpetbetlzya"
           
           # Função para calcular dias
           dias_desde() {
@@ -272,27 +269,23 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PGHOST: aws-1-us-east-1.pooler.supabase.com
+          PGPORT: 6543
+          PGDATABASE: postgres
+          PGUSER: postgres.erbefbnjxgpetbetlzya
         run: |
           # Configurar fuso horário de Brasília
           export TZ='America/Sao_Paulo'
           
-          # Conexão PostgreSQL
-          export PGPASSWORD="$DB_PASSWORD"
-          DB_HOST="aws-1-us-east-1.pooler.supabase.com"
-          DB_PORT="6543"
-          DB_NAME="postgres"
-          DB_USER="postgres.erbefbnjxgpetbetlzya"
-          
           # Estatísticas gerais
-          STATS=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -A \
-            -c "SELECT 
-                  COUNT(*) as total,
-                  COUNT(*) FILTER (WHERE nome_popular = 'Coqueiro') as coqueiros,
-                  COUNT(*) FILTER (WHERE nome_popular = 'Cajueiro') as cajueiros,
-                  COUNT(*) FILTER (WHERE nome_popular = 'Cacau') as cacau,
-                  COUNT(*) FILTER (WHERE nome_popular = 'Mangabeira') as mangabeira
-                FROM frutiferas;")
+          STATS=$(psql -t -A -c "SELECT 
+            COUNT(*) as total,
+            COUNT(*) FILTER (WHERE nome_popular = 'Coqueiro') as coqueiros,
+            COUNT(*) FILTER (WHERE nome_popular = 'Cajueiro') as cajueiros,
+            COUNT(*) FILTER (WHERE nome_popular = 'Cacau') as cacau,
+            COUNT(*) FILTER (WHERE nome_popular = 'Mangabeira') as mangabeira
+          FROM frutiferas;")
           
           IFS='|' read -r TOTAL COQUEIROS CAJUEIROS CACAU MANGABEIRA <<< "$STATS"
           
