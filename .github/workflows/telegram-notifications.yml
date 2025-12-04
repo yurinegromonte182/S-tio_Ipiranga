@@ -1,4 +1,4 @@
-name: Notificações Telegram - Sincronização Automática
+name: Notificações Telegram - Sincronização Automática  #  sads
 
 on:
   schedule:
