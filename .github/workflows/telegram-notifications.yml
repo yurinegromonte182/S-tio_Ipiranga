@@ -33,14 +33,13 @@ jobs:
         env:
           SUPABASE_URL: "https://erbefbnjxgpetbetlzya.supabase.co"
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }} # sb_secret_NaKtq...
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           
         run: |
           # 1. Contar total de frutíferas
           TOTAL_FRUTIFERAS=$(curl -s "$SUPABASE_URL/rest/v1/frutiferas?select=id" \
             -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            -H "Content-Range: 0-9" | jq '. | length')
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" | jq '. | length')
           
           # 2. Contar espécies únicas
           TOTAL_SPECIES=$(curl -s "$SUPABASE_URL/rest/v1/frutiferas?select=nome_popular" \
@@ -48,12 +47,16 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_ANON_KEY" | jq 'map(.nome_popular) | unique | length')
           
           # 3. Verificar ações pendentes (ultima_rega antiga)
-          TODAY=$(date +%Y-%m-%d)
-          DAYS_AGO=$(date -d "7 days ago" +%Y-%m-%d)
+          DAYS_AGO=$(date -u -d "7 days ago" +%Y-%m-%d)
           
           PENDING_ACTIONS=$(curl -s "$SUPABASE_URL/rest/v1/frutiferas?select=id&ultima_rega=lt.$DAYS_AGO" \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY" | jq '. | length')
+          
+          # Garantir que os valores não estejam vazios
+          TOTAL_FRUTIFERAS=${TOTAL_FRUTIFERAS:-0}
+          TOTAL_SPECIES=${TOTAL_SPECIES:-0}
+          PENDING_ACTIONS=${PENDING_ACTIONS:-0}
           
           echo "total_frutiferas=$TOTAL_FRUTIFERAS" >> $GITHUB_OUTPUT
           echo "total_species=$TOTAL_SPECIES" >> $GITHUB_OUTPUT
@@ -74,18 +77,23 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           # Formatar mensagem com dados do Supabase
+          TIPO_RELATORIO="${{ github.event.inputs.tipo_relatorio }}"
+          if [ -z "$TIPO_RELATORIO" ]; then
+            TIPO_RELATORIO="Automático"
+          fi
+          
           TEXT="🌿 *RELATÓRIO SÍTIO IPIRANGA* 🌿
-          
-          📊 *Dados do Sistema:*
-          🌳 *Frutíferas:* ${{ needs.fetch-supabase-data.outputs.total_frutiferas }}
-          🏷️ *Espécies:* ${{ needs.fetch-supabase-data.outputs.total_species }}
-          ⚠️ *Ações Pendentes:* ${{ needs.fetch-supabase-data.outputs.pending_actions }}
-          
-          ⏰ *Horário:* $(date '+%d/%m/%Y %H:%M')
-          🔄 *Tipo:* ${{ github.event.inputs.tipo_relatorio || 'Automático' }}
-          
-          📡 *Status:* ✅ Conectado ao Supabase
-          🗺️ *SIGWEB:* Operacional"
+
+📊 *Dados do Sistema:*
+🌳 *Frutíferas:* ${{ needs.fetch-supabase-data.outputs.total_frutiferas }}
+🏷️ *Espécies:* ${{ needs.fetch-supabase-data.outputs.total_species }}
+⚠️ *Ações Pendentes:* ${{ needs.fetch-supabase-data.outputs.pending_actions }}
+
+⏰ *Horário:* $(TZ='America/Fortaleza' date '+%d/%m/%Y %H:%M')
+🔄 *Tipo:* $TIPO_RELATORIO
+
+📡 *Status:* ✅ Conectado ao Supabase
+🗺️ *SIGWEB:* Operacional"
           
           # Enviar para Telegram
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
@@ -104,20 +112,42 @@ jobs:
           SUPABASE_URL: "https://erbefbnjxgpetbetlzya.supabase.co"
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
+          # Preparar dados para o log
+          TIPO_RELATORIO="${{ github.event.inputs.tipo_relatorio }}"
+          if [ -z "$TIPO_RELATORIO" ]; then
+            TIPO_RELATORIO="automático"
+          fi
+          
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+          
           # Criar log da execução
           JSON_DATA=$(jq -n \
-            --arg tipo "${{ github.event.inputs.tipo_relatorio || 'automático' }}" \
+            --arg tipo "$TIPO_RELATORIO" \
             --arg total "${{ needs.fetch-supabase-data.outputs.total_frutiferas }}" \
             --arg especies "${{ needs.fetch-supabase-data.outputs.total_species }}" \
             --arg pendentes "${{ needs.fetch-supabase-data.outputs.pending_actions }}" \
-            '{tipo: $tipo, total_frutiferas: $total, especies: $especies, acoes_pendentes: $pendentes, executado_em: now()}')
+            --arg timestamp "$TIMESTAMP" \
+            '{
+              tipo: $tipo,
+              total_frutiferas: ($total | tonumber),
+              especies: ($especies | tonumber),
+              acoes_pendentes: ($pendentes | tonumber),
+              executado_em: $timestamp
+            }')
           
-          # Inserir na tabela de logs (crie a tabela primeiro)
-          curl -X POST "$SUPABASE_URL/rest/v1/telegram_logs" \
+          # Inserir na tabela de logs
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$SUPABASE_URL/rest/v1/telegram_logs" \
             -H "apikey: $SUPABASE_SERVICE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
             -H "Content-Type: application/json" \
             -H "Prefer: return=minimal" \
-            -d "$JSON_DATA"
+            -d "$JSON_DATA")
           
-          echo "📝 Log registrado no Supabase!"
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          
+          if [ "$HTTP_CODE" -eq 201 ] || [ "$HTTP_CODE" -eq 200 ]; then
+            echo "📝 Log registrado no Supabase com sucesso!"
+          else
+            echo "⚠️ Erro ao registrar log (HTTP $HTTP_CODE)"
+            echo "Response: $(echo "$RESPONSE" | head -n-1)"
+          fi
