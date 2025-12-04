@@ -1,4 +1,4 @@
-name: Notificações Telegram - Sincronização Automática  #  sads
+name: Notificações Telegram - Sincronização Automática
 
 on:
   schedule:
@@ -6,10 +6,11 @@ on:
     - cron: '0 15 * * *'
     - cron: '0 21 * * *'
   workflow_dispatch:
+
 jobs:
   notify-telegram:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,7 +21,7 @@ jobs:
           sudo apt-get install -y jq postgis postgresql-client
 
       #######################################################################
-      #  NOVO BLOCO CORRIGIDO — CONEXÃO SUPABASE VIA HOST/USER/PASSWORD     #
+      #    BLOCO SUPABASE - CONEXÃO DIRETA (porta 5432 - SEM POOLER)       #
       #######################################################################
       - name: Baixar dados do Supabase (PostGIS → GeoJSON)
         env:
@@ -30,7 +31,7 @@ jobs:
           SUPABASE_DB: ${{ secrets.SUPABASE_DB }}
           SUPABASE_PORT: ${{ secrets.SUPABASE_PORT }}
         run: |
-          echo "Baixando dados do Supabase via conexão direta..."
+          echo "Baixando dados do Supabase via conexão direta (porta 5432)..."
 
           SQL="SELECT jsonb_build_object(
                   'type','FeatureCollection',
@@ -46,8 +47,9 @@ jobs:
 
           export PGPASSWORD="$SUPABASE_PASSWORD"
 
+          # --- HOST sem pooler + PORTA 5432 --- #
           psql -h "$SUPABASE_HOST" \
-               -p "${SUPABASE_PORT:-6543}" \
+               -p "${SUPABASE_PORT:-5432}" \
                -U "$SUPABASE_USER" \
                -d "$SUPABASE_DB" \
                -t -A -c "$SQL" > dados.geojson
@@ -59,32 +61,28 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+
       - name: Processar ações e notificar Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          # (resto do seu script permanece exatamente igual)
           echo "Processando ações e enviando notificações..."
 
-          # Instalar jq
           sudo apt-get update
           sudo apt-get install -y jq
-          
+
           export TZ='America/Sao_Paulo'
-          
+
           HOJE=$(date +%Y-%m-%d)
           DATA_EXIBICAO=$(date +%d/%m/%Y)
           HORA_EXIBICAO=$(date +%H:%M)
           HORA_NUM=$(date +%H)
 
-          # Intervalos
           declare -A REGA_INT=( ["Mangabeira"]=7 ["Cajueiro"]=10 ["Coqueiro"]=5 ["Cacau"]=3 ["default"]=7 )
           declare -A PODA_INT=( ["Mangabeira"]=180 ["Cajueiro"]=365 ["Coqueiro"]=730 ["Cacau"]=180 ["default"]=180 )
           declare -A COLH_INT=( ["Mangabeira"]=90 ["Cajueiro"]=60 ["Coqueiro"]=30 ["Cacau"]=120 ["default"]=90 )
 
-          # Função dias desde
           dias_desde() {
             if [ -z "$1" ] || [ "$1" = "null" ]; then
               echo "999"
@@ -93,7 +91,6 @@ jobs:
             fi
           }
 
-          # Função intervalo
           get_intervalo() {
             local especie=$1
             local tipo=$2
@@ -125,10 +122,10 @@ jobs:
             esac
           }
 
-          # Processar plantas
           jq -c '.features[]' dados.geojson | while read -r feature; do
             ID=$(echo "$feature" | jq -r '.properties.id // .properties.ID // "S/N"')
             NOME=$(echo "$feature" | jq -r '.properties.nome_popular // .properties.NOME_POPULAR // "Planta"')
+
             ULT_REGA=$(echo "$feature" | jq -r '.properties.ultima_rega // .properties.ULTIMA_REGA // "null"')
             ULT_PODA=$(echo "$feature" | jq -r '.properties.ultima_poda // .properties.ULTIMA_PODA // "null"')
             ULT_COLH=$(echo "$feature" | jq -r '.properties.ultima_colheita // .properties.ULTIMA_COLHEITA // "null"')
@@ -151,7 +148,6 @@ jobs:
             [ "$DIAS_C" -ge "$INT_C" ] && echo "COLHEITA:$NOME #$ID" >> /tmp/acoes.txt
           done
 
-          # Montar mensagem
           TOTAL=$(jq '.features | length' dados.geojson)
 
           if [ "$HORA_NUM" -lt 12 ]; then SAUD="☀️ Bom dia"
@@ -183,4 +179,3 @@ jobs:
             -d parse_mode="Markdown"
 
           echo "Notificação enviada!"
-
