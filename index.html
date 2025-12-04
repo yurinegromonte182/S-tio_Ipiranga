@@ -720,8 +720,8 @@
         <div class="section-title">📋 Ações Necessárias Hoje</div>
         
         <div id="autoSyncInfo" class="info-box">
-          <span>📡 Enviando ações para Supabase</span><br>
-          <small>As ações são salvas localmente e enviadas para o banco de dados</small>
+          <span>📡 Dados sincronizados com Supabase</span><br>
+          <small>As ações são salvas localmente e sincronizadas com o banco de dados</small>
         </div>
         
         <div class="filter-group">
@@ -748,7 +748,7 @@
         
         <div id="cadastroFormContainer">
           <div class="info-box">
-            🌱 Cadastre e veja imediatamente no mapa abaixo
+            🌱 Cadastre e visualize imediatamente no mapa. Use o botão "Sincronizar" para enviar ao banco de dados.
           </div>
 
           <form onsubmit="cadastrarFrutifera(event)">
@@ -760,18 +760,7 @@
                 <option value="Cajueiro">🌰 Cajueiro</option>
                 <option value="Coqueiro">🥥 Coqueiro</option>
                 <option value="Cacau">🍫 Cacau</option>
-                <option value="Outra">🌳 Outra espécie</option>
               </select>
-            </div>
-
-            <div class="form-group" id="outraEspecieGroup" style="display:none;">
-              <label>Nome da espécie</label>
-              <input type="text" id="outraEspecieNome" placeholder="Ex: Goiabeira, Mangueira...">
-            </div>
-
-            <div class="form-group">
-              <label>🏷️ Identificação/Código *</label>
-              <input type="text" id="novoId" placeholder="Ex: MG-001, COQ-15..." required>
             </div>
 
             <div class="form-row">
@@ -805,6 +794,11 @@
               ✅ Cadastrar Frutífera
             </button>
           </form>
+          
+          <button class="btn btn-secondary" onclick="sincronizarComSupabase()" style="margin-top: 0.5rem;">
+            🔄 Sincronizar com Banco de Dados
+          </button>
+          <div id="syncMessage" style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem; text-align: center;"></div>
         </div>
       </div>
 
@@ -869,7 +863,7 @@
         <div class="section-title">🌱 Minhas Frutíferas</div>
         
         <div class="info-box">
-          💾 Todos os dados são salvos localmente no seu dispositivo
+          💾 Dados sincronizados com Supabase
         </div>
         
         <input type="text" class="search-box" id="searchFrutifera" placeholder="🔎 Buscar frutífera..." onkeyup="filtrarFrutiferas()">
@@ -1021,6 +1015,7 @@
     let historico = [];
     let perfilAtual = localStorage.getItem('perfilAtual') || 'Default';
     let currentFilter = 'todas';
+    let pendingSync = [];
     
     // Variáveis do mapa
     let map;
@@ -1038,17 +1033,9 @@
       console.log('🔥 Carregando frutíferas do Supabase...');
       
       try {
-        const frutiferasLocal = JSON.parse(localStorage.getItem('frutiferas') || '[]');
-        
-        if (frutiferasLocal.length > 0) {
-          frutiferas = frutiferasLocal;
-          console.log(`📦 ${frutiferas.length} frutíferas do cache local`);
-          atualizarTodasAbas();
-        }
-        
         if (navigator.onLine) {
           const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/frutiferas?select=*`,
+            `${SUPABASE_URL}/rest/v1/frutiferas?select=*&nome_popular=in.(Mangabeira,Cajueiro,Coqueiro,Cacau)`,
             {
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
@@ -1061,10 +1048,11 @@
             const dados = await response.json();
             
             frutiferas = dados.map(f => ({
-              id: f.fid || f.id || 'S/N',
-              especie: f.nome_popular || 'Frutífera',
-              nome_popular: f.nome_popular || 'Frutífera',
-              identificacao: f.fid || f.id || 'S/N',
+              id: f.id,
+              fid: f.fid,
+              especie: f.nome_popular,
+              nome_popular: f.nome_popular,
+              identificacao: f.fid,
               data_plantio: f.data_plantio || null,
               ultima_rega: f.data_irrigacao_ordinaria || null,
               ultima_poda: f.data_poda_formacao_1 || null,
@@ -1073,23 +1061,38 @@
               longitude: f.longitude || null,
               altura_total: f.altura_total || null,
               diametro_copa: f.diametro_copa || null,
-              created_at: new Date().toISOString()
+              created_at: f.created_at || new Date().toISOString()
             }));
             
             localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
             console.log(`✅ ${frutiferas.length} frutíferas carregadas do Supabase`);
             atualizarTodasAbas();
             
-            // Atualizar mapa se estiver na aba
             if (document.getElementById('mapa').classList.contains('active')) {
               atualizarMapa();
             }
+          } else {
+            console.error('Erro na resposta do Supabase:', response.status);
+            carregarDoCache();
           }
+        } else {
+          console.log('📡 Modo offline - carregando do cache');
+          carregarDoCache();
         }
         
       } catch (error) {
         console.error('❌ Erro ao carregar frutíferas:', error);
         mostrarToast('⚠️ Erro ao carregar. Usando dados locais.');
+        carregarDoCache();
+      }
+    }
+
+    function carregarDoCache() {
+      const frutiferasLocal = JSON.parse(localStorage.getItem('frutiferas') || '[]');
+      if (frutiferasLocal.length > 0) {
+        frutiferas = frutiferasLocal;
+        console.log(`📦 ${frutiferas.length} frutíferas do cache local`);
+        atualizarTodasAbas();
       }
     }
 
@@ -1300,7 +1303,7 @@
                                 'inicio_colheita';
           
           await fetch(
-            `${SUPABASE_URL}/rest/v1/frutiferas?fid=eq.${frutiferaId}`,
+            `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${frutiferaId}`,
             {
               method: 'PATCH',
               headers: {
@@ -1323,11 +1326,14 @@
       event.preventDefault();
       
       const especie = document.getElementById('novaEspecie').value;
-      const outraEspecie = document.getElementById('outraEspecieNome').value;
-      const identificacao = document.getElementById('novoId').value;
       const dataPlantio = document.getElementById('dataPlantio').value;
       const coordenadas = document.getElementById('coordenadas').value;
       const responsavel = document.getElementById('responsavel').value;
+      
+      if (!especie) {
+        mostrarToast('❌ Selecione uma espécie');
+        return;
+      }
       
       let lat = null, lon = null;
       if (coordenadas) {
@@ -1336,11 +1342,14 @@
         lon = coords[1];
       }
       
+      const fidTemp = `${especie.substring(0, 3).toUpperCase()}-${Date.now()}`;
+      
       const novaFrutifera = {
-        id: 'FRT-' + Date.now(),
-        especie: especie === 'Outra' ? outraEspecie : especie,
-        nome_popular: especie === 'Outra' ? outraEspecie : especie,
-        identificacao: identificacao,
+        id: null,
+        fid: fidTemp,
+        especie: especie,
+        nome_popular: especie,
+        identificacao: fidTemp,
         data_plantio: dataPlantio,
         latitude: lat,
         longitude: lon,
@@ -1348,31 +1357,64 @@
         ultima_rega: null,
         ultima_poda: null,
         ultima_colheita: null,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        pendingSync: true
       };
       
       try {
+        pendingSync.push(novaFrutifera);
+        localStorage.setItem('pendingSync', JSON.stringify(pendingSync));
+        
         frutiferas.push(novaFrutifera);
         localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
         
         atualizarTodasAbas();
-        mostrarToast('✅ Frutífera cadastrada com sucesso!');
+        mostrarToast('✅ Frutífera cadastrada! Clique em "Sincronizar" para enviar ao banco.');
         
         event.target.reset();
         document.getElementById('coordDisplay').style.display = 'none';
         
-        // Atualizar o mapa se estiver na aba
         if (document.getElementById('mapa').classList.contains('active') && map) {
           atualizarMapa();
-          // Colapsar o formulário após cadastro
           const container = document.getElementById('cadastroFormContainer');
           const icon = document.getElementById('cadastroToggleIcon');
           container.classList.add('collapsed');
           icon.textContent = '▶';
         }
         
-        if (navigator.onLine) {
-          await fetch(
+        atualizarContadorSync();
+        
+      } catch (error) {
+        console.error('❌ Erro ao cadastrar frutífera:', error);
+        mostrarToast('❌ Erro ao cadastrar frutífera');
+      }
+    }
+
+    async function sincronizarComSupabase() {
+      if (!navigator.onLine) {
+        mostrarToast('📡 Você está offline. Conecte-se à internet para sincronizar.');
+        return;
+      }
+      
+      const syncMsg = document.getElementById('syncMessage');
+      
+      pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+      
+      if (pendingSync.length === 0) {
+        mostrarToast('✅ Nenhuma alteração pendente');
+        syncMsg.textContent = '✅ Tudo sincronizado';
+        return;
+      }
+      
+      syncMsg.textContent = `🔄 Sincronizando ${pendingSync.length} item(ns)...`;
+      mostrarToast(`🔄 Sincronizando ${pendingSync.length} frutífera(s)...`);
+      
+      let sucessos = 0;
+      let erros = 0;
+      
+      for (const frutifera of pendingSync) {
+        try {
+          const response = await fetch(
             `${SUPABASE_URL}/rest/v1/frutiferas`,
             {
               method: 'POST',
@@ -1383,19 +1425,72 @@
                 'Prefer': 'return=representation'
               },
               body: JSON.stringify({
-                fid: novaFrutifera.id,
-                nome_popular: novaFrutifera.especie,
-                data_plantio: novaFrutifera.data_plantio,
-                latitude: lat,
-                longitude: lon
+                nome_popular: frutifera.especie,
+                data_plantio: frutifera.data_plantio,
+                latitude: frutifera.latitude,
+                longitude: frutifera.longitude,
+                data_irrigacao_ordinaria: frutifera.ultima_rega,
+                data_poda_formacao_1: frutifera.ultima_poda,
+                inicio_colheita: frutifera.ultima_colheita
               })
             }
           );
+          
+          if (response.ok) {
+            const [resultado] = await response.json();
+            
+            const index = frutiferas.findIndex(f => f.fid === frutifera.fid);
+            if (index >= 0) {
+              frutiferas[index].id = resultado.id;
+              frutiferas[index].fid = resultado.fid;
+              frutiferas[index].identificacao = resultado.fid;
+              frutiferas[index].pendingSync = false;
+            }
+            
+            sucessos++;
+            console.log(`✅ Sincronizado: ${frutifera.especie} (ID: ${resultado.id})`);
+          } else {
+            erros++;
+            console.error(`❌ Erro ao sincronizar: ${frutifera.especie}`, response.status);
+          }
+          
+        } catch (error) {
+          erros++;
+          console.error('❌ Erro na sincronização:', error);
         }
-        
-      } catch (error) {
-        console.error('❌ Erro ao cadastrar frutífera:', error);
-        mostrarToast('❌ Erro ao cadastrar frutífera');
+      }
+      
+      pendingSync = [];
+      localStorage.setItem('pendingSync', '[]');
+      localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+      
+      await carregarFrutiferas();
+      
+      if (erros === 0) {
+        syncMsg.textContent = `✅ ${sucessos} item(ns) sincronizado(s) com sucesso!`;
+        mostrarToast(`✅ ${sucessos} frutífera(s) sincronizada(s) com sucesso!`);
+      } else {
+        syncMsg.textContent = `⚠️ ${sucessos} sucesso(s), ${erros} erro(s)`;
+        mostrarToast(`⚠️ ${sucessos} sucesso(s), ${erros} erro(s)`);
+      }
+      
+      setTimeout(() => {
+        syncMsg.textContent = '';
+      }, 5000);
+      
+      atualizarContadorSync();
+    }
+
+    function atualizarContadorSync() {
+      pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+      const syncStatus = document.getElementById('syncStatus');
+      
+      if (pendingSync.length > 0) {
+        syncStatus.textContent = `⚠️ ${pendingSync.length} pendente(s)`;
+        syncStatus.style.color = '#f59e0b';
+      } else {
+        syncStatus.textContent = 'Sítio Ipiranga';
+        syncStatus.style.color = '';
       }
     }
 
@@ -1566,7 +1661,6 @@
       event.target.classList.add('active');
       document.getElementById(tabName).classList.add('active');
       
-      // Inicializar mapa quando a aba for aberta
       if (tabName === 'mapa') {
         setTimeout(() => {
           if (!map) {
@@ -1638,17 +1732,6 @@
       atualizarTodasAbas();
     }
 
-    document.getElementById('novaEspecie')?.addEventListener('change', function() {
-      const outraGroup = document.getElementById('outraEspecieGroup');
-      if (this.value === 'Outra') {
-        outraGroup.style.display = 'block';
-        document.getElementById('outraEspecieNome').required = true;
-      } else {
-        outraGroup.style.display = 'none';
-        document.getElementById('outraEspecieNome').required = false;
-      }
-    });
-
     // INICIALIZAÇÃO
     async function inicializarApp() {
       console.log('🚀 Inicializando app...');
@@ -1657,6 +1740,8 @@
       const mainApp = document.getElementById('mainApp');
       
       try {
+        atualizarContadorSync();
+        
         await carregarFrutiferas();
         
         await new Promise(resolve => setTimeout(resolve, 500));
