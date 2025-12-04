@@ -25,14 +25,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq postgis postgresql-client
 
+      #######################################################################
+      #  NOVO BLOCO CORRIGIDO — CONEXÃO SUPABASE VIA HOST/USER/PASSWORD     #
+      #######################################################################
       - name: Baixar dados do Supabase (PostGIS → GeoJSON)
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_CONNECTION: ${{ secrets.SUPABASE_CONNECTION }}
+          SUPABASE_HOST: ${{ secrets.SUPABASE_HOST }}
+          SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
+          SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
+          SUPABASE_DB: ${{ secrets.SUPABASE_DB }}
+          SUPABASE_PORT: ${{ secrets.SUPABASE_PORT }}
         run: |
-          echo "Baixando dados do Supabase..."
+          echo "Baixando dados do Supabase via conexão direta..."
 
-          # CONSULTA — ajuste a tabela/colunas se necessário
           SQL="SELECT jsonb_build_object(
                   'type','FeatureCollection',
                   'features', jsonb_agg(
@@ -45,9 +50,16 @@ jobs:
                 )
                 FROM (SELECT * FROM arvores) row;"
 
-          psql "$SUPABASE_CONNECTION" -t -A -c "$SQL" > dados.geojson
+          export PGPASSWORD="$SUPABASE_PASSWORD"
+
+          psql -h "$SUPABASE_HOST" \
+               -p "${SUPABASE_PORT:-5432}" \
+               -U "$SUPABASE_USER" \
+               -d "$SUPABASE_DB" \
+               -t -A -c "$SQL" > dados.geojson
 
           echo "Dados baixados com sucesso!"
+      #######################################################################
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -59,6 +71,9 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          # (resto do seu script permanece exatamente igual)
+          echo "Processando ações e enviando notificações..."
+
           # Instalar jq
           sudo apt-get update
           sudo apt-get install -y jq
