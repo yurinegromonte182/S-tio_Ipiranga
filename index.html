@@ -532,7 +532,7 @@
 
     .map-controls {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 0.75rem;
       margin-bottom: 1rem;
     }
@@ -817,6 +817,9 @@
           <button class="map-btn" data-basemap="satellite" onclick="changeBasemap('satellite', event)">
             🛰️ Satélite
           </button>
+          <button class="map-btn" data-basemap="orthomosaic" onclick="changeBasemap('orthomosaic', event)">
+            📸 Orthomosaico
+          </button>
         </div>
 
         <div class="layer-toggle">
@@ -875,8 +878,9 @@
     <!-- Tab: Histórico -->
     <div id="historico" class="tab-content">
       <div class="section">
-        <div class="section-title">📜 Histórico de Ações</div>
-        <div class="filter-group">
+        <div class="section-title">📜 Histórico de Ações
+       
+ 	  </div><div class="filter-group">
           <button class="filter-btn active" onclick="filterHistorico(event, '7')">Últimos 7 dias</button>
           <button class="filter-btn" onclick="filterHistorico(event, '30')">Últimos 30 dias</button>
           <button class="filter-btn" onclick="filterHistorico(event, 'todos')">Tudo</button>
@@ -886,127 +890,124 @@
         </div>
       </div>
     </div>
-
-    <!-- Tab: Stats -->
-    <div id="stats" class="tab-content">
-      <div class="section">
-        <div class="section-title">📊 Estatísticas Gerais</div>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-value" id="statTotal">0</div>
-            <div class="stat-label">Total Frutíferas</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statPend">0</div>
-            <div class="stat-label">Pendências</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statUrg">0</div>
-            <div class="stat-label">Urgentes</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statEsp">0</div>
-            <div class="stat-label">Espécies</div>
-          </div>
-        </div>
-
-        <div class="section" style="margin-top: 1rem;">
-          <div class="section-title">🌳 Resumo por Espécie</div>
-          <div id="speciesSummary"></div>
-        </div>
+<!-- Tab: Stats -->
+<div id="stats" class="tab-content">
+  <div class="section">
+    <div class="section-title">📊 Estatísticas Gerais</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">Total Frutíferas</div>
       </div>
-    </div>
-    
-    <!-- Tab: Config -->
-    <div id="config" class="tab-content">
-      <div class="section">
-        <div class="section-title">📋 Intervalos por Espécie (dias)</div>
-        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.5rem;">
-          Ajuste os intervalos de manutenção para cada tipo de frutífera
-        </p>
-        
-        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🥭 Mangabeira</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
-              <input type="number" id="mang_rega" value="7" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
-              <input type="number" id="mang_poda" value="180" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
-              <input type="number" id="mang_colh" value="90" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-          </div>
-        </div>
-
-        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🌰 Cajueiro</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
-              <input type="number" id="caju_rega" value="10" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
-              <input type="number" id="caju_poda" value="365" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
-              <input type="number" id="caju_colh" value="60" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-          </div>
-        </div>
-
-        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🥥 Coqueiro</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
-              <input type="number" id="coq_rega" value="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
-              <input type="number" id="coq_poda" value="730" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
-              <input type="number" id="coq_colh" value="30" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-          </div>
-        </div>
-
-        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🍫 Cacau</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
-              <input type="number" id="cac_rega" value="3" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
-              <input type="number" id="cac_poda" value="180" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-            <div>
-              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
-              <input type="number" id="cac_colh" value="120" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-          </div>
-        </div>
-
-        <button class="btn btn-primary" onclick="saveConfig()">💾 Salvar Intervalos</button>
+      <div class="stat-card">
+        <div class="stat-value" id="statPend">0</div>
+        <div class="stat-label">Pendências</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statUrg">0</div>
+        <div class="stat-label">Urgentes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statEsp">0</div>
+        <div class="stat-label">Espécies</div>
       </div>
     </div>
 
-    <div class="toast" id="toast"></div>
-    <div class="footer-space"></div>
+    <div class="section" style="margin-top: 1rem;">
+      <div class="section-title">🌳 Resumo por Espécie</div>
+      <div id="speciesSummary"></div>
+    </div>
   </div>
+</div>
 
+<!-- Tab: Config -->
+<div id="config" class="tab-content">
+  <div class="section">
+    <div class="section-title">📋 Intervalos por Espécie (dias)</div>
+    <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.5rem;">
+      Ajuste os intervalos de manutenção para cada tipo de frutífera
+    </p>
+    
+    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+      <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🥭 Mangabeira</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+          <input type="number" id="mang_rega" value="7" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+          <input type="number" id="mang_poda" value="180" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+          <input type="number" id="mang_colh" value="90" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+      </div>
+    </div>
+
+    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+      <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🌰 Cajueiro</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+          <input type="number" id="caju_rega" value="10" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+          <input type="number" id="caju_poda" value="365" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+          <input type="number" id="caju_colh" value="60" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+      </div>
+    </div>
+
+    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+      <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🥥 Coqueiro</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+          <input type="number" id="coq_rega" value="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+          <input type="number" id="coq_poda" value="730" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+          <input type="number" id="coq_colh" value="30" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+      </div>
+    </div>
+
+    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+      <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🍫 Cacau</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+          <input type="number" id="cac_rega" value="3" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+          <input type="number" id="cac_poda" value="180" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+          <input type="number" id="cac_colh" value="120" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveConfig()">💾 Salvar Intervalos</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="footer-space"></div>
+  </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-  
   <script>
     const SUPABASE_URL = 'https://erbefbnjxgpetbetlzya.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmVmYm5qeGdwZXRiZXRsenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzI4ODcsImV4cCI6MjA3NjYwODg4N30.d09pjgddZpNY3Z4cVZ3V4h77aAf_GVGF0sOBTZkZf2A';
@@ -1020,6 +1021,7 @@
     // Variáveis do mapa
     let map;
     let baseLayers = {};
+    let orthomosaicLayer;
     let frutiferasLayer;
     let markers = {};
     let speciesColors = {
@@ -1496,304 +1498,324 @@
 
     // FUNÇÕES DO MAPA
     function inicializarMapa() {
-      if (map) return;
-      
-      map = L.map('mapContainer').setView([-7.1195, -34.8450], 13);
-      
-      baseLayers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
-      }).addTo(map);
+if (map) return;
+  map = L.map('mapContainer').setView([-7.1195, -34.8450], 13);
+  
+  baseLayers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map);
 
-      baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Esri, Maxar',
-        maxZoom: 19
+  baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Esri, Maxar',
+    maxZoom: 19
+  });
+
+  // Configurar camada do orthomosaico
+  const orthoBounds = [
+    [-7.2567123407225420, -34.8508400655581880], // Southwest
+    [-7.2534701604245848, -34.8470106189991711]  // Northeast
+  ];
+
+  orthomosaicLayer = L.imageOverlay('orthomosaic.jpeg', orthoBounds, {
+    opacity: 1,
+    attribution: 'Orthomosaico Sítio Ipiranga'
+  });
+
+  frutiferasLayer = L.layerGroup().addTo(map);
+  
+  atualizarMapa();
+}
+
+function atualizarMapa() {
+  if (!map || !frutiferasLayer) return;
+  
+  frutiferasLayer.clearLayers();
+  markers = {};
+  
+  const bounds = [];
+  
+  frutiferas.forEach(f => {
+    if (f.latitude && f.longitude) {
+      const color = speciesColors[f.especie] || '#10b981';
+      
+      const marker = L.circleMarker([f.latitude, f.longitude], {
+        radius: 8,
+        fillColor: color,
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8
       });
 
-      frutiferasLayer = L.layerGroup().addTo(map);
-      
-      atualizarMapa();
+      const popupContent = `
+        <div class="popup-content">
+          <h3>${f.nome_popular || f.especie}</h3>
+          <div class="info-row">
+            <span class="info-label">Código:</span>
+            <span class="info-value">${f.identificacao || f.id}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Data Plantio:</span>
+            <span class="info-value">${formatarData(f.data_plantio) || 'Não informado'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Última Rega:</span>
+            <span class="info-value">${formatarData(f.ultima_rega) || 'Nunca'}</span>
+          </div>
+          ${f.altura_total ? `
+          <div class="info-row">
+            <span class="info-label">Altura:</span>
+            <span class="info-value">${f.altura_total} m</span>
+          </div>` : ''}
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+      frutiferasLayer.addLayer(marker);
+      markers[f.id] = marker;
+      bounds.push([f.latitude, f.longitude]);
     }
+  });
 
-    function atualizarMapa() {
-      if (!map || !frutiferasLayer) return;
-      
-      frutiferasLayer.clearLayers();
-      markers = {};
-      
-      const bounds = [];
-      
-      frutiferas.forEach(f => {
-        if (f.latitude && f.longitude) {
-          const color = speciesColors[f.especie] || '#10b981';
-          
-          const marker = L.circleMarker([f.latitude, f.longitude], {
-            radius: 8,
-            fillColor: color,
-            color: '#fff',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.8
-          });
+  if (bounds.length > 0) {
+    map.fitBounds(bounds, { padding: [50, 50] });
+  }
+}
 
-          const popupContent = `
-            <div class="popup-content">
-              <h3>${f.nome_popular || f.especie}</h3>
-              <div class="info-row">
-                <span class="info-label">Código:</span>
-                <span class="info-value">${f.identificacao || f.id}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Data Plantio:</span>
-                <span class="info-value">${formatarData(f.data_plantio) || 'Não informado'}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Última Rega:</span>
-                <span class="info-value">${formatarData(f.ultima_rega) || 'Nunca'}</span>
-              </div>
-              ${f.altura_total ? `
-              <div class="info-row">
-                <span class="info-label">Altura:</span>
-                <span class="info-value">${f.altura_total} m</span>
-              </div>` : ''}
-            </div>
-          `;
+function changeBasemap(basemapType, event) {
+  document.querySelectorAll('.map-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  // Remover todas as camadas base
+  Object.values(baseLayers).forEach(layer => map.removeLayer(layer));
+  if (orthomosaicLayer) map.removeLayer(orthomosaicLayer);
+  
+  // Adicionar a camada selecionada
+  if (basemapType === 'orthomosaic') {
+    orthomosaicLayer.addTo(map);
+    // Ajustar o zoom para o orthomosaico
+    const orthoBounds = [
+      [-7.2567123407225420, -34.8508400655581880],
+      [-7.2534701604245848, -34.8470106189991711]
+    ];
+    map.fitBounds(orthoBounds);
+  } else {
+    baseLayers[basemapType].addTo(map);
+  }
+}
 
-          marker.bindPopup(popupContent);
-          frutiferasLayer.addLayer(marker);
-          markers[f.id] = marker;
-          bounds.push([f.latitude, f.longitude]);
-        }
-      });
+function toggleFrutiferasLayer() {
+  const isChecked = document.getElementById('toggleFrutiferas').checked;
+  if (isChecked) {
+    frutiferasLayer.addTo(map);
+  } else {
+    map.removeLayer(frutiferasLayer);
+  }
+}
 
-      if (bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [50, 50] });
-      }
-    }
+function toggleCadastroForm() {
+  const container = document.getElementById('cadastroFormContainer');
+  const icon = document.getElementById('cadastroToggleIcon');
+  
+  if (container.classList.contains('collapsed')) {
+    container.classList.remove('collapsed');
+    icon.textContent = '▼';
+  } else {
+    container.classList.add('collapsed');
+    icon.textContent = '▶';
+  }
+}
 
-    function changeBasemap(basemapType, event) {
-      document.querySelectorAll('.map-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-      
-      Object.values(baseLayers).forEach(layer => map.removeLayer(layer));
-      baseLayers[basemapType].addTo(map);
-    }
+// FUNÇÕES AUXILIARES
+function calcularDias(dataString) {
+  if (!dataString) return 999;
+  const data = new Date(dataString);
+  const hoje = new Date();
+  const diff = hoje - data;
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
 
-    function toggleFrutiferasLayer() {
-      const isChecked = document.getElementById('toggleFrutiferas').checked;
-      if (isChecked) {
-        frutiferasLayer.addTo(map);
+function formatarData(dataString) {
+  if (!dataString) return null;
+  const data = new Date(dataString);
+  return data.toLocaleDateString('pt-BR');
+}
+
+function obterIntervaloRega(frutifera) {
+  const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
+  if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_rega') || '5');
+  if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_rega') || '3');
+  if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_rega') || '7');
+  if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_rega') || '10');
+  return 7;
+}
+
+function obterIntervaloPoda(frutifera) {
+  const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
+  if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_poda') || '730');
+  if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_poda') || '180');
+  if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_poda') || '180');
+  if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_poda') || '365');
+  return 180;
+}
+
+function obterIntervaloColheita(frutifera) {
+  const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
+  if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_colh') || '30');
+  if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_colh') || '120');
+  if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_colh') || '90');
+  if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_colh') || '60');
+  return 90;
+}
+
+function mostrarToast(mensagem) {
+  const toast = document.getElementById('toast');
+  toast.textContent = mensagem;
+  toast.className = 'toast show';
+  
+  setTimeout(() => {
+    toast.className = 'toast';
+  }, 3000);
+}
+
+// FUNÇÕES DE UI
+function switchTab(event, tabName) {
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+  
+  event.target.classList.add('active');
+  document.getElementById(tabName).classList.add('active');
+  
+  if (tabName === 'mapa') {
+    setTimeout(() => {
+      if (!map) {
+        inicializarMapa();
       } else {
-        map.removeLayer(frutiferasLayer);
+        map.invalidateSize();
+        atualizarMapa();
       }
-    }
+    }, 100);
+  }
+}
 
-    function toggleCadastroForm() {
-      const container = document.getElementById('cadastroFormContainer');
-      const icon = document.getElementById('cadastroToggleIcon');
-      
-      if (container.classList.contains('collapsed')) {
-        container.classList.remove('collapsed');
-        icon.textContent = '▼';
-      } else {
-        container.classList.add('collapsed');
-        icon.textContent = '▶';
-      }
-    }
+function filterAcoes(event, filtro) {
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  currentFilter = filtro;
+  carregarAcoesHoje();
+}
 
-    // FUNÇÕES AUXILIARES
-    function calcularDias(dataString) {
-      if (!dataString) return 999;
-      const data = new Date(dataString);
-      const hoje = new Date();
-      const diff = hoje - data;
-      return Math.floor(diff / (1000 * 60 * 60 * 24));
-    }
+function filtrarFrutiferas() {
+  const query = document.getElementById('searchFrutifera').value.toLowerCase();
+  const cards = document.querySelectorAll('.frutifera-card');
+  
+  cards.forEach(card => {
+    const text = card.textContent.toLowerCase();
+    card.style.display = text.includes(query) ? 'block' : 'none';
+  });
+}
 
-    function formatarData(dataString) {
-      if (!dataString) return null;
-      const data = new Date(dataString);
-      return data.toLocaleDateString('pt-BR');
-    }
+function filterHistorico(event, periodo) {
+  document.querySelectorAll('#historico .filter-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+}
 
-    function obterIntervaloRega(frutifera) {
-      const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-      if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_rega') || '5');
-      if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_rega') || '3');
-      if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_rega') || '7');
-      if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_rega') || '10');
-      return 7;
+function obterLocalizacao() {
+  if (!navigator.geolocation) {
+    mostrarToast('❌ Geolocalização não suportada');
+    return;
+  }
+  
+  mostrarToast('📍 Obtendo localização...');
+  
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude.toFixed(6);
+      const lon = position.coords.longitude.toFixed(6);
+      document.getElementById('coordenadas').value = `${lat}, ${lon}`;
+      document.getElementById('coordDisplay').style.display = 'block';
+      document.getElementById('coordDisplay').textContent = `✅ Localização obtida: ${lat}, ${lon}`;
+      mostrarToast('✅ Localização obtida!');
+    },
+    (error) => {
+      console.error('Erro ao obter localização:', error);
+      mostrarToast('❌ Erro ao obter localização');
     }
+  );
+}
 
-    function obterIntervaloPoda(frutifera) {
-      const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-      if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_poda') || '730');
-      if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_poda') || '180');
-      if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_poda') || '180');
-      if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_poda') || '365');
-      return 180;
-    }
-
-    function obterIntervaloColheita(frutifera) {
-      const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-      if (especie.includes('coqueiro')) return parseInt(localStorage.getItem('coq_colh') || '30');
-      if (especie.includes('cacau')) return parseInt(localStorage.getItem('cac_colh') || '120');
-      if (especie.includes('mangabeira')) return parseInt(localStorage.getItem('mang_colh') || '90');
-      if (especie.includes('caju')) return parseInt(localStorage.getItem('caju_colh') || '60');
-      return 90;
-    }
-
-    function mostrarToast(mensagem) {
-      const toast = document.getElementById('toast');
-      toast.textContent = mensagem;
-      toast.className = 'toast show';
-      
-      setTimeout(() => {
-        toast.className = 'toast';
-      }, 3000);
-    }
-
-    // FUNÇÕES DE UI
-    function switchTab(event, tabName) {
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-      
-      event.target.classList.add('active');
-      document.getElementById(tabName).classList.add('active');
-      
-      if (tabName === 'mapa') {
-        setTimeout(() => {
-          if (!map) {
-            inicializarMapa();
-          } else {
-            map.invalidateSize();
-            atualizarMapa();
-          }
-        }, 100);
-      }
-    }
-
-    function filterAcoes(event, filtro) {
-      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-      
-      currentFilter = filtro;
-      carregarAcoesHoje();
-    }
-
-    function filtrarFrutiferas() {
-      const query = document.getElementById('searchFrutifera').value.toLowerCase();
-      const cards = document.querySelectorAll('.frutifera-card');
-      
-      cards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(query) ? 'block' : 'none';
-      });
-    }
-
-    function filterHistorico(event, periodo) {
-      document.querySelectorAll('#historico .filter-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-    }
-
-    function obterLocalizacao() {
-      if (!navigator.geolocation) {
-        mostrarToast('❌ Geolocalização não suportada');
-        return;
-      }
-      
-      mostrarToast('📍 Obtendo localização...');
-      
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude.toFixed(6);
-          const lon = position.coords.longitude.toFixed(6);
-          document.getElementById('coordenadas').value = `${lat}, ${lon}`;
-          document.getElementById('coordDisplay').style.display = 'block';
-          document.getElementById('coordDisplay').textContent = `✅ Localização obtida: ${lat}, ${lon}`;
-          mostrarToast('✅ Localização obtida!');
-        },
-        (error) => {
-          console.error('Erro ao obter localização:', error);
-          mostrarToast('❌ Erro ao obter localização');
-        }
-      );
-    }
-
-    function saveConfig() {
-      ['mang', 'caju', 'coq', 'cac'].forEach(prefixo => {
-        ['rega', 'poda', 'colh'].forEach(tipo => {
-          const valor = document.getElementById(`${prefixo}_${tipo}`).value;
-          localStorage.setItem(`${prefixo}_${tipo}`, valor);
-        });
-      });
-      
-      mostrarToast('✅ Configurações salvas!');
-      atualizarTodasAbas();
-    }
-
-    // INICIALIZAÇÃO
-    async function inicializarApp() {
-      console.log('🚀 Inicializando app...');
-      
-      const loader = document.getElementById('appLoader');
-      const mainApp = document.getElementById('mainApp');
-      
-      try {
-        atualizarContadorSync();
-        
-        await carregarFrutiferas();
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        if (loader) {
-          loader.classList.add('hidden');
-          setTimeout(() => loader.remove(), 300);
-        }
-        
-        if (mainApp) {
-          mainApp.classList.add('loaded');
-        }
-        
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        
-        if (navigator.onLine) {
-          if (statusDot) statusDot.className = 'status-dot';
-          if (statusText) statusText.textContent = 'Online';
-        } else {
-          if (statusDot) statusDot.className = 'status-dot offline';
-          if (statusText) statusText.textContent = 'Offline';
-        }
-        
-        console.log('✅ App inicializado com sucesso!');
-        
-      } catch (error) {
-        console.error('❌ Erro na inicialização:', error);
-        if (loader) loader.classList.add('hidden');
-        if (mainApp) mainApp.classList.add('loaded');
-      }
-    }
-
-    window.addEventListener('online', () => {
-      document.getElementById('statusDot').className = 'status-dot';
-      document.getElementById('statusText').textContent = 'Online';
-      mostrarToast('🌐 Você voltou online!');
-      carregarFrutiferas();
+function saveConfig() {
+  ['mang', 'caju', 'coq', 'cac'].forEach(prefixo => {
+    ['rega', 'poda', 'colh'].forEach(tipo => {
+      const valor = document.getElementById(`${prefixo}_${tipo}`).value;
+      localStorage.setItem(`${prefixo}_${tipo}`, valor);
     });
+  });
+  
+  mostrarToast('✅ Configurações salvas!');
+  atualizarTodasAbas();
+}
 
-    window.addEventListener('offline', () => {
-      document.getElementById('statusDot').className = 'status-dot offline';
-      document.getElementById('statusText').textContent = 'Offline';
-      mostrarToast('📡 Você está offline');
-    });
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', inicializarApp);
+// INICIALIZAÇÃO
+async function inicializarApp() {
+  console.log('🚀 Inicializando app...');
+  
+  const loader = document.getElementById('appLoader');
+  const mainApp = document.getElementById('mainApp');
+  
+  try {
+    atualizarContadorSync();
+    
+    await carregarFrutiferas();
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    if (loader) {
+      loader.classList.add('hidden');
+      setTimeout(() => loader.remove(), 300);
+    }
+    
+    if (mainApp) {
+      mainApp.classList.add('loaded');
+    }
+    
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    
+    if (navigator.onLine) {
+      if (statusDot) statusDot.className = 'status-dot';
+      if (statusText) statusText.textContent = 'Online';
     } else {
-      inicializarApp();
+      if (statusDot) statusDot.className = 'status-dot offline';
+      if (statusText) statusText.textContent = 'Offline';
     }
-  </script>
+    
+    console.log('✅ App inicializado com sucesso!');
+    
+  } catch (error) {
+    console.error('❌ Erro na inicialização:', error);
+    if (loader) loader.classList.add('hidden');
+    if (mainApp) mainApp.classList.add('loaded');
+  }
+}
 
-</body>
-</html>
+window.addEventListener('online', () => {
+  document.getElementById('statusDot').className = 'status-dot';
+  document.getElementById('statusText').textContent = 'Online';
+  mostrarToast('🌐 Você voltou online!');
+  carregarFrutiferas();
+});
+
+window.addEventListener('offline', () => {
+  document.getElementById('statusDot').className = 'status-dot offline';
+  document.getElementById('statusText').textContent = 'Offline';
+  mostrarToast('📡 Você está offline');
+});
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', inicializarApp);
+} else {
+  inicializarApp();
+}
