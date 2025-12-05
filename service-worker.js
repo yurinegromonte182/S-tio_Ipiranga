@@ -1,28 +1,29 @@
-const CACHE_NAME = 'sitio-ipiranga-v7.2';
+const CACHE_NAME = 'sitio-ipiranga-v8.0';
 const CACHE_TIMEOUT = 3000;
 
 // URLs para cachear (apenas arquivos estáticos)
 const urlsToCache = [
   '/S-tio_Ipiranga/',
   '/S-tio_Ipiranga/index.html',
-  '/S-tio_Ipiranga/manifest.json'
+  '/S-tio_Ipiranga/manifest.json',
+  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'
 ];
 
 // Instalação
 self.addEventListener('install', event => {
-  console.log('[SW] Instalando v7.2...');
+  console.log('[SW] Instalando v8.0...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('[SW] Cache aberto');
-        return cache.addAll(urlsToCache);
+        console.log('[SW] Cache aberto, adicionando recursos...');
+        return cache.addAll(urlsToCache).catch(err => {
+          console.warn('[SW] Alguns recursos não puderam ser cacheados:', err);
+        });
       })
       .then(() => {
         console.log('[SW] Instalado com sucesso');
         return self.skipWaiting();
-      })
-      .catch(err => {
-        console.error('[SW] Erro na instalação:', err);
       })
   );
 });
@@ -53,300 +54,387 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
+  
+  // Ignorar requisições que não são GET
+  if (request.method !== 'GET') {
+    event.respondWith(fetch(request));
+    return;
+  }
 
-  // 🎯 SUPABASE: Sempre buscar da rede (dados dinâmicos)
+  // 🎯 SUPABASE: Network first com fallback para cache
   if (url.origin.includes('supabase.co')) {
-    // Verificar se é para a tabela frutiferas
-    if (url.pathname.includes('/frutiferas')) {
-      console.log('[SW] Requisição Supabase para frutiferas:', request.method, url.pathname);
+    event.respondWith(
+      networkFirstWithTimeout(request)
+        .catch(() => cacheFallbackForSupabase(request))
+    );
+    return;
+  }
+
+  // 📱 ARQUIVOS LOCAIS e CDNs: Cache first
+  event.respondWith(
+    cacheFirstWithNetworkFallback(request)
+  );
+});
+
+// Estratégia: Network First com Timeout para Supabase
+async function networkFirstWithTimeout(request) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CACHE_TIMEOUT);
+    
+    const response = await fetch(request, { 
+      signal: controller.signal 
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      // Atualizar cache em background para próximas requisições
+      cacheResponse(request, response.clone());
     }
     
-    event.respondWith(
-      fetch(request)
-        .catch(error => {
-          console.warn('[SW] Supabase offline:', error);
-          
-          // Se for GET para frutiferas e estiver offline, tentar retornar do cache
-          if (request.method === 'GET' && url.pathname.includes('/frutiferas')) {
-            return caches.match('/S-tio_Ipiranga/frutiferas-fallback.json')
-              .then(cached => {
-                if (cached) {
-                  console.log('[SW] Retornando frutíferas do cache offline');
-                  return cached;
-                }
-                
-                // Retornar resposta de fallback
-                return new Response(
-                  JSON.stringify({ 
-                    error: 'offline', 
-                    message: 'Banco de dados offline. Dados locais serão usados.',
-                    frutiferas: []
-                  }),
-                  {
-                    status: 503,
-                    headers: { 'Content-Type': 'application/json' }
-                  }
-                );
-              });
-          }
-          
-          // Para outras requisições Supabase
-          return new Response(
-            JSON.stringify({ 
-              error: 'offline', 
-              message: 'Supabase offline',
-              cached: true 
-            }),
-            {
-              status: 503,
-              headers: { 'Content-Type': 'application/json' }
-            }
-          );
-        })
-    );
-    return;
+    return response;
+  } catch (error) {
+    console.warn('[SW] Network error:', error);
+    throw error;
   }
+}
 
-  // 📱 ARQUIVOS LOCAIS: Cache first, network fallback
-  if (url.origin === location.origin) {
-    event.respondWith(
-      caches.match(request)
-        .then(cached => {
-          if (cached) {
-            return cached;
-          }
-          
-          // Buscar da rede com timeout
-          return Promise.race([
-            fetch(request),
-            new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('timeout')), CACHE_TIMEOUT)
-            )
-          ])
-          .then(response => {
-            // Cachear se for uma resposta válida
-            if (response && response.status === 200) {
-              const responseToCache = response.clone();
-              caches.open(CACHE_NAME).then(cache => {
-                cache.put(request, responseToCache);
-              });
-            }
-            return response;
-          })
-          .catch(error => {
-            console.warn('[SW] Fetch falhou:', request.url, error);
-            
-            // Retornar página offline para navegação
-            if (request.mode === 'navigate') {
-              return new Response(
-                `<!DOCTYPE html>
-                <html lang="pt-BR">
-                <head>
-                  <meta charset="UTF-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                  <title>Offline - Sítio Ipiranga</title>
-                  <style>
-                    body {
-                      font-family: system-ui, -apple-system, sans-serif;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      min-height: 100vh;
-                      margin: 0;
-                      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                      color: white;
-                      text-align: center;
-                      padding: 2rem;
-                    }
-                    .offline {
-                      background: rgba(255,255,255,0.1);
-                      backdrop-filter: blur(10px);
-                      padding: 2rem;
-                      border-radius: 16px;
-                      max-width: 400px;
-                    }
-                    h1 { font-size: 3rem; margin: 0 0 1rem 0; }
-                    p { margin: 1rem 0; opacity: 0.9; }
-                    button {
-                      background: white;
-                      color: #10b981;
-                      border: none;
-                      padding: 1rem 2rem;
-                      border-radius: 8px;
-                      cursor: pointer;
-                      font-size: 1rem;
-                      font-weight: 600;
-                      margin-top: 1rem;
-                    }
-                    button:active {
-                      transform: scale(0.95);
-                    }
-                  </style>
-                </head>
-                <body>
-                  <div class="offline">
-                    <h1>📡</h1>
-                    <h2>Você está offline</h2>
-                    <p>Verifique sua conexão com a internet e tente novamente.</p>
-                    <p><small>As frutíferas salvas anteriormente ainda estão disponíveis.</small></p>
-                    <button onclick="location.reload()">🔄 Tentar Novamente</button>
-                  </div>
-                </body>
-                </html>`,
-                {
-                  headers: { 'Content-Type': 'text/html' }
-                }
-              );
-            }
-            
-            // Para arquivos JSON de frutíferas
-            if (request.url.includes('frutiferas') && request.url.endsWith('.json')) {
-              return caches.match('/S-tio_Ipiranga/frutiferas-fallback.json')
-                .then(cached => {
-                  if (cached) {
-                    console.log('[SW] Retornando frutíferas do fallback');
-                    return cached;
-                  }
-                  
-                  // Fallback padrão
-                  return new Response(
-                    JSON.stringify({ 
-                      frutiferas: [],
-                      offline: true,
-                      timestamp: new Date().toISOString()
-                    }),
-                    {
-                      status: 200,
-                      headers: { 'Content-Type': 'application/json' }
-                    }
-                  );
-                });
-            }
-            
-            return new Response('', { status: 408 });
-          });
-        })
-    );
-    return;
+// Fallback para Supabase offline
+async function cacheFallbackForSupabase(request) {
+  const url = new URL(request.url);
+  
+  console.log('[SW] Supabase offline, usando cache');
+  
+  // Verificar se temos uma resposta em cache
+  const cached = await caches.match(request);
+  if (cached) {
+    console.log('[SW] Retornando resposta cacheada');
+    return cached;
   }
+  
+  // Se for uma requisição GET para frutiferas
+  if (request.method === 'GET' && url.pathname.includes('/frutiferas')) {
+    return new Response(
+      JSON.stringify({ 
+        error: 'offline', 
+        message: 'Banco de dados offline. Use dados locais.',
+        offline: true
+      }),
+      {
+        status: 200,
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Service-Worker': 'offline-fallback'
+        }
+      }
+    );
+  }
+  
+  // Resposta genérica para outras requisições Supabase
+  return new Response(
+    JSON.stringify({ 
+      error: 'offline', 
+      message: 'Supabase offline. Sem dados disponíveis no cache.',
+      offline: true 
+    }),
+    {
+      status: 503,
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Service-Worker': 'offline-fallback'
+      }
+    }
+  );
+}
 
-  // 🌐 OUTROS RECURSOS: Network only
-  event.respondWith(fetch(request));
-});
+// Estratégia: Cache First com Network Fallback
+async function cacheFirstWithNetworkFallback(request) {
+  const url = new URL(request.url);
+  
+  // Verificar cache primeiro
+  const cached = await caches.match(request);
+  if (cached) {
+    // Verificar se a resposta em cache ainda é válida
+    const cacheAge = getCacheAge(cached);
+    if (cacheAge < 3600000) { // 1 hora
+      console.log('[SW] Cache válido, retornando:', request.url);
+      return cached;
+    }
+    
+    // Cache muito antigo, tentar atualizar em background
+    updateCacheInBackground(request);
+  }
+  
+  // Tentar rede com timeout
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CACHE_TIMEOUT);
+    
+    const response = await fetch(request, { 
+      signal: controller.signal 
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      // Cachear a resposta para uso futuro
+      cacheResponse(request, response.clone());
+      return response;
+    }
+    
+    throw new Error(`HTTP ${response.status}`);
+  } catch (error) {
+    console.warn('[SW] Fetch failed:', request.url, error);
+    
+    // Se tivermos cache, usar mesmo que antigo
+    if (cached) {
+      console.log('[SW] Usando cache antigo como fallback');
+      return cached;
+    }
+    
+    // Fallback para navegação offline
+    if (request.mode === 'navigate') {
+      return getOfflinePage();
+    }
+    
+    // Fallback para recursos de mídia
+    if (request.destination === 'image') {
+      return new Response(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+          <rect width="100" height="100" fill="#f3f4f6"/>
+          <text x="50" y="50" text-anchor="middle" dy=".3em" fill="#6b7280" font-size="10">🌿</text>
+        </svg>`,
+        {
+          headers: { 
+            'Content-Type': 'image/svg+xml',
+            'X-Service-Worker': 'image-fallback'
+          }
+        }
+      );
+    }
+    
+    // Fallback genérico
+    return new Response('', { 
+      status: 408,
+      statusText: 'Network Timeout' 
+    });
+  }
+}
+
+// Função auxiliar para cachear resposta
+async function cacheResponse(request, response) {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(request, response);
+    console.log('[SW] Cache atualizado:', request.url);
+  } catch (error) {
+    console.warn('[SW] Erro ao cachear:', error);
+  }
+}
+
+// Função para atualizar cache em background
+async function updateCacheInBackground(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      await cacheResponse(request, response);
+      console.log('[SW] Cache atualizado em background:', request.url);
+    }
+  } catch (error) {
+    // Ignorar erros em background updates
+  }
+}
+
+// Função para obter idade do cache
+function getCacheAge(cachedResponse) {
+  const dateHeader = cachedResponse.headers.get('date');
+  if (dateHeader) {
+    const cacheDate = new Date(dateHeader).getTime();
+    return Date.now() - cacheDate;
+  }
+  return Infinity;
+}
+
+// Página offline
+function getOfflinePage() {
+  return new Response(
+    `<!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Sítio Ipiranga - Offline</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          margin: 0;
+          padding: 2rem;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          text-align: center;
+        }
+        .container {
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(10px);
+          padding: 2rem;
+          border-radius: 16px;
+          max-width: 400px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+          font-size: 3rem;
+          margin: 0 0 1rem 0;
+        }
+        p {
+          margin: 0.5rem 0;
+          line-height: 1.5;
+          opacity: 0.9;
+        }
+        .button {
+          display: inline-block;
+          background: white;
+          color: #10b981;
+          border: none;
+          padding: 0.75rem 1.5rem;
+          border-radius: 8px;
+          font-weight: 600;
+          text-decoration: none;
+          margin-top: 1.5rem;
+          cursor: pointer;
+          transition: transform 0.2s;
+        }
+        .button:active {
+          transform: scale(0.95);
+        }
+        small {
+          font-size: 0.85rem;
+          opacity: 0.8;
+          display: block;
+          margin-top: 1rem;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>📡</h1>
+        <h2>Você está offline</h2>
+        <p>Não foi possível conectar ao servidor.</p>
+        <p>Verifique sua conexão com a internet.</p>
+        <small>Dados locais estão disponíveis quando você voltar ao app.</small>
+        <button class="button" onclick="location.reload()">🔄 Tentar Novamente</button>
+      </div>
+      <script>
+        document.querySelector('.button').addEventListener('click', function() {
+          location.reload();
+        });
+      </script>
+    </body>
+    </html>`,
+    {
+      headers: { 
+        'Content-Type': 'text/html; charset=utf-8',
+        'X-Service-Worker': 'offline-page'
+      }
+    }
+  );
+}
 
 // Mensagens do cliente
 self.addEventListener('message', event => {
-  if (event.data === 'skipWaiting') {
-    self.skipWaiting();
+  switch (event.data) {
+    case 'skipWaiting':
+      self.skipWaiting();
+      console.log('[SW] skipWaiting chamado');
+      break;
+      
+    case 'clearCache':
+      clearAllCaches();
+      break;
+      
+    case 'updateCache':
+      updateStaticCache();
+      break;
   }
   
-  if (event.data === 'clearCache') {
-    event.waitUntil(
-      caches.keys().then(keys => {
-        return Promise.all(
-          keys.map(key => caches.delete(key))
-        );
-      })
-    );
-  }
-  
-  if (event.data.action === 'syncFrutiferas') {
-    // Sincronização de frutíferas em background
-    console.log('[SW] Sincronizando frutíferas...');
-    
-    // Aqui você pode adicionar lógica para sincronizar
-    // frutíferas locais com Supabase quando online
-    
-    event.ports[0].postMessage({ 
-      status: 'syncing',
-      message: 'Sincronizando frutíferas...' 
-    });
+  if (event.data && event.data.type === 'sync') {
+    handleSyncMessage(event);
   }
 });
 
-// Background sync para frutíferas
-self.addEventListener('sync', event => {
-  if (event.tag === 'sync-frutiferas') {
-    console.log('[SW] Background sync para frutíferas');
-    
-    event.waitUntil(
-      syncFrutiferasComSupabase()
-        .then(() => {
-          console.log('[SW] Frutíferas sincronizadas com sucesso');
-          self.registration.showNotification('Sítio Ipiranga', {
-            body: 'Frutíferas sincronizadas com o servidor!',
-            icon: '/S-tio_Ipiranga/icon.png',
-            tag: 'sync-complete'
-          });
-        })
-        .catch(error => {
-          console.error('[SW] Erro na sincronização:', error);
-        })
-    );
+// Função para limpar todos os caches
+async function clearAllCaches() {
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames.map(name => caches.delete(name)));
+  console.log('[SW] Todos os caches limpos');
+}
+
+// Função para atualizar cache estático
+async function updateStaticCache() {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.addAll(urlsToCache);
+    console.log('[SW] Cache estático atualizado');
+  } catch (error) {
+    console.error('[SW] Erro ao atualizar cache:', error);
   }
-});
+}
+
+// Manipular mensagens de sincronização
+async function handleSyncMessage(event) {
+  if (event.data.type === 'sync' && event.data.data === 'frutiferas') {
+    console.log('[SW] Recebida mensagem de sync de frutíferas');
+    
+    // Enviar resposta imediata
+    event.ports[0]?.postMessage({ status: 'received' });
+    
+    // Tentar sincronizar em background
+    try {
+      await syncFrutiferas();
+      event.ports[0]?.postMessage({ status: 'success' });
+    } catch (error) {
+      event.ports[0]?.postMessage({ status: 'error', error: error.message });
+    }
+  }
+}
 
 // Função para sincronizar frutíferas
-async function syncFrutiferasComSupabase() {
-  // Esta função pode ser implementada para sincronizar
-  // frutíferas locais com Supabase
-  
-  // Exemplo:
-  // 1. Buscar frutíferas locais do IndexedDB
-  // 2. Enviar para Supabase
-  // 3. Marcar como sincronizadas
-  
+async function syncFrutiferas() {
+  // Esta função seria implementada para sincronizar
+  // dados locais com o Supabase
+  console.log('[SW] Função syncFrutiferas chamada');
   return Promise.resolve();
 }
 
-// Period sync para atualizações regulares
-self.addEventListener('periodicsync', event => {
-  if (event.tag === 'update-frutiferas') {
-    console.log('[SW] Atualização periódica de frutíferas');
-    
+// Background sync (se suportado)
+self.addEventListener('sync', event => {
+  console.log('[SW] Sync event:', event.tag);
+  
+  if (event.tag === 'sync-frutiferas') {
     event.waitUntil(
-      atualizarFrutiferasDoSupabase()
-        .then(result => {
-          console.log('[SW] Frutíferas atualizadas:', result);
-        })
-        .catch(error => {
-          console.error('[SW] Erro na atualização periódica:', error);
-        })
+      syncFrutiferas().catch(console.error)
     );
   }
 });
 
-// Função para atualizar frutíferas do Supabase
-async function atualizarFrutiferasDoSupabase() {
-  // Esta função pode ser implementada para buscar
-  // atualizações de frutíferas do Supabase
+// Periodic sync (se suportado)
+self.addEventListener('periodicsync', event => {
+  console.log('[SW] Periodic sync:', event.tag);
   
-  try {
-    const response = await fetch('https://erbefbnjxgpetbetlzya.supabase.co/rest/v1/frutiferas?select=*&order=updated_at.desc&limit=50', {
-      headers: {
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmVmYm5qeGdwZXRiZXRsenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzI4ODcsImV4cCI6MjA3NjYwODg4N30.d09pjgddZpNY3Z4cVZ3V4h77aAf_GVGF0sOBTZkZf2A'
-      }
-    });
-    
-    if (response.ok) {
-      const frutiferas = await response.json();
-      
-      // Enviar mensagem para clientes com as novas frutíferas
-      const clients = await self.clients.matchAll();
-      clients.forEach(client => {
-        client.postMessage({
-          type: 'frutiferas-updated',
-          data: frutiferas,
-          timestamp: new Date().toISOString()
-        });
-      });
-      
-      return { success: true, count: frutiferas.length };
-    }
-    
-    return { success: false, error: 'Erro na resposta' };
-  } catch (error) {
-    console.error('[SW] Erro ao atualizar frutíferas:', error);
-    return { success: false, error: error.message };
+  if (event.tag === 'update-frutiferas') {
+    event.waitUntil(
+      atualizarFrutiferasPeriodicamente().catch(console.error)
+    );
   }
+});
+
+// Função para atualização periódica
+async function atualizarFrutiferasPeriodicamente() {
+  console.log('[SW] Atualização periódica iniciada');
+  // Implementar lógica de atualização periódica
+  return Promise.resolve();
 }
