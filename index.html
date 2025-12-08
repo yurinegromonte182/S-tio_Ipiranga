@@ -1645,16 +1645,29 @@ async function sincronizarFilaAcoes() {
     mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s)`);
     
     // CHAVE: Disparar atualização do GitHub
-    try {
-      await fetch('https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson', {
-        headers: {
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        }
-      });
-      console.log('✅ GitHub atualizado via Edge Function');
-    } catch (e) {
-      console.log('⚠️ Edge Function não disponível');
+try {
+  console.log('🔄 Chamando Edge Function para atualizar GitHub...');
+  
+  const edgeResponse = await fetch('https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson', {
+    method: 'POST',  // ← MUDOU DE GET PARA POST
+    headers: {
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json'  // ← ADICIONEI ESTE HEADER
     }
+  });
+  
+  if (edgeResponse.ok) {
+    const result = await edgeResponse.json();
+    console.log('✅ GitHub atualizado via Edge Function:', result);
+    mostrarToast('📱 Dados enviados para notificações');
+  } else {
+    console.warn('⚠️ Edge Function respondeu com erro:', edgeResponse.status);
+    const errorText = await edgeResponse.text();
+    console.warn('Erro detalhado:', errorText);
+  }
+} catch (e) {
+  console.log('⚠️ Edge Function não disponível:', e.message);
+}
   }
   
   if (falhas.length > 0) {
