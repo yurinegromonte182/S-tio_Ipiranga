@@ -7,7 +7,8 @@ const urlsToCache = [
   '/S-tio_Ipiranga/index.html',
   '/S-tio_Ipiranga/manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js',
+  '/S-tio_Ipiranga/orthomosaic.jpeg'
 ];
 
 // Instalação
