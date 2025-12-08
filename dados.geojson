@@ -494,11 +494,11 @@
         "data_irrigacao_ordinaria": "2025-12-08",
         "data_irrigacao_floracao": null,
         "data_irrigacao_frutificacao": "2025-12-18",
-        "inicio_colheita": null,
+        "inicio_colheita": "2025-12-08",
         "fim_colheita": null,
         "volume_colhido": null,
         "foto": null,
-        "updated_at": "2025-12-08T19:12:51.978741+00:00",
+        "updated_at": "2025-12-08T19:12:57.400915+00:00",
         "ultima_modificacao": "2025-12-06T13:53:34.528834",
         "ativo": true,
         "cache_buster": 0,
@@ -566,62 +566,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -34.849432,
-          -7.255024
-        ]
-      },
-      "properties": {
-        "id": 344,
-        "geom": {
-          "type": "Point",
-          "crs": {
-            "type": "name",
-            "properties": {
-              "name": "EPSG:4326"
-            }
-          },
-          "coordinates": [
-            -34.849432,
-            -7.255024
-          ]
-        },
-        "latitude": -7.255024,
-        "longitude": -34.849432,
-        "nome_popular": "Cajueiro",
-        "nome_cientifico": null,
-        "data_plantio": "2025-12-17",
-        "tipo_plantio": null,
-        "altura_total": null,
-        "diametro_copa": null,
-        "data_poda_formacao_1": null,
-        "data_poda_formacao_2": null,
-        "data_poda_formacao_3": null,
-        "data_poda_reducao": null,
-        "data_poda_floracao": null,
-        "data_adubacao_ordinaria": null,
-        "adubacao_frutificacao": null,
-        "irrigacao_ordinaria": null,
-        "irrigacao_floracao": null,
-        "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": null,
-        "data_irrigacao_floracao": null,
-        "data_irrigacao_frutificacao": null,
-        "inicio_colheita": null,
-        "fim_colheita": null,
-        "volume_colhido": null,
-        "foto": null,
-        "updated_at": "2025-12-08T18:15:17.32304+00:00",
-        "ultima_modificacao": "2025-12-08T18:15:17.32304",
-        "ativo": true,
-        "cache_buster": 0,
-        "id_frutifera": null
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           -34.8496445762673,
           -7.25533683531568
         ]
@@ -668,6 +612,62 @@
         "foto": null,
         "updated_at": "2025-12-08T18:31:54.220483+00:00",
         "ultima_modificacao": "2025-12-04T02:32:34.792165",
+        "ativo": true,
+        "cache_buster": 0,
+        "id_frutifera": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -34.849432,
+          -7.255024
+        ]
+      },
+      "properties": {
+        "id": 344,
+        "geom": {
+          "type": "Point",
+          "crs": {
+            "type": "name",
+            "properties": {
+              "name": "EPSG:4326"
+            }
+          },
+          "coordinates": [
+            -34.849432,
+            -7.255024
+          ]
+        },
+        "latitude": -7.255024,
+        "longitude": -34.849432,
+        "nome_popular": "Cajueiro",
+        "nome_cientifico": null,
+        "data_plantio": "2025-12-17",
+        "tipo_plantio": null,
+        "altura_total": null,
+        "diametro_copa": null,
+        "data_poda_formacao_1": null,
+        "data_poda_formacao_2": null,
+        "data_poda_formacao_3": null,
+        "data_poda_reducao": null,
+        "data_poda_floracao": null,
+        "data_adubacao_ordinaria": null,
+        "adubacao_frutificacao": null,
+        "irrigacao_ordinaria": null,
+        "irrigacao_floracao": null,
+        "irrigacao_frutificacao": null,
+        "data_irrigacao_ordinaria": "2025-12-08",
+        "data_irrigacao_floracao": null,
+        "data_irrigacao_frutificacao": null,
+        "inicio_colheita": null,
+        "fim_colheita": null,
+        "volume_colhido": null,
+        "foto": null,
+        "updated_at": "2025-12-08T19:12:57.645163+00:00",
+        "ultima_modificacao": "2025-12-08T18:15:17.32304",
         "ativo": true,
         "cache_buster": 0,
         "id_frutifera": null
