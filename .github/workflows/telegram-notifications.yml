@@ -99,12 +99,6 @@ jobs:
             echo "$valor"
           }
           
-          # Arrays de ações
-          REGA_URG=""
-          REGA_NORM=""
-          PODA=""
-          COLHEITA=""
-          
           # Processar cada planta
           jq -c '.features[]' dados.geojson | while read -r feature; do
             ID=$(echo "$feature" | jq -r '.properties.ID // .properties.fid // "S/N"')
@@ -166,35 +160,34 @@ jobs:
           
           MESSAGE="${SAUDACAO}!%0A"
           MESSAGE="${MESSAGE}📅 ${DATA_EXIBICAO} às ${HORA_EXIBICAO}%0A%0A"
-          # Detectar se foi acionado por commit (push)
-if [ "${{ github.event_name }}" = "push" ]; then
-  MESSAGE="${MESSAGE}🔄 *Atualização automática*%0A"
-  MESSAGE="${MESSAGE}Dados sincronizados do Aplicativo%0A%0A"
-else
-  MESSAGE="${MESSAGE}🔄 Atualização automática%0A"
-  MESSAGE="${MESSAGE}Dados sincronizados do Aplicativo%0A%0A"
-fi
-
-MESSAGE="${MESSAGE}📋 Total de frutíferas: ${TOTAL}%0A%0A"
-
-# Contar ações por tipo
-URG_COUNT=$(grep -c "^REGA_URG:" /tmp/acoes.txt 2>/dev/null || echo 0)
-NORM_COUNT=$(grep -c "^REGA_NORM:" /tmp/acoes.txt 2>/dev/null || echo 0)
-PODA_COUNT=$(grep -c "^PODA:" /tmp/acoes.txt 2>/dev/null || echo 0)
-COLH_COUNT=$(grep -c "^COLHEITA:" /tmp/acoes.txt 2>/dev/null || echo 0)
-
-# Calcular total de ações urgentes
-TOTAL_URG=$((URG_COUNT))
-
-# Montar resumo no formato que você quer
-MESSAGE="${MESSAGE}🚨 URGENTE: ${TOTAL_URG} ações atrasada(s)%0A"
-MESSAGE="${MESSAGE}💧 Rega: $((URG_COUNT + NORM_COUNT)) planta(s)%0A"
-MESSAGE="${MESSAGE}✂️ Poda: ${PODA_COUNT} planta(s)%0A"
-MESSAGE="${MESSAGE}🍊 Colheita: ${COLH_COUNT} planta(s)%0A%0A"
-MESSAGE="${MESSAGE}💡 Veja detalhes no app"
           
-      
-  
+          # Detectar se foi acionado por commit (push)
+          if [ "${{ github.event_name }}" = "push" ]; then
+            MESSAGE="${MESSAGE}🔄 *Atualização automática*%0A"
+            MESSAGE="${MESSAGE}Dados sincronizados do Aplicativo%0A%0A"
+          else
+            MESSAGE="${MESSAGE}🔄 Atualização automática%0A"
+            MESSAGE="${MESSAGE}Dados sincronizados do Aplicativo%0A%0A"
+          fi
+          
+          MESSAGE="${MESSAGE}📋 Total de frutíferas: ${TOTAL}%0A%0A"
+          
+          # Contar ações por tipo
+          URG_COUNT=$(grep -c "^REGA_URG:" /tmp/acoes.txt 2>/dev/null || echo 0)
+          NORM_COUNT=$(grep -c "^REGA_NORM:" /tmp/acoes.txt 2>/dev/null || echo 0)
+          PODA_COUNT=$(grep -c "^PODA:" /tmp/acoes.txt 2>/dev/null || echo 0)
+          COLH_COUNT=$(grep -c "^COLHEITA:" /tmp/acoes.txt 2>/dev/null || echo 0)
+          
+          # Calcular total de TODAS as ações atrasadas (não apenas urgentes)
+          TOTAL_ATRASADAS=$((URG_COUNT + NORM_COUNT + PODA_COUNT + COLH_COUNT))
+          
+          # Montar resumo no formato que você quer
+          MESSAGE="${MESSAGE}🚨 URGENTE: ${TOTAL_ATRASADAS} ações atrasada(s)%0A"
+          MESSAGE="${MESSAGE}💧 Rega: $((URG_COUNT + NORM_COUNT)) planta(s)%0A"
+          MESSAGE="${MESSAGE}✂️ Poda: ${PODA_COUNT} planta(s)%0A"
+          MESSAGE="${MESSAGE}🍊 Colheita: ${COLH_COUNT} planta(s)%0A%0A"
+          MESSAGE="${MESSAGE}💡 Veja detalhes no app"
+          
           # Limpar arquivo temporário
           rm -f /tmp/acoes.txt
           
@@ -206,6 +199,8 @@ MESSAGE="${MESSAGE}💡 Veja detalhes no app"
           
           echo "Notificação enviada com sucesso!"
           echo "Horário: ${DATA_EXIBICAO} às ${HORA_EXIBICAO} (Brasília)"
+          echo "Total de frutíferas: ${TOTAL}"
+          echo "Ações atrasadas: ${TOTAL_ATRASADAS}"
           
       - name: Resumo estatístico (apenas 06h)
         if: github.event.schedule == '0 9 * * *'
