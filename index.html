@@ -738,69 +738,131 @@
     </div>
 
     <!-- Tab: Mapa -->
-    <div id="mapa" class="tab-content">
-      <!-- Seção de Cadastro -->
-      <div class="section">
-        <div class="section-title clickable" onclick="toggleCadastroForm()">
-          ➕ Cadastrar Nova Frutífera
-          <span id="cadastroToggleIcon" style="margin-left: auto; font-size: 1.2rem;">▼</span>
+    <!-- Tab: Mapa -->
+<div id="mapa" class="tab-content">
+  <!-- Seção do Mapa (AGORA EM CIMA) -->
+  <div class="section">
+    <div class="section-title">🗺️ Visualização do Mapa</div>
+    
+    <!-- BOTÃO DE SINCRONIZAR (ADICIONADO AQUI) -->
+    <button class="btn btn-secondary" onclick="sincronizarComSupabase()" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%;">
+      🔄 Sincronizar com Banco de Dados
+    </button>
+    <div id="syncMessage" style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem; text-align: center; min-height: 1.2rem;"></div>
+    
+    <div class="info-box">
+      📍 Visualize todas as frutíferas georeferenciadas no mapa
+    </div>
+
+    <div class="map-controls">
+      <button class="map-btn" data-basemap="satellite" onclick="changeBasemap('satellite', event)">
+        🛰️ Satélite
+      </button>
+      <button class="map-btn active" data-basemap="orthomosaic" onclick="changeBasemap('orthomosaic', event)">
+        📸 Orthomosaico
+      </button>
+    </div>
+
+    <div class="layer-toggle">
+      <div class="layer-label">
+        <div class="layer-badge" style="color: #10b981;"></div>
+        <span>Frutíferas</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggleFrutiferas" checked onchange="toggleFrutiferasLayer()">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <!-- Legenda de Espécies -->
+    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
+      <div style="font-size: 0.75rem; font-weight: 600; color: #6b7280; margin-bottom: 0.5rem;">LEGENDA POR ESPÉCIE</div>
+      <div id="mapLegend">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #10b981; border: 2px solid #fff;"></div>
+          <span>🥭 Mangabeira</span>
         </div>
-        
-        <div id="cadastroFormContainer">
-          <div class="info-box">
-            🌱 Cadastre e visualize imediatamente no mapa. Use o botão "Sincronizar" para enviar ao banco de dados.
-          </div>
-
-          <form onsubmit="cadastrarFrutifera(event)">
-            <div class="form-group">
-              <label>🌿 Espécie *</label>
-              <select id="novaEspecie" required>
-                <option value="">Selecione...</option>
-                <option value="Mangabeira">🥭 Mangabeira</option>
-                <option value="Cajueiro">🌰 Cajueiro</option>
-                <option value="Coqueiro">🥥 Coqueiro</option>
-                <option value="Cacau">🍫 Cacau</option>
-              </select>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label>📅 Data do Plantio *</label>
-                <input type="date" id="dataPlantio" required>
-              </div>
-              <div class="form-group">
-                <label>🌱 Idade (meses)</label>
-                <input type="number" id="idadeFrutifera" min="0" placeholder="0">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label>📍 Localização GPS</label>
-              <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: end;">
-                <input type="text" id="coordenadas" placeholder="Latitude, Longitude" readonly style="margin-bottom: 0;">
-                <button type="button" onclick="obterLocalizacao()" style="padding: 0.75rem 1rem; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; margin-bottom: 0;">
-                  📍 Obter GPS
-                </button>
-              </div>
-              <div id="coordDisplay" style="background: #f9fafb; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem; display: none;"></div>
-            </div>
-
-            <div class="form-group">
-              <label>👤 Responsável pelo plantio</label>
-              <input type="text" id="responsavel" placeholder="Nome" value="">
-            </div>
-
-            <button type="submit" class="btn btn-primary">
-              ✅ Cadastrar Frutífera
-            </button>
-          </form>
-          
-          <button class="btn btn-secondary" onclick="sincronizarComSupabase()" style="margin-top: 0.5rem;">
-            🔄 Sincronizar com Banco de Dados
-          </button>
-          <div id="syncMessage" style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem; text-align: center;"></div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #f59e0b; border: 2px solid #fff;"></div>
+          <span>🌰 Cajueiro</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #ef4444; border: 2px solid #fff;"></div>
+          <span>🥥 Coqueiro</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #8b5cf6; border: 2px solid #fff;"></div>
+          <span>🍫 Cacau</span>
         </div>
       </div>
+    </div>
+
+    <div id="mapContainer"></div>
+  </div>
+
+  <!-- Seção de Cadastro (AGORA EMBAIXO) -->
+  <div class="section">
+    <div class="section-title clickable" onclick="toggleCadastroForm()">
+      ➕ Cadastrar Nova Frutífera
+      <span id="cadastroToggleIcon" style="margin-left: auto; font-size: 1.2rem;">▼</span>
+    </div>
+    
+    <div id="cadastroFormContainer">
+      <div class="info-box">
+        🌱 Cadastre e visualize imediatamente no mapa. Use o botão "Sincronizar" acima para enviar ao banco de dados.
+      </div>
+
+      <form onsubmit="cadastrarFrutifera(event)">
+        <div class="form-group">
+          <label>🌿 Espécie *</label>
+          <select id="novaEspecie" required>
+            <option value="">Selecione...</option>
+            <option value="Mangabeira">🥭 Mangabeira</option>
+            <option value="Cajueiro">🌰 Cajueiro</option>
+            <option value="Coqueiro">🥥 Coqueiro</option>
+            <option value="Cacau">🍫 Cacau</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>📅 Data do Plantio *</label>
+            <input type="date" id="dataPlantio" required>
+          </div>
+          <div class="form-group">
+            <label>🌱 Idade (meses)</label>
+            <input type="number" id="idadeFrutifera" min="0" placeholder="0">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>📍 Localização GPS</label>
+          <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: end;">
+            <input type="text" id="coordenadas" placeholder="Latitude, Longitude" readonly style="margin-bottom: 0;">
+            <button type="button" onclick="obterLocalizacao()" style="padding: 0.75rem 1rem; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; margin-bottom: 0;">
+              📍 Obter GPS
+            </button>
+          </div>
+          <div id="coordDisplay" style="background: #f9fafb; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem; display: none;"></div>
+        </div>
+
+        <div class="form-group">
+          <label>👤 Responsável pelo plantio</label>
+          <input type="text" id="responsavel" placeholder="Nome" value="">
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          ✅ Cadastrar Frutífera
+        </button>
+      </form>
+      <!-- REMOVA estas linhas do formulário de cadastro -->
+      <!-- <button class="btn btn-secondary" onclick="sincronizarComSupabase()" style="margin-top: 0.5rem;">
+        🔄 Sincronizar com Banco de Dados
+      </button>
+      <div id="syncMessage" style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem; text-align: center;"></div> -->
+    </div>
+  </div>
+</div>
 
       <!-- Seção do Mapa -->
       <div class="section">
@@ -1391,108 +1453,150 @@
     }
 
     async function sincronizarComSupabase() {
-      if (!navigator.onLine) {
-        mostrarToast('📡 Você está offline. Conecte-se à internet para sincronizar.');
-        return;
-      }
-      
-      const syncMsg = document.getElementById('syncMessage');
-      
-      pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
-      
-      if (pendingSync.length === 0) {
-        mostrarToast('✅ Nenhuma alteração pendente');
-        syncMsg.textContent = '✅ Tudo sincronizado';
-        return;
-      }
-      
-      syncMsg.textContent = `🔄 Sincronizando ${pendingSync.length} item(ns)...`;
-      mostrarToast(`🔄 Sincronizando ${pendingSync.length} frutífera(s)...`);
-      
-      let sucessos = 0;
-      let erros = 0;
-      
-      for (const frutifera of pendingSync) {
-        try {
-          const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/frutiferas`,
-            {
-              method: 'POST',
-              headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
-              body: JSON.stringify({
-                nome_popular: frutifera.especie,
-                data_plantio: frutifera.data_plantio,
-                latitude: frutifera.latitude,
-                longitude: frutifera.longitude,
-                data_irrigacao_ordinaria: frutifera.ultima_rega,
-                data_poda_formacao_1: frutifera.ultima_poda,
-                inicio_colheita: frutifera.ultima_colheita
-              })
-            }
-          );
-          
-          if (response.ok) {
-            const [resultado] = await response.json();
-            
-            const index = frutiferas.findIndex(f => f.fid === frutifera.fid);
-            if (index >= 0) {
-              frutiferas[index].id = resultado.id;
-              frutiferas[index].fid = resultado.fid;
-              frutiferas[index].identificacao = resultado.fid;
-              frutiferas[index].pendingSync = false;
-            }
-            
-            sucessos++;
-            console.log(`✅ Sincronizado: ${frutifera.especie} (ID: ${resultado.id})`);
-          } else {
-            erros++;
-            console.error(`❌ Erro ao sincronizar: ${frutifera.especie}`, response.status);
-          }
-          
-        } catch (error) {
-          erros++;
-          console.error('❌ Erro na sincronização:', error);
-        }
-      }
-      
-      pendingSync = [];
-      localStorage.setItem('pendingSync', '[]');
-      localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
-      
-      await carregarFrutiferas();
-      
-      if (erros === 0) {
-        syncMsg.textContent = `✅ ${sucessos} item(ns) sincronizado(s) com sucesso!`;
-        mostrarToast(`✅ ${sucessos} frutífera(s) sincronizada(s) com sucesso!`);
-      } else {
-        syncMsg.textContent = `⚠️ ${sucessos} sucesso(s), ${erros} erro(s)`;
-        mostrarToast(`⚠️ ${sucessos} sucesso(s), ${erros} erro(s)`);
-      }
-      
-      setTimeout(() => {
-        syncMsg.textContent = '';
-      }, 5000);
-      
-      atualizarContadorSync();
+  if (!navigator.onLine) {
+    mostrarToast('📡 Você está offline. Conecte-se à internet para sincronizar.');
+    return;
+  }
+  
+  const syncMsg = document.getElementById('syncMessage');
+  const syncButton = document.querySelector('[onclick="sincronizarComSupabase()"]');
+  
+  // Desabilitar botão durante sincronização
+  if (syncButton) {
+    syncButton.disabled = true;
+    syncButton.innerHTML = '⏳ Sincronizando...';
+  }
+  
+  pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+  
+  if (pendingSync.length === 0) {
+    mostrarToast('✅ Nenhuma alteração pendente');
+    syncMsg.textContent = '✅ Tudo sincronizado';
+    if (syncButton) {
+      syncButton.disabled = false;
+      syncButton.innerHTML = '🔄 Sincronizar com Banco de Dados';
     }
+    return;
+  }
+  
+  syncMsg.textContent = `🔄 Sincronizando ${pendingSync.length} item(ns)...`;
+  mostrarToast(`🔄 Sincronizando ${pendingSync.length} frutífera(s)...`);
+  
+  let sucessos = 0;
+  let erros = 0;
+  
+  for (const frutifera of pendingSync) {
+    try {
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/frutiferas`,
+        {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            nome_popular: frutifera.especie,
+            data_plantio: frutifera.data_plantio,
+            latitude: frutifera.latitude,
+            longitude: frutifera.longitude,
+            data_irrigacao_ordinaria: frutifera.ultima_rega,
+            data_poda_formacao_1: frutifera.ultima_poda,
+            inicio_colheita: frutifera.ultima_colheita
+          })
+        }
+      );
+      
+      if (response.ok) {
+        const [resultado] = await response.json();
+        
+        const index = frutiferas.findIndex(f => f.fid === frutifera.fid);
+        if (index >= 0) {
+          frutiferas[index].id = resultado.id;
+          frutiferas[index].fid = resultado.fid;
+          frutiferas[index].identificacao = resultado.fid;
+          frutiferas[index].pendingSync = false;
+        }
+        
+        sucessos++;
+        console.log(`✅ Sincronizado: ${frutifera.especie} (ID: ${resultado.id})`);
+      } else {
+        erros++;
+        console.error(`❌ Erro ao sincronizar: ${frutifera.especie}`, response.status);
+      }
+      
+    } catch (error) {
+      erros++;
+      console.error('❌ Erro na sincronização:', error);
+    }
+  }
+  
+  pendingSync = [];
+  localStorage.setItem('pendingSync', '[]');
+  localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+  
+  await carregarFrutiferas();
+  
+  // Restaurar botão
+  if (syncButton) {
+    syncButton.disabled = false;
+    syncButton.innerHTML = '🔄 Sincronizar com Banco de Dados';
+  }
+  
+  if (erros === 0) {
+    syncMsg.textContent = `✅ ${sucessos} item(ns) sincronizado(s) com sucesso!`;
+    syncMsg.style.color = '#059669';
+    mostrarToast(`✅ ${sucessos} frutífera(s) sincronizada(s) com sucesso!`);
+  } else {
+    syncMsg.textContent = `⚠️ ${sucessos} sucesso(s), ${erros} erro(s)`;
+    syncMsg.style.color = '#dc2626';
+    mostrarToast(`⚠️ ${sucessos} sucesso(s), ${erros} erro(s)`);
+  }
+  
+  setTimeout(() => {
+    syncMsg.textContent = '';
+    syncMsg.style.color = '';
+  }, 5000);
+  
+  atualizarContadorSync();
+}
 
     function atualizarContadorSync() {
-      pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
-      const syncStatus = document.getElementById('syncStatus');
+  pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+  const syncStatus = document.getElementById('syncStatus');
+  const syncButton = document.querySelector('[onclick="sincronizarComSupabase()"]');
+  
+  if (pendingSync.length > 0) {
+    syncStatus.textContent = `⚠️ ${pendingSync.length} pendente(s)`;
+    syncStatus.style.color = '#f59e0b';
+    
+    // Adicionar badge ao botão
+    if (syncButton) {
+      // Remove badge anterior se existir
+      const oldBadge = syncButton.querySelector('.sync-badge');
+      if (oldBadge) oldBadge.remove();
       
-      if (pendingSync.length > 0) {
-        syncStatus.textContent = `⚠️ ${pendingSync.length} pendente(s)`;
-        syncStatus.style.color = '#f59e0b';
-      } else {
-        syncStatus.textContent = 'Sítio Ipiranga';
-        syncStatus.style.color = '';
-      }
+      // Adicionar novo badge
+      const badge = document.createElement('span');
+      badge.className = 'sync-badge';
+      badge.textContent = pendingSync.length;
+      badge.style.cssText = 'position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold;';
+      syncButton.style.position = 'relative';
+      syncButton.appendChild(badge);
     }
+  } else {
+    syncStatus.textContent = 'Sítio Ipiranga';
+    syncStatus.style.color = '';
+    
+    // Remover badge do botão
+    if (syncButton) {
+      const badge = syncButton.querySelector('.sync-badge');
+      if (badge) badge.remove();
+    }
+  }
+}
 
     // FUNÇÕES DO MAPA
     function inicializarMapa() {
