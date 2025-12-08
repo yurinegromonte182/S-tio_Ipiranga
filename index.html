@@ -1343,47 +1343,69 @@
     }
 
     async function registrarAcao(tipo, frutiferaId) {
-      console.log(`📝 Registrando ${tipo} para frutífera ${frutiferaId}`);
+  console.log(`📝 Registrando ${tipo} para frutífera ${frutiferaId}`);
+  
+  try {
+    const campo = tipo === 'rega' ? 'ultima_rega' : 
+                  tipo === 'poda' ? 'ultima_poda' : 'ultima_colheita';
+    
+    const dataHoje = new Date().toISOString().split('T')[0];
+    
+    const index = frutiferas.findIndex(f => f.id === frutiferaId);
+    if (index >= 0) {
+      // 1. ATUALIZAR LOCALMENTE
+      frutiferas[index][campo] = dataHoje;
+      localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
       
-      try {
-        const campo = tipo === 'rega' ? 'ultima_rega' : 
-                      tipo === 'poda' ? 'ultima_poda' : 'ultima_colheita';
-        
-        const dataHoje = new Date().toISOString().split('T')[0];
-        
-        const index = frutiferas.findIndex(f => f.id === frutiferaId);
-        if (index >= 0) {
-          frutiferas[index][campo] = dataHoje;
-          localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
-        }
-        
-        atualizarTodasAbas();
-        mostrarToast(`✅ ${tipo.charAt(0).toUpperCase() + tipo.slice(1)} registrada!`);
-        
-        if (navigator.onLine) {
-          const campoSupabase = campo === 'ultima_rega' ? 'data_irrigacao_ordinaria' : 
-                                campo === 'ultima_poda' ? 'data_poda_formacao_1' : 
-                                'inicio_colheita';
-          
-          await fetch(
-            `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${frutiferaId}`,
-            {
-              method: 'PATCH',
-              headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-              },
-              body: JSON.stringify({ [campoSupabase]: dataHoje })
-            }
-          );
-        }
-        
-      } catch (error) {
-        console.error('❌ Erro ao registrar ação:', error);
-      }
+      // ⭐⭐ ADIÇÃO CRÍTICA: SALVAR PARA SINCRONIZAÇÃO POSTERIOR ⭐⭐
+      let acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+      acoesPendentes.push({
+        tipo: tipo,
+        frutiferaId: frutiferaId,
+        data: dataHoje,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('acoesPendentes', JSON.stringify(acoesPendentes));
+      
+      // Atualizar badge
+      atualizarBadgeSincronizacao();
     }
+    
+    // 2. ATUALIZAR UI
+    atualizarTodasAbas();
+    mostrarToast(`✅ ${tipo.charAt(0).toUpperCase() + tipo.slice(1)} registrada!`);
+    
+    // 3. TENTAR SINCRONIZAR IMEDIATAMENTE SE ONLINE
+    if (navigator.onLine) {
+      sincronizarFilaAcoes(); // Chamar a NOVA função de sincronização
+    }
+    
+    if (navigator.onLine) {
+      const campoSupabase = campo === 'ultima_rega' ? 'data_irrigacao_ordinaria' : 
+                            campo === 'ultima_poda' ? 'data_poda_formacao_1' : 
+                            'inicio_colheita';
+      
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${frutiferaId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({ [campoSupabase]: dataHoje })
+        }
+      );
+    }
+    
+    
+  } catch (error) {
+    console.error('❌ Erro ao registrar ação:', error);
+    // NÃO mostrar erro, pois já salvamos localmente
+  }
+}
 
     async function cadastrarFrutifera(event) {
       event.preventDefault();
