@@ -1345,8 +1345,8 @@
     async function registrarAcao(tipo, frutiferaId) {
   console.log(`📝 Registrando ${tipo} para frutífera ${frutiferaId}`);
   
-  try {
-    const campo = tipo === 'rega' ? 'ultima_rega' : 
+   try {
+     const campo = tipo === 'rega' ? 'ultima_rega' : 
                   tipo === 'poda' ? 'ultima_poda' : 'ultima_colheita';
     
     const dataHoje = new Date().toISOString().split('T')[0];
@@ -1357,18 +1357,55 @@
       frutiferas[index][campo] = dataHoje;
       localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
       
-      // ⭐⭐ ADIÇÃO CRÍTICA: SALVAR PARA SINCRONIZAÇÃO POSTERIOR ⭐⭐
-      let acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
-      acoesPendentes.push({
-        tipo: tipo,
-        frutiferaId: frutiferaId,
-        data: dataHoje,
-        timestamp: new Date().toISOString()
-      });
-      localStorage.setItem('acoesPendentes', JSON.stringify(acoesPendentes));
+      // ⭐⭐ CORREÇÃO CRÍTICA: SALVAR NO localStorage CORRETAMENTE ⭐⭐
+      try {
+        // Buscar ou criar array de ações
+        let acoesPendentes = [];
+        const acoesSalvas = localStorage.getItem('acoesPendentes');
+        
+        if (acoesSalvas && acoesSalvas !== 'null' && acoesSalvas !== 'undefined') {
+          try {
+            acoesPendentes = JSON.parse(acoesSalvas);
+            if (!Array.isArray(acoesPendentes)) {
+              console.warn('⚠️ acoesPendentes não é array, recriando...');
+              acoesPendentes = [];
+            }
+          } catch (e) {
+            console.warn('⚠️ Erro ao parsear acoesPendentes:', e);
+            acoesPendentes = [];
+          }
+        }
+        
+        // Criar nova ação
+        const novaAcao = {
+          tipo: tipo,
+          frutiferaId: String(frutiferaId), // Garantir string
+          data: dataHoje,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Adicionar ao array
+        acoesPendentes.push(novaAcao);
+        
+        // Salvar no localStorage
+        localStorage.setItem('acoesPendentes', JSON.stringify(acoesPendentes));
+        
+        console.log('✅ Ação salva no localStorage:', novaAcao);
+        console.log('📊 Total de ações pendentes:', acoesPendentes.length);
+        
+        // Verificar se salvou
+        setTimeout(() => {
+          const verificacao = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+          console.log('✅ Verificação:', verificacao.length, 'ações no localStorage');
+        }, 100);
+        
+      } catch (storageError) {
+        console.error('❌ ERRO ao salvar no localStorage:', storageError);
+      }
+      // ⭐⭐ FIM DA CORREÇÃO ⭐⭐
       
       // Atualizar badge
-      atualizarBadgeSincronizacao();
+      atualizarContadorSync();
     }
     
     // 2. ATUALIZAR UI
@@ -1377,33 +1414,41 @@
     
     // 3. TENTAR SINCRONIZAR IMEDIATAMENTE SE ONLINE
     if (navigator.onLine) {
-      sincronizarFilaAcoes(); // Chamar a NOVA função de sincronização
+      console.log('🌐 Online - tentando sincronizar...');
+      setTimeout(() => sincronizarFilaAcoes(), 1000); // Dar tempo para salvar
     }
     
+    // 4. TENTAR SINCRONIZAR COM SUPABASE SE ONLINE
     if (navigator.onLine) {
       const campoSupabase = campo === 'ultima_rega' ? 'data_irrigacao_ordinaria' : 
                             campo === 'ultima_poda' ? 'data_poda_formacao_1' : 
                             'inicio_colheita';
       
-      await fetch(
-        `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${frutiferaId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify({ [campoSupabase]: dataHoje })
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${frutiferaId}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ [campoSupabase]: dataHoje })
+          }
+        );
+        
+        if (response.ok) {
+          console.log(`✅ ${tipo} sincronizada com Supabase`);
         }
-      );
+      } catch (supabaseError) {
+        console.log('⚠️ Supabase offline, ação ficará na fila');
+      }
     }
-    
     
   } catch (error) {
     console.error('❌ Erro ao registrar ação:', error);
-    // NÃO mostrar erro, pois já salvamos localmente
   }
 }
 
