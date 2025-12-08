@@ -62,174 +62,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -34.8492068891753,
-          -7.25530604123711
-        ]
-      },
-      "properties": {
-        "id": 88,
-        "geom": {
-          "type": "Point",
-          "crs": {
-            "type": "name",
-            "properties": {
-              "name": "EPSG:4326"
-            }
-          },
-          "coordinates": [
-            -34.84920688917526,
-            -7.255306041237108
-          ]
-        },
-        "latitude": -7.25530604123711,
-        "longitude": -34.8492068891753,
-        "nome_popular": "Coqueiro",
-        "nome_cientifico": null,
-        "data_plantio": null,
-        "tipo_plantio": null,
-        "altura_total": null,
-        "diametro_copa": null,
-        "data_poda_formacao_1": null,
-        "data_poda_formacao_2": null,
-        "data_poda_formacao_3": null,
-        "data_poda_reducao": null,
-        "data_poda_floracao": null,
-        "data_adubacao_ordinaria": null,
-        "adubacao_frutificacao": null,
-        "irrigacao_ordinaria": null,
-        "irrigacao_floracao": null,
-        "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": null,
-        "data_irrigacao_floracao": null,
-        "data_irrigacao_frutificacao": null,
-        "inicio_colheita": null,
-        "fim_colheita": null,
-        "volume_colhido": null,
-        "foto": null,
-        "updated_at": "2025-12-08T12:46:20.252421+00:00",
-        "ultima_modificacao": "2025-12-04T02:32:34.792165",
-        "ativo": true,
-        "cache_buster": 0,
-        "id_frutifera": null
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -34.8492596597938,
-          -7.25523480090206
-        ]
-      },
-      "properties": {
-        "id": 89,
-        "geom": {
-          "type": "Point",
-          "crs": {
-            "type": "name",
-            "properties": {
-              "name": "EPSG:4326"
-            }
-          },
-          "coordinates": [
-            -34.849259659793816,
-            -7.255234800902056
-          ]
-        },
-        "latitude": -7.25523480090206,
-        "longitude": -34.8492596597938,
-        "nome_popular": "Coqueiro",
-        "nome_cientifico": null,
-        "data_plantio": null,
-        "tipo_plantio": null,
-        "altura_total": null,
-        "diametro_copa": null,
-        "data_poda_formacao_1": null,
-        "data_poda_formacao_2": null,
-        "data_poda_formacao_3": null,
-        "data_poda_reducao": null,
-        "data_poda_floracao": null,
-        "data_adubacao_ordinaria": null,
-        "adubacao_frutificacao": null,
-        "irrigacao_ordinaria": null,
-        "irrigacao_floracao": null,
-        "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": null,
-        "data_irrigacao_floracao": null,
-        "data_irrigacao_frutificacao": null,
-        "inicio_colheita": null,
-        "fim_colheita": null,
-        "volume_colhido": null,
-        "foto": null,
-        "updated_at": "2025-12-08T12:46:20.252421+00:00",
-        "ultima_modificacao": "2025-12-04T02:32:34.792165",
-        "ativo": true,
-        "cache_buster": 0,
-        "id_frutifera": null
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -34.8492680151417,
-          -7.25530296295103
-        ]
-      },
-      "properties": {
-        "id": 90,
-        "geom": {
-          "type": "Point",
-          "crs": {
-            "type": "name",
-            "properties": {
-              "name": "EPSG:4326"
-            }
-          },
-          "coordinates": [
-            -34.849268015141746,
-            -7.255302962951026
-          ]
-        },
-        "latitude": -7.25530296295103,
-        "longitude": -34.8492680151417,
-        "nome_popular": "Coqueiro",
-        "nome_cientifico": null,
-        "data_plantio": null,
-        "tipo_plantio": null,
-        "altura_total": null,
-        "diametro_copa": null,
-        "data_poda_formacao_1": null,
-        "data_poda_formacao_2": null,
-        "data_poda_formacao_3": null,
-        "data_poda_reducao": null,
-        "data_poda_floracao": null,
-        "data_adubacao_ordinaria": null,
-        "adubacao_frutificacao": null,
-        "irrigacao_ordinaria": null,
-        "irrigacao_floracao": null,
-        "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": null,
-        "data_irrigacao_floracao": null,
-        "data_irrigacao_frutificacao": null,
-        "inicio_colheita": null,
-        "fim_colheita": null,
-        "volume_colhido": null,
-        "foto": null,
-        "updated_at": "2025-12-08T12:46:20.252421+00:00",
-        "ultima_modificacao": "2025-12-04T02:32:34.792165",
-        "ativo": true,
-        "cache_buster": 0,
-        "id_frutifera": null
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           -34.8489478733892,
           -7.25485617171391
         ]
@@ -342,6 +174,174 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
+          -34.8492068891753,
+          -7.25530604123711
+        ]
+      },
+      "properties": {
+        "id": 88,
+        "geom": {
+          "type": "Point",
+          "crs": {
+            "type": "name",
+            "properties": {
+              "name": "EPSG:4326"
+            }
+          },
+          "coordinates": [
+            -34.84920688917526,
+            -7.255306041237108
+          ]
+        },
+        "latitude": -7.25530604123711,
+        "longitude": -34.8492068891753,
+        "nome_popular": "Coqueiro",
+        "nome_cientifico": null,
+        "data_plantio": null,
+        "tipo_plantio": null,
+        "altura_total": null,
+        "diametro_copa": null,
+        "data_poda_formacao_1": "2025-12-08",
+        "data_poda_formacao_2": null,
+        "data_poda_formacao_3": null,
+        "data_poda_reducao": null,
+        "data_poda_floracao": null,
+        "data_adubacao_ordinaria": null,
+        "adubacao_frutificacao": null,
+        "irrigacao_ordinaria": null,
+        "irrigacao_floracao": null,
+        "irrigacao_frutificacao": null,
+        "data_irrigacao_ordinaria": "2025-12-08",
+        "data_irrigacao_floracao": null,
+        "data_irrigacao_frutificacao": null,
+        "inicio_colheita": "2025-12-08",
+        "fim_colheita": null,
+        "volume_colhido": null,
+        "foto": null,
+        "updated_at": "2025-12-08T18:09:26.315864+00:00",
+        "ultima_modificacao": "2025-12-04T02:32:34.792165",
+        "ativo": true,
+        "cache_buster": 0,
+        "id_frutifera": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -34.8492596597938,
+          -7.25523480090206
+        ]
+      },
+      "properties": {
+        "id": 89,
+        "geom": {
+          "type": "Point",
+          "crs": {
+            "type": "name",
+            "properties": {
+              "name": "EPSG:4326"
+            }
+          },
+          "coordinates": [
+            -34.849259659793816,
+            -7.255234800902056
+          ]
+        },
+        "latitude": -7.25523480090206,
+        "longitude": -34.8492596597938,
+        "nome_popular": "Coqueiro",
+        "nome_cientifico": null,
+        "data_plantio": null,
+        "tipo_plantio": null,
+        "altura_total": null,
+        "diametro_copa": null,
+        "data_poda_formacao_1": "2025-12-08",
+        "data_poda_formacao_2": null,
+        "data_poda_formacao_3": null,
+        "data_poda_reducao": null,
+        "data_poda_floracao": null,
+        "data_adubacao_ordinaria": null,
+        "adubacao_frutificacao": null,
+        "irrigacao_ordinaria": null,
+        "irrigacao_floracao": null,
+        "irrigacao_frutificacao": null,
+        "data_irrigacao_ordinaria": "2025-12-08",
+        "data_irrigacao_floracao": null,
+        "data_irrigacao_frutificacao": null,
+        "inicio_colheita": "2025-12-08",
+        "fim_colheita": null,
+        "volume_colhido": null,
+        "foto": null,
+        "updated_at": "2025-12-08T18:32:48.139033+00:00",
+        "ultima_modificacao": "2025-12-04T02:32:34.792165",
+        "ativo": true,
+        "cache_buster": 0,
+        "id_frutifera": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -34.8492680151417,
+          -7.25530296295103
+        ]
+      },
+      "properties": {
+        "id": 90,
+        "geom": {
+          "type": "Point",
+          "crs": {
+            "type": "name",
+            "properties": {
+              "name": "EPSG:4326"
+            }
+          },
+          "coordinates": [
+            -34.849268015141746,
+            -7.255302962951026
+          ]
+        },
+        "latitude": -7.25530296295103,
+        "longitude": -34.8492680151417,
+        "nome_popular": "Coqueiro",
+        "nome_cientifico": null,
+        "data_plantio": null,
+        "tipo_plantio": null,
+        "altura_total": null,
+        "diametro_copa": null,
+        "data_poda_formacao_1": "2025-12-08",
+        "data_poda_formacao_2": null,
+        "data_poda_formacao_3": null,
+        "data_poda_reducao": null,
+        "data_poda_floracao": null,
+        "data_adubacao_ordinaria": null,
+        "adubacao_frutificacao": null,
+        "irrigacao_ordinaria": null,
+        "irrigacao_floracao": null,
+        "irrigacao_frutificacao": null,
+        "data_irrigacao_ordinaria": "2025-12-08",
+        "data_irrigacao_floracao": null,
+        "data_irrigacao_frutificacao": null,
+        "inicio_colheita": "2025-12-08",
+        "fim_colheita": null,
+        "volume_colhido": null,
+        "foto": null,
+        "updated_at": "2025-12-08T19:00:19.201687+00:00",
+        "ultima_modificacao": "2025-12-04T02:32:34.792165",
+        "ativo": true,
+        "cache_buster": 0,
+        "id_frutifera": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
           -34.8495395639497,
           -7.25537508279639
         ]
@@ -388,6 +388,62 @@
         "foto": null,
         "updated_at": "2025-12-08T12:36:58.223707+00:00",
         "ultima_modificacao": "2025-12-04T02:32:34.792165",
+        "ativo": true,
+        "cache_buster": 0,
+        "id_frutifera": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -34.8496723514798,
+          -7.25479359278846
+        ]
+      },
+      "properties": {
+        "id": 333,
+        "geom": {
+          "type": "Point",
+          "crs": {
+            "type": "name",
+            "properties": {
+              "name": "EPSG:4326"
+            }
+          },
+          "coordinates": [
+            -34.84967235147977,
+            -7.254793592788465
+          ]
+        },
+        "latitude": -7.25479359278846,
+        "longitude": -34.8496723514798,
+        "nome_popular": "Cacau",
+        "nome_cientifico": null,
+        "data_plantio": null,
+        "tipo_plantio": null,
+        "altura_total": null,
+        "diametro_copa": null,
+        "data_poda_formacao_1": "2025-12-06",
+        "data_poda_formacao_2": null,
+        "data_poda_formacao_3": null,
+        "data_poda_reducao": null,
+        "data_poda_floracao": null,
+        "data_adubacao_ordinaria": null,
+        "adubacao_frutificacao": null,
+        "irrigacao_ordinaria": null,
+        "irrigacao_floracao": null,
+        "irrigacao_frutificacao": null,
+        "data_irrigacao_ordinaria": "2025-12-06",
+        "data_irrigacao_floracao": null,
+        "data_irrigacao_frutificacao": null,
+        "inicio_colheita": "2025-12-08",
+        "fim_colheita": null,
+        "volume_colhido": null,
+        "foto": null,
+        "updated_at": "2025-12-08T18:09:32.049477+00:00",
+        "ultima_modificacao": "2025-12-06T13:49:48.499487",
         "ativo": true,
         "cache_buster": 0,
         "id_frutifera": null
@@ -454,62 +510,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -34.8496723514798,
-          -7.25479359278846
-        ]
-      },
-      "properties": {
-        "id": 333,
-        "geom": {
-          "type": "Point",
-          "crs": {
-            "type": "name",
-            "properties": {
-              "name": "EPSG:4326"
-            }
-          },
-          "coordinates": [
-            -34.84967235147977,
-            -7.254793592788465
-          ]
-        },
-        "latitude": -7.25479359278846,
-        "longitude": -34.8496723514798,
-        "nome_popular": "Cacau",
-        "nome_cientifico": null,
-        "data_plantio": null,
-        "tipo_plantio": null,
-        "altura_total": null,
-        "diametro_copa": null,
-        "data_poda_formacao_1": "2025-12-06",
-        "data_poda_formacao_2": null,
-        "data_poda_formacao_3": null,
-        "data_poda_reducao": null,
-        "data_poda_floracao": null,
-        "data_adubacao_ordinaria": null,
-        "adubacao_frutificacao": null,
-        "irrigacao_ordinaria": null,
-        "irrigacao_floracao": null,
-        "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": "2025-12-06",
-        "data_irrigacao_floracao": null,
-        "data_irrigacao_frutificacao": null,
-        "inicio_colheita": null,
-        "fim_colheita": null,
-        "volume_colhido": null,
-        "foto": null,
-        "updated_at": "2025-12-06T13:49:48.499487+00:00",
-        "ultima_modificacao": "2025-12-06T13:49:48.499487",
-        "ativo": true,
-        "cache_buster": 0,
-        "id_frutifera": null
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           -34.860011,
           -7.131277
         ]
@@ -550,12 +550,68 @@
         "data_irrigacao_ordinaria": null,
         "data_irrigacao_floracao": null,
         "data_irrigacao_frutificacao": null,
+        "inicio_colheita": "2025-12-08",
+        "fim_colheita": null,
+        "volume_colhido": null,
+        "foto": null,
+        "updated_at": "2025-12-08T18:09:33.193354+00:00",
+        "ultima_modificacao": "2025-12-08T18:00:31.399136",
+        "ativo": true,
+        "cache_buster": 0,
+        "id_frutifera": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -34.849432,
+          -7.255024
+        ]
+      },
+      "properties": {
+        "id": 344,
+        "geom": {
+          "type": "Point",
+          "crs": {
+            "type": "name",
+            "properties": {
+              "name": "EPSG:4326"
+            }
+          },
+          "coordinates": [
+            -34.849432,
+            -7.255024
+          ]
+        },
+        "latitude": -7.255024,
+        "longitude": -34.849432,
+        "nome_popular": "Cajueiro",
+        "nome_cientifico": null,
+        "data_plantio": "2025-12-17",
+        "tipo_plantio": null,
+        "altura_total": null,
+        "diametro_copa": null,
+        "data_poda_formacao_1": null,
+        "data_poda_formacao_2": null,
+        "data_poda_formacao_3": null,
+        "data_poda_reducao": null,
+        "data_poda_floracao": null,
+        "data_adubacao_ordinaria": null,
+        "adubacao_frutificacao": null,
+        "irrigacao_ordinaria": null,
+        "irrigacao_floracao": null,
+        "irrigacao_frutificacao": null,
+        "data_irrigacao_ordinaria": null,
+        "data_irrigacao_floracao": null,
+        "data_irrigacao_frutificacao": null,
         "inicio_colheita": null,
         "fim_colheita": null,
         "volume_colhido": null,
         "foto": null,
-        "updated_at": "2025-12-08T18:00:31.399136+00:00",
-        "ultima_modificacao": "2025-12-08T18:00:31.399136",
+        "updated_at": "2025-12-08T18:15:17.32304+00:00",
+        "ultima_modificacao": "2025-12-08T18:15:17.32304",
         "ativo": true,
         "cache_buster": 0,
         "id_frutifera": null
@@ -603,14 +659,14 @@
         "irrigacao_ordinaria": null,
         "irrigacao_floracao": null,
         "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": "2025-12-05",
+        "data_irrigacao_ordinaria": "2025-12-08",
         "data_irrigacao_floracao": null,
         "data_irrigacao_frutificacao": null,
         "inicio_colheita": "2025-12-05",
         "fim_colheita": null,
         "volume_colhido": null,
         "foto": null,
-        "updated_at": "2025-12-04T02:32:34.792165+00:00",
+        "updated_at": "2025-12-08T18:31:54.220483+00:00",
         "ultima_modificacao": "2025-12-04T02:32:34.792165",
         "ativo": true,
         "cache_buster": 0,
