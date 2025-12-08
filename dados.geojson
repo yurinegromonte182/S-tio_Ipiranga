@@ -11710,62 +11710,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -34.8496887927023,
-          -7.25531749487439
-        ]
-      },
-      "properties": {
-        "id": 7,
-        "geom": {
-          "type": "Point",
-          "crs": {
-            "type": "name",
-            "properties": {
-              "name": "EPSG:4326"
-            }
-          },
-          "coordinates": [
-            -34.84968879270229,
-            -7.255317494874391
-          ]
-        },
-        "latitude": -7.25531749487439,
-        "longitude": -34.8496887927023,
-        "nome_popular": "Cacau",
-        "nome_cientifico": null,
-        "data_plantio": null,
-        "tipo_plantio": null,
-        "altura_total": null,
-        "diametro_copa": null,
-        "data_poda_formacao_1": null,
-        "data_poda_formacao_2": null,
-        "data_poda_formacao_3": null,
-        "data_poda_reducao": null,
-        "data_poda_floracao": null,
-        "data_adubacao_ordinaria": null,
-        "adubacao_frutificacao": null,
-        "irrigacao_ordinaria": null,
-        "irrigacao_floracao": null,
-        "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": null,
-        "data_irrigacao_floracao": null,
-        "data_irrigacao_frutificacao": null,
-        "inicio_colheita": null,
-        "fim_colheita": null,
-        "volume_colhido": null,
-        "foto": null,
-        "updated_at": "2025-12-04T02:32:34.792165+00:00",
-        "ultima_modificacao": "2025-12-04T02:32:34.792165",
-        "ativo": true,
-        "cache_buster": 0,
-        "id_frutifera": null
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           -34.8496873289783,
           -7.25538134134473
         ]
@@ -11787,6 +11731,62 @@
         },
         "latitude": -7.25538134134473,
         "longitude": -34.8496873289783,
+        "nome_popular": "Cacau",
+        "nome_cientifico": null,
+        "data_plantio": null,
+        "tipo_plantio": null,
+        "altura_total": null,
+        "diametro_copa": null,
+        "data_poda_formacao_1": null,
+        "data_poda_formacao_2": null,
+        "data_poda_formacao_3": null,
+        "data_poda_reducao": null,
+        "data_poda_floracao": null,
+        "data_adubacao_ordinaria": null,
+        "adubacao_frutificacao": null,
+        "irrigacao_ordinaria": null,
+        "irrigacao_floracao": null,
+        "irrigacao_frutificacao": null,
+        "data_irrigacao_ordinaria": "2025-12-08",
+        "data_irrigacao_floracao": null,
+        "data_irrigacao_frutificacao": null,
+        "inicio_colheita": null,
+        "fim_colheita": null,
+        "volume_colhido": null,
+        "foto": null,
+        "updated_at": "2025-12-08T23:51:23.639349+00:00",
+        "ultima_modificacao": "2025-12-04T02:32:34.792165",
+        "ativo": true,
+        "cache_buster": 0,
+        "id_frutifera": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -34.8496887927023,
+          -7.25531749487439
+        ]
+      },
+      "properties": {
+        "id": 7,
+        "geom": {
+          "type": "Point",
+          "crs": {
+            "type": "name",
+            "properties": {
+              "name": "EPSG:4326"
+            }
+          },
+          "coordinates": [
+            -34.84968879270229,
+            -7.255317494874391
+          ]
+        },
+        "latitude": -7.25531749487439,
+        "longitude": -34.8496887927023,
         "nome_popular": "Cacau",
         "nome_cientifico": null,
         "data_plantio": null,
