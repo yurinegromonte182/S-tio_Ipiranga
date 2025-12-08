@@ -765,7 +765,7 @@
           </button>
           <button class="map-btn active" data-basemap="orthomosaic" onclick="changeBasemap('orthomosaic', event)">
             <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">📸</div>
-            <div style="font-size: 0.75rem; font-weight: 600;">Orthomosaico</div>
+            <div style="font-size: 0.75rem; font-weight: 600;">Ortomosaico</div>
           </button>
         </div>
 
@@ -1521,80 +1521,100 @@
   }
 
   function toggleAction(tipo, frutiferaId, actionId, event) {
-    event.stopPropagation();
+  event.stopPropagation();
+  
+  const button = event.target;
+  const actionItem = button.closest('.action-item');
+  const isDone = localStorage.getItem(actionId) === 'true';
+  
+  if (!isDone) {
+    // Marcar como feito
+    localStorage.setItem(actionId, 'true');
+    actionItem.classList.add('completed');
     
-    const button = event.target;
-    const actionItem = button.closest('.action-item');
-    const isDone = localStorage.getItem(actionId) === 'true';
+    // Mudar aparência do botão
+    button.innerHTML = '<span style="font-size: 1.1rem; margin-right: 0.5rem;">↶</span> Desmarcar';
+    button.className = 'action-button btn-undo';
+    button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+    button.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.3)';
     
-    if (!isDone) {
-      // Marcar como feito
-      localStorage.setItem(actionId, 'true');
-      actionItem.classList.add('completed');
-      
-      // Mudar aparência do botão
-      button.innerHTML = '<span style="font-size: 1.1rem; margin-right: 0.5rem;">↶</span> Desmarcar';
-      button.className = 'action-button btn-undo';
-      button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-      button.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.3)';
-      
-      // Registrar a ação para sincronização
-      setTimeout(() => registrarAcao(tipo, frutiferaId), 300);
-      
+    // Registrar a ação para sincronização
+    setTimeout(() => registrarAcao(tipo, frutiferaId), 300);
+    
+    // Mensagem imediata
+    const statusDot = document.getElementById('statusDot');
+    if (navigator.onLine && statusDot && !statusDot.classList.contains('offline')) {
+      mostrarToast('✅ Ação registrada! Sincronizando...');
     } else {
-      // Desmarcar
-      localStorage.removeItem(actionId);
-      actionItem.classList.remove('completed');
-      
-      // Restaurar botão original
-      button.innerHTML = '<span style="font-size: 1.1rem; margin-right: 0.5rem;">✅</span> Marcar como feito';
-      button.className = 'action-button btn-do';
-      button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-      button.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+      mostrarToast('✅ Ação registrada! Sincronizará quando online.');
     }
     
-    // Efeito visual
-    button.style.transform = 'scale(0.95)';
-    setTimeout(() => {
-      button.style.transform = 'scale(1)';
-    }, 150);
+  } else {
+    // Desmarcar
+    localStorage.removeItem(actionId);
+    actionItem.classList.remove('completed');
+    
+    // Restaurar botão original
+    button.innerHTML = '<span style="font-size: 1.1rem; margin-right: 0.5rem;">✅</span> Marcar como feito';
+    button.className = 'action-button btn-do';
+    button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    button.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+    
+    mostrarToast('↶ Ação desmarcada');
   }
+  
+  // Efeito visual
+  button.style.transform = 'scale(0.95)';
+  setTimeout(() => {
+    button.style.transform = 'scale(1)';
+  }, 150);
+}
 
   function registrarAcao(tipo, frutiferaId) {
-    const acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
-    
-    acoesPendentes.push({
-      tipo: tipo,
-      frutiferaId: frutiferaId,
-      data: new Date().toISOString(),
-      timestamp: Date.now()
-    });
-    
-    localStorage.setItem('acoesPendentes', JSON.stringify(acoesPendentes));
-    
-    // Atualizar localmente na lista de frutíferas
-    const index = frutiferas.findIndex(f => 
-      f.id === frutiferaId || f.fid === frutiferaId || f.identificacao === frutiferaId
-    );
-    
-    if (index >= 0) {
-      if (tipo === 'rega') {
-        frutiferas[index].ultima_rega = new Date().toISOString();
-      } else if (tipo === 'poda') {
-        frutiferas[index].ultima_poda = new Date().toISOString();
-      } else if (tipo === 'colheita') {
-        frutiferas[index].ultima_colheita = new Date().toISOString();
-      }
-      
-      localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+  const acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+  
+  acoesPendentes.push({
+    tipo: tipo,
+    frutiferaId: frutiferaId,
+    data: new Date().toISOString(),
+    timestamp: Date.now()
+  });
+  
+  localStorage.setItem('acoesPendentes', JSON.stringify(acoesPendentes));
+  
+  // Atualizar localmente na lista de frutíferas
+  const index = frutiferas.findIndex(f => 
+    f.id === frutiferaId || f.fid === frutiferaId || f.identificacao === frutiferaId
+  );
+  
+  if (index >= 0) {
+    if (tipo === 'rega') {
+      frutiferas[index].ultima_rega = new Date().toISOString();
+    } else if (tipo === 'poda') {
+      frutiferas[index].ultima_poda = new Date().toISOString();
+    } else if (tipo === 'colheita') {
+      frutiferas[index].ultima_colheita = new Date().toISOString();
     }
     
-    atualizarContadorSync();
-    mostrarToast('✅ Ação registrada! Sincronizará quando online.');
-    
-    // Recarregar ações para atualizar a interface
-    carregarAcoesHojeDebounced();
+    localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
   }
+  
+  atualizarContadorSync();
+  
+  // VERIFICAR SE ESTÁ ONLINE ANTES DE MOSTRAR MENSAGEM
+  if (navigator.onLine) {
+    mostrarToast('✅ Ação registrada! Sincronizando...');
+    // Tentar sincronizar imediatamente se estiver online
+    setTimeout(() => {
+      sincronizarFilaAcoes();
+    }, 500);
+  } else {
+    mostrarToast('✅ Ação registrada! Sincronizará quando online.');
+  }
+  
+  // Recarregar ações para atualizar a interface
+  carregarAcoesHojeDebounced();
+}
 
   function atualizarStats() {
     const totalFrutiferas = frutiferas.length;
@@ -1857,92 +1877,107 @@
   }
 
   async function sincronizarFilaAcoes() {
-    if (!navigator.onLine) {
-      console.log('Offline - aguardando conexão');
-      return;
-    }
-    
-    let acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
-    
-    if (acoesPendentes.length === 0) {
-      console.log('Nenhuma ação pendente para sincronizar');
-      return;
-    }
-    
-    console.log(`🔄 Sincronizando ${acoesPendentes.length} ação(ões)...`);
-    mostrarToast(`🔄 Sincronizando ${acoesPendentes.length} ação(ões)...`);
-    
-    const sucessos = [];
-    const falhas = [];
-    
-    for (const acao of acoesPendentes) {
-      try {
-        const campoSupabase = acao.tipo === 'rega' ? 'data_irrigacao_ordinaria' : 
-                              acao.tipo === 'poda' ? 'data_poda_formacao_1' : 
-                              'inicio_colheita';
-        
-        const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${acao.frutiferaId}`,
-          {
-            method: 'PATCH',
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ [campoSupabase]: acao.data })
-          }
-        );
-        
-        if (response.ok) {
-          sucessos.push(acao);
-          console.log(`✅ ${acao.tipo} sincronizada para ID ${acao.frutiferaId}`);
-        } else {
-          falhas.push(acao);
-        }
-      } catch (error) {
-        falhas.push(acao);
-      }
-    }
-    
-    localStorage.setItem('acoesPendentes', JSON.stringify(falhas));
-    
-    if (sucessos.length > 0) {
-      mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s)`);
+  if (!navigator.onLine) {
+    console.log('Offline - aguardando conexão');
+    mostrarToast('📡 Você está offline. Ação será sincronizada quando conectar.');
+    return;
+  }
+  
+  let acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+  
+  if (acoesPendentes.length === 0) {
+    console.log('Nenhuma ação pendente para sincronizar');
+    return;
+  }
+  
+  console.log(`🔄 Sincronizando ${acoesPendentes.length} ação(ões)...`);
+  
+  // Mostrar mensagem específica para ações
+  const toast = document.getElementById('toast');
+  toast.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <span>🔄</span>
+      <div>
+        Sincronizando ${acoesPendentes.length} ação(ões)...
+        <div style="font-size: 0.8rem; opacity: 0.8;">Por favor, aguarde</div>
+      </div>
+    </div>
+  `;
+  toast.className = 'toast show';
+  
+  const sucessos = [];
+  const falhas = [];
+  
+  for (const acao of acoesPendentes) {
+    try {
+      const campoSupabase = acao.tipo === 'rega' ? 'data_irrigacao_ordinaria' : 
+                            acao.tipo === 'poda' ? 'data_poda_formacao_1' : 
+                            'inicio_colheita';
       
-      try {
-        const edgeResponse = await fetch('https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson', {
-          method: 'POST',
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${acao.frutiferaId}`,
+        {
+          method: 'PATCH',
           headers: {
+            'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json'
-          }
-        });
-        
-        if (edgeResponse.ok) {
-          const result = await edgeResponse.json();
-          console.log('✅ GitHub atualizado via Edge Function:', result);
-          
-          const syncMsg = document.getElementById('syncMessage');
-          if (syncMsg) {
-            syncMsg.innerHTML = `✅ GitHub atualizado! <small>Commit: ${result.commit?.substring(0, 8)}</small>`;
-            syncMsg.style.color = '#059669';
-            
-            setTimeout(() => {
-              syncMsg.innerHTML = '';
-            }, 5000);
-          }
-          
-          mostrarToast('📱 Notificação enviada para Telegram');
+          },
+          body: JSON.stringify({ [campoSupabase]: acao.data })
         }
-      } catch (e) {
-        console.log('⚠️ Edge Function:', e.message);
+      );
+      
+      if (response.ok) {
+        sucessos.push(acao);
+        console.log(`✅ ${acao.tipo} sincronizada para ID ${acao.frutiferaId}`);
+      } else {
+        falhas.push(acao);
       }
+    } catch (error) {
+      falhas.push(acao);
     }
-    
-    atualizarContadorSync();
-    await carregarFrutiferas();
   }
+  
+  localStorage.setItem('acoesPendentes', JSON.stringify(falhas));
+  
+  if (sucessos.length > 0) {
+    mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s) com sucesso!`);
+    
+    try {
+      const edgeResponse = await fetch('https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (edgeResponse.ok) {
+        const result = await edgeResponse.json();
+        console.log('✅ GitHub atualizado via Edge Function:', result);
+        
+        const syncMsg = document.getElementById('syncMessage');
+        if (syncMsg) {
+          syncMsg.innerHTML = `✅ GitHub atualizado! <small>Commit: ${result.commit?.substring(0, 8)}</small>`;
+          syncMsg.style.color = '#059669';
+          
+          setTimeout(() => {
+            syncMsg.innerHTML = '';
+          }, 5000);
+        }
+        
+        mostrarToast('📱 Notificação enviada para Telegram');
+      }
+    } catch (e) {
+      console.log('⚠️ Edge Function:', e.message);
+    }
+  } else if (falhas.length > 0) {
+    mostrarToast(`⚠️ Erro ao sincronizar ${falhas.length} ação(ões)`);
+  }
+  
+  atualizarContadorSync();
+  await carregarFrutiferas();
+}
 
   async function sincronizarTudo() {
     if (!navigator.onLine) {
