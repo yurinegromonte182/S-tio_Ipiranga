@@ -1211,15 +1211,15 @@
     }
 
     // ⭐⭐ VERSÃO COM DEBOUNCE PARA EVITAR CHAMADAS DUPLICADAS ⭐⭐
-    function carregarAcoesHojeDebounced() {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        console.log('✅ [ÚNICA] Chamando carregarAcoesHoje()');
-        carregarAcoesHoje();
-      }, 300);
-    }
+function carregarAcoesHojeDebounced() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    console.log('✅ [ÚNICA] Chamando carregarAcoesHoje()');
+    carregarAcoesHoje();
+  }, 300);
+}
 
-    function carregarAcoesHoje() {
+function carregarAcoesHoje() {
   console.log('📋 carregarAcoesHoje() executando...');
   const container = document.getElementById('acoesHoje');
   if (!container) return;
@@ -1448,7 +1448,7 @@
       toggle.style.transform = 'rotate(180deg)';
     }
   });
-}
+} // ⬅⬅⬅ ESTE É O FECHAMENTO QUE ESTÁ FALTANDO! ⬅⬅⬅
 
 // ⭐⭐ NOVAS FUNÇÕES PARA AÇÕES DINÂMICAS ⭐⭐
 
@@ -1505,88 +1505,41 @@ function toggleAction(tipo, frutiferaId, actionId, event) {
   }, 150);
 }
 
-// ⭐⭐ ADICIONE ESTES ESTILOS NO CSS ⭐⭐
-
-<style>
-  /* Adicione no final do seu CSS existente */
+function registrarAcao(tipo, frutiferaId) {
+  const acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
   
-  .especie-header:hover {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
-    border-color: #10b981 !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1) !important;
-  }
+  acoesPendentes.push({
+    tipo: tipo,
+    frutiferaId: frutiferaId,
+    data: new Date().toISOString(),
+    timestamp: Date.now()
+  });
   
-  .action-item.completed {
-    opacity: 0.8;
-    border-left-width: 6px !important;
-  }
+  localStorage.setItem('acoesPendentes', JSON.stringify(acoesPendentes));
   
-  .action-item.completed .action-title {
-    text-decoration: line-through;
-    color: #6b7280;
-  }
+  // Atualizar localmente na lista de frutíferas
+  const index = frutiferas.findIndex(f => 
+    f.id === frutiferaId || f.fid === frutiferaId || f.identificacao === frutiferaId
+  );
   
-  .action-item.completed .action-desc,
-  .action-item.completed .action-meta {
-    opacity: 0.7;
-  }
-  
-  .action-button {
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .action-button:before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-  }
-  
-  .action-button:active:before {
-    width: 300px;
-    height: 300px;
-  }
-  
-  .btn-do:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4) !important;
-  }
-  
-  .btn-undo:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 12px rgba(239, 68, 68, 0.4) !important;
-  }
-  
-  .action-button:active {
-    transform: scale(0.95) !important;
-  }
-  
-  /* Animação para novos itens */
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
+  if (index >= 0) {
+    if (tipo === 'rega') {
+      frutiferas[index].ultima_rega = new Date().toISOString();
+    } else if (tipo === 'poda') {
+      frutiferas[index].ultima_poda = new Date().toISOString();
+    } else if (tipo === 'colheita') {
+      frutiferas[index].ultima_colheita = new Date().toISOString();
     }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    
+    localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
   }
   
-  .action-item {
-    animation: fadeInUp 0.3s ease-out;
-  }
-</style>
-
-// ⭐⭐ ATUALIZE A FUNÇÃO filterAcoes ⭐⭐
+  atualizarContadorSync();
+  mostrarToast('✅ Ação registrada! Sincronizará quando online.');
+  
+  // Recarregar ações para atualizar a interface
+  carregarAcoesHojeDebounced();
+}
 
 function filterAcoes(event, filtro) {
   document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
@@ -1602,7 +1555,6 @@ function filterAcoes(event, filtro) {
   
   carregarAcoesHojeDebounced();
 }
-    }
 
     async function cadastrarFrutifera(event) {
       event.preventDefault();
