@@ -811,16 +811,13 @@
         </div>
 
         <div class="map-controls">
-          <button class="map-btn active" data-basemap="osm" onclick="changeBasemap('osm', event)">
-            🗺️ OpenStreetMap
-          </button>
-          <button class="map-btn" data-basemap="satellite" onclick="changeBasemap('satellite', event)">
-            🛰️ Satélite
-          </button>
-          <button class="map-btn" data-basemap="orthomosaic" onclick="changeBasemap('orthomosaic', event)">
-            📸 Orthomosaico
-          </button>
-        </div>
+  <button class="map-btn" data-basemap="satellite" onclick="changeBasemap('satellite', event)">
+    🛰️ Satélite
+  </button>
+  <button class="map-btn active" data-basemap="orthomosaic" onclick="changeBasemap('orthomosaic', event)">
+    📸 Orthomosaico
+  </button>
+</div>
 
         <div class="layer-toggle">
           <div class="layer-label">
@@ -1499,35 +1496,38 @@
 
     // FUNÇÕES DO MAPA
     function inicializarMapa() {
-      if (map) return;
-      
-      map = L.map('mapContainer').setView([-7.1195, -34.8450], 13);
-      
-      baseLayers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
-      }).addTo(map);
+  if (map) return;
+  
+  map = L.map('mapContainer').setView([-7.1195, -34.8450], 13);
+  
+  // REMOVA esta linha ou comente:
+  // baseLayers.satellite = L.tileLayer(...).addTo(map);
+  
+  // Em vez disso, faça assim:
+  baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Esri, Maxar',
+    maxZoom: 19
+  });
+  // ← Note: SEM .addTo(map) aqui!
 
-      baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Esri, Maxar',
-        maxZoom: 19
-      });
+  // Configurar camada do ortomosaico
+  const orthoBounds = [
+    [-7.2567123407225420, -34.8508400655581880], // Southwest
+    [-7.2534701604245848, -34.8470106189991711]  // Northeast
+  ];
 
-      // Configurar camada do orthomosaico
-      const orthoBounds = [
-        [-7.2567123407225420, -34.8508400655581880], // Southwest
-        [-7.2534701604245848, -34.8470106189991711]  // Northeast
-      ];
+  orthomosaicLayer = L.imageOverlay('orthomosaic.jpeg', orthoBounds, {
+    opacity: 1,
+    attribution: 'Ortomosaico Sítio Ipiranga'
+  }).addTo(map); // ← ADICIONE .addTo(map) AQUI!
 
-      orthomosaicLayer = L.imageOverlay('orthomosaic.jpeg', orthoBounds, {
-        opacity: 1,
-        attribution: 'Orthomosaico Sítio Ipiranga'
-      });
-
-      frutiferasLayer = L.layerGroup().addTo(map);
-      
-      atualizarMapa();
-    }
+  frutiferasLayer = L.layerGroup().addTo(map);
+  
+  // Ajustar o zoom para o ortomosaico
+  map.fitBounds(orthoBounds);
+  
+  atualizarMapa();
+}
 
     function atualizarMapa() {
       if (!map || !frutiferasLayer) return;
@@ -1586,26 +1586,39 @@
     }
 
     function changeBasemap(basemapType, event) {
-      document.querySelectorAll('.map-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-      
-      // Remover todas as camadas base
-      Object.values(baseLayers).forEach(layer => map.removeLayer(layer));
-      if (orthomosaicLayer) map.removeLayer(orthomosaicLayer);
-      
-      // Adicionar a camada selecionada
-      if (basemapType === 'orthomosaic') {
-        orthomosaicLayer.addTo(map);
-        // Ajustar o zoom para o orthomosaico
-        const orthoBounds = [
-          [-7.2567123407225420, -34.8508400655581880],
-          [-7.2534701604245848, -34.8470106189991711]
-        ];
-        map.fitBounds(orthoBounds);
-      } else {
-        baseLayers[basemapType].addTo(map);
-      }
+  // Atualizar botões ativos
+  document.querySelectorAll('.map-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  // Remover todas as camadas base atuais
+  Object.values(baseLayers).forEach(layer => {
+    if (map.hasLayer(layer)) {
+      map.removeLayer(layer);
     }
+  });
+  
+  if (orthomosaicLayer && map.hasLayer(orthomosaicLayer)) {
+    map.removeLayer(orthomosaicLayer);
+  }
+  
+  // Adicionar a camada selecionada
+  if (basemapType === 'orthomosaic') {
+    orthomosaicLayer.addTo(map);
+    // Ajustar o zoom para o orthomosaico
+    const orthoBounds = [
+      [-7.2567123407225420, -34.8508400655581880],
+      [-7.2534701604245848, -34.8470106189991711]
+    ];
+    map.fitBounds(orthoBounds);
+  } else if (basemapType === 'satellite') {
+    baseLayers.satellite.addTo(map);
+    // Se for satélite, ajustar para mostrar todas as frutíferas
+    const markerBounds = Object.values(markers).map(m => m.getLatLng());
+    if (markerBounds.length > 0) {
+      map.fitBounds(markerBounds, { padding: [50, 50] });
+    }
+  }
+}
 
     function toggleFrutiferasLayer() {
       const isChecked = document.getElementById('toggleFrutiferas').checked;
