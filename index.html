@@ -1,11 +1,1076 @@
-// 🔧 CORREÇÕES APLICADAS:
-// 1. Removida função duplicada atualizarBadgeSincronizacao()
-// 2. Adicionado debounce para carregarAcoesHoje()
-// 3. Corrigido bug de múltiplas chamadas
-// 4. Otimizado localStorage
-// 5. Melhorado feedback visual
 
-<script>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="App para gestão e monitoramento das frutíferas do Sítio Ipiranga">
+  <meta name="theme-color" content="#10b981">
+  <title>Sítio Ipiranga - Gestão de Frutíferas</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sítio Ipiranga">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    #appLoader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      color: white;
+      transition: opacity 0.3s;
+    }
+
+    #appLoader.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loader-icon {
+      font-size: 4rem;
+      animation: bounce 1s infinite;
+      margin-bottom: 1rem;
+    }
+
+    .loader-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .loader-progress {
+      width: 200px;
+      height: 4px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 1rem;
+    }
+
+    .loader-bar {
+      height: 100%;
+      background: white;
+      width: 0%;
+      animation: progressBar 2s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-20px); }
+    }
+
+    @keyframes progressBar {
+      0% { width: 0%; }
+      50% { width: 70%; }
+      100% { width: 100%; }
+    }
+
+    #mainApp {
+      opacity: 0;
+      transition: opacity 0.3s;
+      min-height: 100vh;
+    }
+
+    #mainApp.loaded {
+      opacity: 1;
+    }
+
+    .status-bar {
+      background: #1f2937;
+      color: white;
+      padding: 0.5rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.offline {
+      background: #ef4444;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 1.5rem 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .header h1 {
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .header-stats {
+      font-size: 0.9rem;
+      opacity: 0.95;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .tabs {
+      display: flex;
+      background: white;
+      border-bottom: 2px solid #e5e7eb;
+      overflow-x: auto;
+      position: sticky;
+      top: 100px;
+      z-index: 99;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 1rem;
+      border: none;
+      background: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+      min-width: 100px;
+    }
+    
+    .tab.active {
+      border-bottom-color: #10b981;
+      color: #10b981;
+      font-weight: 600;
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 1rem;
+      animation: fadeIn 0.3s;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .section-title.clickable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .section-title.clickable:hover {
+      color: #10b981;
+    }
+
+    #cadastroFormContainer {
+      transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+      overflow: hidden;
+      max-height: 2000px;
+      opacity: 1;
+    }
+
+    #cadastroFormContainer.collapsed {
+      max-height: 0;
+      opacity: 0;
+      margin-bottom: 0;
+    }
+    
+    .action-item {
+      padding: 1rem;
+      border-left: 4px solid #10b981;
+      background: #f0fdf4;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+    }
+    
+    .action-item.urgent {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+    
+    .action-item.warning {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
+
+    .action-title {
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .action-meta {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .badge.urgent {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    
+    .badge.warning {
+      background: #fef3c7;
+      color: #d97706;
+    }
+    
+    .action-desc {
+      color: #4b5563;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .btn {
+      padding: 0.75rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #10b981;
+      color: white;
+    }
+    
+    .btn-primary:active {
+      background: #059669;
+      transform: scale(0.98);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #10b981;
+      border: 2px solid #10b981;
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      overflow-x: auto;
+      padding-bottom: 0.25rem;
+    }
+    
+    .filter-btn {
+      padding: 0.5rem 1rem;
+      border: 1px solid #d1d5db;
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    
+    .filter-btn.active {
+      background: #10b981;
+      color: white;
+      border-color: #10b981;
+    }
+
+    .search-box, .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      font-family: inherit;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #374151;
+      font-size: 0.9rem;
+    }
+
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .frutifera-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .frutifera-card:active {
+      transform: scale(0.98);
+    }
+    
+    .frutifera-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    
+    .frutifera-name {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    
+    .frutifera-info {
+      display: grid;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+
+    .info-box {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #0c4a6e;
+    }
+
+    .success-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      color: #166534;
+    }
+
+    .warning-box {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+    }
+
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2937;
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 2000;
+      display: none;
+      max-width: 90%;
+    }
+
+    .toast.show {
+      display: block;
+      animation: slideUp 0.3s;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px) translateX(-50%); opacity: 0; }
+      to { transform: translateY(0) translateX(-50%); opacity: 1; }
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #9ca3af;
+    }
+    
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .stat-card {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 1.25rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .footer-space {
+      height: 2rem;
+    }
+
+    /* ESTILOS DO MAPA */
+    #mapContainer {
+      width: 100%;
+      height: calc(100vh - 180px);
+      min-height: 400px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .map-controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .map-btn {
+      padding: 0.75rem;
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .map-btn:hover {
+      border-color: #10b981;
+      color: #10b981;
+    }
+
+    .map-btn.active {
+      background: #10b981;
+      color: white;
+      border-color: #10b981;
+    }
+
+    .layer-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+
+    .layer-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .layer-badge {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 3px solid currentColor;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #d1d5db;
+      border-radius: 24px;
+      transition: all 0.2s;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: #10b981;
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 8px !important;
+    }
+
+    .leaflet-popup-content {
+      font-family: inherit !important;
+      line-height: 1.6 !important;
+      margin: 0.75rem !important;
+    }
+
+    .popup-content h3 {
+      margin: 0 0 0.75rem 0;
+      color: #10b981;
+      border-bottom: 2px solid #10b981;
+      padding-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+
+    .popup-content .info-row {
+      margin: 0.5rem 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      font-size: 0.85rem;
+    }
+
+    .popup-content .info-label {
+      font-weight: 600;
+      color: #6b7280;
+    }
+
+    .popup-content .info-value {
+      color: #1f2937;
+      text-align: right;
+    }
+
+    @media (max-width: 768px) {
+      #mapContainer {
+        height: calc(100vh - 220px);
+      }
+      
+      .map-controls {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="appLoader">
+    <div class="loader-icon">🌿</div>
+    <div class="loader-text">Sítio Ipiranga</div>
+    <div style="font-size: 0.9rem; opacity: 0.9;">Carregando frutíferas...</div>
+    <div class="loader-progress">
+      <div class="loader-bar"></div>
+    </div>
+  </div>
+
+  <div id="mainApp">
+    <div class="status-bar">
+      <div class="status-indicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Online</span>
+      </div>
+      <div id="syncStatus" style="font-size: 0.75rem;">Sítio Ipiranga</div>
+    </div>
+
+    <div class="header">
+      <h1>🌿 Sítio Ipiranga</h1>
+      <div class="header-stats">
+        <span id="frutiferaCount">📊 0 frutíferas</span>
+        <span id="actionCount">📋 0 ações</span>
+        <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">✅ Supabase</span>
+      </div>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(event, 'acoes')">📋 Ações</button>
+      <button class="tab" onclick="switchTab(event, 'mapa')">🗺️ Mapa</button>
+      <button class="tab" onclick="switchTab(event, 'frutiferas')">🌱 Frutíferas</button>
+      <button class="tab" onclick="switchTab(event, 'historico')">📜 Histórico</button>
+      <button class="tab" onclick="switchTab(event, 'stats')">📊 Stats</button>
+      <button class="tab" onclick="switchTab(event, 'config')">⚙️ Config</button>
+    </div>
+    
+    <!-- Tab: Ações -->
+    <div id="acoes" class="tab-content active">
+      <div class="section">
+        <div class="section-title">📋 Ações Necessárias Hoje</div>
+        
+        <div id="autoSyncInfo" class="info-box">
+          <span>📡 Dados sincronizados com Supabase</span><br>
+          <small>As ações são salvas localmente e sincronizadas com o banco de dados</small>
+        </div>
+        
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="filterAcoes(event, 'todas')">Todas</button>
+          <button class="filter-btn" onclick="filterAcoes(event, 'urgente')">🚨 Urgentes</button>
+          <button class="filter-btn" onclick="filterAcoes(event, 'rega')">💧 Rega</button>
+          <button class="filter-btn" onclick="filterAcoes(event, 'poda')">✂️ Poda</button>
+          <button class="filter-btn" onclick="filterAcoes(event, 'colheita')">🍊 Colheita</button>
+        </div>
+        <div id="acoesHoje">
+          <div class="loading">Carregando dados...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Mapa -->
+    <div id="mapa" class="tab-content">
+      <div class="section">
+        <div class="section-title">🗺️ Visualização do Mapa</div>
+        
+        <!-- Botão de Sincronizar (EM CIMA DO MAPA) -->
+        <button class="btn btn-secondary" onclick="sincronizarComSupabase()" 
+                style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; position: relative; padding: 0.75rem; border: 2px solid #10b981; background: white; color: #10b981; font-weight: 600; border-radius: 8px; cursor: pointer;">
+          <span>🔄</span>
+          <span id="syncButtonText">Sincronizar com Banco de Dados</span>
+        </button>
+        
+        <div id="syncMessage" style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem; text-align: center; min-height: 1.2rem;"></div>
+        
+        <div class="info-box" style="margin-bottom: 1rem;">
+          <strong>📍 Visualize todas as frutíferas georeferenciadas no mapa</strong><br>
+          <small>Clique nos pontos para ver detalhes. Use o botão acima para sincronizar novas frutíferas.</small>
+        </div>
+
+        <!-- Controles do Mapa -->
+        <div class="map-controls" style="margin-bottom: 1rem;">
+          <button class="map-btn" data-basemap="satellite" onclick="changeBasemap('satellite', event)">
+            <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">🛰️</div>
+            <div style="font-size: 0.75rem; font-weight: 600;">Satélite</div>
+          </button>
+          <button class="map-btn active" data-basemap="orthomosaic" onclick="changeBasemap('orthomosaic', event)">
+            <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">📸</div>
+            <div style="font-size: 0.75rem; font-weight: 600;">Orthomosaico</div>
+          </button>
+        </div>
+
+        <!-- Toggle da camada de frutíferas -->
+        <div class="layer-toggle" style="margin-bottom: 1rem;">
+          <div class="layer-label">
+            <div class="layer-badge" style="color: #10b981; background-color: #10b981;"></div>
+            <span style="font-weight: 500;">Frutíferas no mapa</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleFrutiferas" checked onchange="toggleFrutiferasLayer()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Legenda de Espécies -->
+        <div style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-size: 0.8rem; font-weight: 700; color: #374151; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">🌿 Legenda por Espécie</div>
+          <div id="mapLegend" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #10b981; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
+              <span style="font-size: 0.8rem; font-weight: 500;">🥭 Mangabeira</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #f59e0b; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
+              <span style="font-size: 0.8rem; font-weight: 500;">🌰 Cajueiro</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #ef4444; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
+              <span style="font-size: 0.8rem; font-weight: 500;">🥥 Coqueiro</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #8b5cf6; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
+              <span style="font-size: 0.8rem; font-weight: 500;">🍫 Cacau</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Container do Mapa -->
+        <div id="mapContainer" style="width: 100%; height: 50vh; min-height: 400px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; margin-bottom: 2rem;"></div>
+
+        <!-- Seção de Cadastro (EMBAIXO DO MAPA) -->
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; padding: 1.5rem; border: 1px solid #bbf7d0; margin-top: 1rem;">
+          <div class="section-title clickable" onclick="toggleCadastroForm()" 
+               style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: white; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #10b981; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.5rem; color: #10b981;">➕</span>
+              <div>
+                <div style="font-weight: 700; color: #1f2937; font-size: 1.1rem;">Cadastrar Nova Frutífera</div>
+                <div style="font-size: 0.8rem; color: #6b7280; margin-top: 0.25rem;">Clique para expandir/recolher</div>
+              </div>
+            </div>
+            <span id="cadastroToggleIcon" style="font-size: 1.5rem; color: #10b981; transition: transform 0.3s ease;">▼</span>
+          </div>
+          
+          <div id="cadastroFormContainer" class="cadastro-form-container">
+            <div class="info-box" style="background: white; border: 1px solid #bbf7d0; color: #065f46; margin-bottom: 1.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.2rem;">🌱</span>
+                <strong>Como funciona:</strong>
+              </div>
+              <div style="font-size: 0.9rem; line-height: 1.5;">
+                1. Preencha os dados da frutífera<br>
+                2. Clique em "Cadastrar Frutífera"<br>
+                3. A frutífera aparecerá no mapa<br>
+                4. Use o botão "Sincronizar" acima para enviar ao banco de dados
+              </div>
+            </div>
+
+            <form onsubmit="cadastrarFrutifera(event)" id="formCadastroFrutifera" style="background: white; padding: 1.5rem; border-radius: 10px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+              <!-- Espécie -->
+              <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="font-size: 1.2rem;">🌿</span>
+                  <span style="font-weight: 600; color: #374151;">Espécie *</span>
+                </label>
+                <select id="novaEspecie" required style="width: 100%; padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1rem; background: white; transition: all 0.2s;" 
+                        onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#d1d5db'">
+                  <option value="">Selecione uma espécie...</option>
+                  <option value="Mangabeira">🥭 Mangabeira</option>
+                  <option value="Cajueiro">🌰 Cajueiro</option>
+                  <option value="Coqueiro">🥥 Coqueiro</option>
+                  <option value="Cacau">🍫 Cacau</option>
+                </select>
+              </div>
+
+              <!-- Data do Plantio e Idade -->
+              <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0;">
+                <div class="form-group">
+                  <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.2rem;">📅</span>
+                    <span style="font-weight: 600; color: #374151;">Data do Plantio *</span>
+                  </label>
+                  <input type="date" id="dataPlantio" required style="width: 100%; padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div class="form-group">
+                  <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.2rem;">🌱</span>
+                    <span style="font-weight: 600; color: #374151;">Idade (meses)</span>
+                  </label>
+                  <input type="number" id="idadeFrutifera" min="0" placeholder="Ex: 12" style="width: 100%; padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1rem;">
+                </div>
+              </div>
+
+              <!-- Localização GPS -->
+              <div class="form-group" style="margin: 1.5rem 0;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="font-size: 1.2rem;">📍</span>
+                  <span style="font-weight: 600; color: #374151;">Localização GPS</span>
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: end;">
+                  <input type="text" id="coordenadas" placeholder="Latitude, Longitude" readonly 
+                         style="width: 100%; padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1rem; background: #f9fafb;">
+                  <button type="button" onclick="obterLocalizacao()" 
+                          style="padding: 0.75rem 1.25rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: all 0.2s;"
+                          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)'"
+                          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">📍</span>
+                    Obter GPS
+                  </button>
+                </div>
+                <div id="coordDisplay" style="background: #f0f9ff; padding: 0.75rem; border-radius: 6px; font-size: 0.9rem; color: #0c4a6e; margin-top: 0.75rem; display: none; border: 1px solid #bae6fd;"></div>
+              </div>
+
+              <!-- Responsável -->
+              <div class="form-group" style="margin: 1.5rem 0;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="font-size: 1.2rem;">👤</span>
+                  <span style="font-weight: 600; color: #374151;">Responsável pelo plantio</span>
+                </label>
+                <input type="text" id="responsavel" placeholder="Digite o nome do responsável" 
+                       style="width: 100%; padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1rem;">
+              </div>
+
+              <!-- Botão de Cadastro -->
+              <button type="submit" class="btn btn-primary" 
+                      style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 700; cursor: pointer; margin-top: 1rem; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 0.75rem;"
+                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(16, 185, 129, 0.4)'"
+                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                <span style="font-size: 1.5rem;">✅</span>
+                <span>Cadastrar Frutífera</span>
+              </button>
+              
+              <div style="text-align: center; margin-top: 1rem; color: #6b7280; font-size: 0.85rem;">
+                <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                  <span>💡</span> 
+                  A frutífera será salva localmente e aparecerá no mapa imediatamente
+                </span>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tab: Frutíferas -->
+    <div id="frutiferas" class="tab-content">
+      <div class="section">
+        <div class="section-title">🌱 Minhas Frutíferas</div>
+        
+        <div class="info-box">
+          💾 Dados sincronizados com Supabase
+        </div>
+        
+        <input type="text" class="search-box" id="searchFrutifera" placeholder="🔎 Buscar frutífera..." onkeyup="filtrarFrutiferas()">
+        
+        <div style="margin-top: 1rem;" id="frutiferasList"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Histórico -->
+    <div id="historico" class="tab-content">
+      <div class="section">
+        <div class="section-title">📜 Histórico de Ações</div>
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="filterHistorico(event, '7')">Últimos 7 dias</button>
+          <button class="filter-btn" onclick="filterHistorico(event, '30')">Últimos 30 dias</button>
+          <button class="filter-btn" onclick="filterHistorico(event, 'todos')">Tudo</button>
+        </div>
+        <div id="historicoList">
+          <div class="loading">Carregando histórico</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Stats -->
+    <div id="stats" class="tab-content">
+      <div class="section">
+        <div class="section-title">📊 Estatísticas Gerais</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Total Frutíferas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statPend">0</div>
+            <div class="stat-label">Pendências</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statUrg">0</div>
+            <div class="stat-label">Urgentes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statEsp">0</div>
+            <div class="stat-label">Espécies</div>
+          </div>
+        </div>
+
+        <div class="section" style="margin-top: 1rem;">
+          <div class="section-title">🌳 Resumo por Espécie</div>
+          <div id="speciesSummary"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Config -->
+    <div id="config" class="tab-content">
+      <div class="section">
+        <div class="section-title">📋 Intervalos por Espécie (dias)</div>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.5rem;">
+          Ajuste os intervalos de manutenção para cada tipo de frutífera
+        </p>
+        
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🥭 Mangabeira</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+              <input type="number" id="mang_rega" value="7" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+              <input type="number" id="mang_poda" value="180" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+              <input type="number" id="mang_colh" value="90" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🌰 Cajueiro</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+              <input type="number" id="caju_rega" value="10" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+              <input type="number" id="caju_poda" value="365" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+              <input type="number" id="caju_colh" value="60" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🥥 Coqueiro</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+              <input type="number" id="coq_rega" value="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+              <input type="number" id="coq_poda" value="730" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+              <input type="number" id="coq_colh" value="30" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">🍫 Cacau</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">💧 Rega</label>
+              <input type="number" id="cac_rega" value="3" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">✂️ Poda</label>
+              <input type="number" id="cac_poda" value="180" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; display: block; margin-bottom: 0.25rem;">🍊 Colheita</label>
+              <input type="number" id="cac_colh" value="120" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveConfig()">💾 Salvar Intervalos</button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div class="footer-space"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <script>
     const SUPABASE_URL = 'https://erbefbnjxgpetbetlzya.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmVmYm5qeGdwZXRiZXRsenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzI4ODcsImV4cCI6MjA3NjYwODg4N30.d09pjgddZpNY3Z4cVZ3V4h77aAf_GVGF0sOBTZkZf2A';
 
