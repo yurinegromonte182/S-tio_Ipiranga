@@ -678,62 +678,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -34.8484087109016,
-          -7.25547545425248
-        ]
-      },
-      "properties": {
-        "id": 13,
-        "geom": {
-          "type": "Point",
-          "crs": {
-            "type": "name",
-            "properties": {
-              "name": "EPSG:4326"
-            }
-          },
-          "coordinates": [
-            -34.84840871090163,
-            -7.255475454252482
-          ]
-        },
-        "latitude": -7.25547545425248,
-        "longitude": -34.8484087109016,
-        "nome_popular": "Mangabeira",
-        "nome_cientifico": null,
-        "data_plantio": null,
-        "tipo_plantio": null,
-        "altura_total": null,
-        "diametro_copa": null,
-        "data_poda_formacao_1": "2025-12-05",
-        "data_poda_formacao_2": null,
-        "data_poda_formacao_3": null,
-        "data_poda_reducao": null,
-        "data_poda_floracao": null,
-        "data_adubacao_ordinaria": null,
-        "adubacao_frutificacao": null,
-        "irrigacao_ordinaria": null,
-        "irrigacao_floracao": null,
-        "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": "2025-12-06",
-        "data_irrigacao_floracao": null,
-        "data_irrigacao_frutificacao": null,
-        "inicio_colheita": "2025-12-08",
-        "fim_colheita": null,
-        "volume_colhido": null,
-        "foto": null,
-        "updated_at": "2025-12-08T19:32:30.276679+00:00",
-        "ultima_modificacao": "2025-12-04T02:32:34.792165",
-        "ativo": true,
-        "cache_buster": 0,
-        "id_frutifera": null
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           -34.849349,
           -7.255491
         ]
@@ -780,6 +724,62 @@
         "foto": null,
         "updated_at": "2025-12-08T19:41:33.622654+00:00",
         "ultima_modificacao": "2025-12-06T14:14:52.145636",
+        "ativo": true,
+        "cache_buster": 0,
+        "id_frutifera": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -34.8484087109016,
+          -7.25547545425248
+        ]
+      },
+      "properties": {
+        "id": 13,
+        "geom": {
+          "type": "Point",
+          "crs": {
+            "type": "name",
+            "properties": {
+              "name": "EPSG:4326"
+            }
+          },
+          "coordinates": [
+            -34.84840871090163,
+            -7.255475454252482
+          ]
+        },
+        "latitude": -7.25547545425248,
+        "longitude": -34.8484087109016,
+        "nome_popular": "Mangabeira",
+        "nome_cientifico": null,
+        "data_plantio": null,
+        "tipo_plantio": null,
+        "altura_total": null,
+        "diametro_copa": null,
+        "data_poda_formacao_1": "2025-12-05",
+        "data_poda_formacao_2": null,
+        "data_poda_formacao_3": null,
+        "data_poda_reducao": null,
+        "data_poda_floracao": null,
+        "data_adubacao_ordinaria": null,
+        "adubacao_frutificacao": null,
+        "irrigacao_ordinaria": null,
+        "irrigacao_floracao": null,
+        "irrigacao_frutificacao": null,
+        "data_irrigacao_ordinaria": "2025-12-08",
+        "data_irrigacao_floracao": null,
+        "data_irrigacao_frutificacao": null,
+        "inicio_colheita": "2025-12-08",
+        "fim_colheita": null,
+        "volume_colhido": null,
+        "foto": null,
+        "updated_at": "2025-12-08T23:05:58.553409+00:00",
+        "ultima_modificacao": "2025-12-04T02:32:34.792165",
         "ativo": true,
         "cache_buster": 0,
         "id_frutifera": null
