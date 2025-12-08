@@ -1,68 +1,31 @@
-const CACHE_NAME = 'sitio-ipiranga-v8.0';
+const CACHE_NAME = 'sitio-ipiranga-v8.1'; // Incremente a versão
 const CACHE_TIMEOUT = 3000;
+const IMAGE_TIMEOUT = 10000;
 
-// URLs para cachear (apenas arquivos estáticos)
+// URLs para cachear - ADICIONE SUA ORTOIMAGEM
 const urlsToCache = [
   '/S-tio_Ipiranga/',
   '/S-tio_Ipiranga/index.html',
   '/S-tio_Ipiranga/manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js',
-  '/S-tio_Ipiranga/orthomosaic.jpeg'
+  
+  // SUA ORTOIMAGEM AQUI - ajuste o caminho
+  'orthomosaic.jpeg' // ou o caminho correto da sua imagem
 ];
 
-// Instalação
-self.addEventListener('install', event => {
-  console.log('[SW] Instalando v8.0...');
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[SW] Cache aberto, adicionando recursos...');
-        return cache.addAll(urlsToCache).catch(err => {
-          console.warn('[SW] Alguns recursos não puderam ser cacheados:', err);
-        });
-      })
-      .then(() => {
-        console.log('[SW] Instalado com sucesso');
-        return self.skipWaiting();
-      })
-  );
-});
+// Instalação - (mantenha igual)
 
-// Ativação
-self.addEventListener('activate', event => {
-  console.log('[SW] Ativando...');
-  event.waitUntil(
-    caches.keys()
-      .then(cacheNames => {
-        return Promise.all(
-          cacheNames.map(cacheName => {
-            if (cacheName !== CACHE_NAME) {
-              console.log('[SW] Deletando cache antigo:', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      })
-      .then(() => {
-        console.log('[SW] Ativado');
-        return self.clients.claim();
-      })
-  );
-});
-
-// Fetch - estratégia diferente para Supabase vs arquivos locais
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Ignorar requisições que não são GET
   if (request.method !== 'GET') {
     event.respondWith(fetch(request));
     return;
   }
 
-  // 🎯 SUPABASE: Network first com fallback para cache
+  // 🎯 SUPABASE
   if (url.origin.includes('supabase.co')) {
     event.respondWith(
       networkFirstWithTimeout(request)
@@ -71,17 +34,109 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 📱 ARQUIVOS LOCAIS e CDNs: Cache first
+  // 🖼️ IMAGENS LOCAIS (ORTOTIMAGEM)
+  if (request.destination === 'image' || 
+      url.pathname.includes('orthomosaic') || 
+      url.pathname.includes('.jpeg') || 
+      url.pathname.includes('.jpg') || 
+      url.pathname.includes('.png')) {
+    
+    event.respondWith(
+      cacheFirstWithOfflineImageFallback(request)
+    );
+    return;
+  }
+
+  // 📱 OUTROS ARQUIVOS
   event.respondWith(
     cacheFirstWithNetworkFallback(request)
   );
 });
 
-// Estratégia: Network First com Timeout para Supabase
+// NOVA FUNÇÃO PARA IMAGENS
+async function cacheFirstWithOfflineImageFallback(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  
+  // Retornar do cache se disponível
+  if (cached) {
+    console.log('[SW] Retornando imagem do cache:', request.url);
+    return cached;
+  }
+  
+  try {
+    // Buscar da rede
+    const response = await fetch(request);
+    
+    if (response.ok) {
+      // Cachear para uso futuro
+      await cache.put(request, response.clone());
+      console.log('[SW] Imagem cacheada:', request.url);
+      return response;
+    }
+    
+  } catch (error) {
+    console.warn('[SW] Erro ao carregar imagem:', error);
+  }
+  
+  // Fallback para orthomosaico offline
+  if (request.url.includes('orthomosaic')) {
+    return new Response(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d1d5db" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect width="800" height="600" fill="#f9fafb"/>
+        <rect width="800" height="600" fill="url(#grid)"/>
+        <text x="400" y="280" text-anchor="middle" dy=".3em" fill="#6b7280" font-size="32" font-family="Arial">
+          🗺️ Orthomosaico
+        </text>
+        <text x="400" y="320" text-anchor="middle" dy=".3em" fill="#9ca3af" font-size="16" font-family="Arial">
+          Disponível apenas online
+        </text>
+        <text x="400" y="350" text-anchor="middle" dy=".3em" fill="#9ca3af" font-size="14" font-family="Arial">
+          Sítio Ipiranga - Sistema de Frutíferas
+        </text>
+      </svg>`,
+      {
+        headers: { 
+          'Content-Type': 'image/svg+xml',
+          'X-Service-Worker': 'ortho-offline'
+        }
+      }
+    );
+  }
+  
+  // Fallback genérico
+  return new Response(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+      <rect width="100" height="100" fill="#f3f4f6"/>
+      <text x="50" y="50" text-anchor="middle" dy=".3em" fill="#6b7280" font-size="20">🌿</text>
+    </svg>`,
+    {
+      headers: { 
+        'Content-Type': 'image/svg+xml',
+        'X-Service-Worker': 'image-fallback'
+      }
+    }
+  );
+}
+
+// ATUALIZE A FUNÇÃO DE TIMEOUT
 async function networkFirstWithTimeout(request) {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), CACHE_TIMEOUT);
+    
+    // Timeout maior para imagens
+    const isImage = request.destination === 'image' || 
+                   request.url.includes('.jpeg') || 
+                   request.url.includes('.jpg') || 
+                   request.url.includes('.png');
+    
+    const timeout = isImage ? IMAGE_TIMEOUT : CACHE_TIMEOUT;
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
     
     const response = await fetch(request, { 
       signal: controller.signal 
@@ -90,8 +145,11 @@ async function networkFirstWithTimeout(request) {
     clearTimeout(timeoutId);
     
     if (response.ok) {
-      // Atualizar cache em background para próximas requisições
-      cacheResponse(request, response.clone());
+      // Se for uma imagem importante, cachear
+      if (isImage) {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(request, response.clone());
+      }
     }
     
     return response;
@@ -100,6 +158,7 @@ async function networkFirstWithTimeout(request) {
     throw error;
   }
 }
+
 
 // Fallback para Supabase offline
 async function cacheFallbackForSupabase(request) {
