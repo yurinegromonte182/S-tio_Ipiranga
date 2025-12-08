@@ -743,10 +743,10 @@
         <div class="section-title">🗺️ Visualização do Mapa</div>
         
         <!-- Botão de Sincronizar (EM CIMA DO MAPA) -->
-        <button class="btn btn-secondary" onclick="sincronizarComSupabase()" 
+        <button class="btn btn-secondary" onclick="sincronizarTudo()" 
                 style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; position: relative; padding: 0.75rem; border: 2px solid #10b981; background: white; color: #10b981; font-weight: 600; border-radius: 8px; cursor: pointer;">
           <span>🔄</span>
-          <span id="syncButtonText">Sincronizar com Banco de Dados</span>
+          <span id="syncButtonText">Sincronizar Tudo</span>
         </button>
         
         <div id="syncMessage" style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem; text-align: center; min-height: 1.2rem;"></div>
@@ -1585,6 +1585,122 @@
       
       atualizarContadorSync();
     }
+
+    // ⭐⭐ FUNÇÃO NOVA - ADICIONE DEPOIS DA FUNÇÃO sincronizarComSupabase ⭐⭐
+async function sincronizarFilaAcoes() {
+  if (!navigator.onLine) {
+    console.log('Offline - aguardando conexão');
+    return;
+  }
+  
+  // Buscar ações pendentes do localStorage
+  let acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+  
+  if (acoesPendentes.length === 0) {
+    console.log('Nenhuma ação pendente para sincronizar');
+    return;
+  }
+  
+  console.log(`🔄 Sincronizando ${acoesPendentes.length} ação(ões)...`);
+  
+  const sucessos = [];
+  const falhas = [];
+  
+  for (const acao of acoesPendentes) {
+    try {
+      const campoSupabase = acao.tipo === 'rega' ? 'data_irrigacao_ordinaria' : 
+                            acao.tipo === 'poda' ? 'data_poda_formacao_1' : 
+                            'inicio_colheita';
+      
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${acao.frutiferaId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ [campoSupabase]: acao.data })
+        }
+      );
+      
+      if (response.ok) {
+        sucessos.push(acao);
+        console.log(`✅ ${acao.tipo} sincronizada para ID ${acao.frutiferaId}`);
+      } else {
+        falhas.push(acao);
+      }
+    } catch (error) {
+      falhas.push(acao);
+      console.error('❌ Erro na sincronização:', error);
+    }
+  }
+  
+  // Atualizar lista de pendentes
+  localStorage.setItem('acoesPendentes', JSON.stringify(falhas));
+  
+  // Mostrar resultado
+  if (sucessos.length > 0) {
+    mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s)`);
+    
+    // CHAVE: Disparar atualização do GitHub
+    try {
+      await fetch('https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson', {
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+      console.log('✅ GitHub atualizado via Edge Function');
+    } catch (e) {
+      console.log('⚠️ Edge Function não disponível');
+    }
+  }
+  
+  if (falhas.length > 0) {
+    console.warn(`${falhas.length} ações não sincronizadas`);
+  }
+  
+  atualizarBadgeSincronizacao();
+}
+
+// ⭐⭐ FUNÇÃO PARA ATUALIZAR BADGE ⭐⭐
+function atualizarBadgeSincronizacao() {
+  const acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+  const pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+  const total = acoesPendentes.length + pendingSync.length;
+  
+  const statusEl = document.getElementById('syncStatus');
+  if (statusEl) {
+    if (total > 0) {
+      statusEl.innerHTML = `⚠️ <span style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.8rem;">${total}</span>`;
+    } else {
+      statusEl.innerHTML = '✅ Sincronizado';
+      statusEl.style.color = '#10b981';
+    }
+  }
+}
+
+// ⭐⭐ FUNÇÃO SINCRONIZAR TUDO (adicione também) ⭐⭐
+async function sincronizarTudo() {
+  if (!navigator.onLine) {
+    mostrarToast('📡 Você está offline');
+    return;
+  }
+  
+  mostrarToast('🔄 Sincronizando tudo...');
+  
+  // 1. Sincronizar frutíferas novas
+  await sincronizarComSupabase();
+  
+  // 2. Sincronizar ações pendentes
+  await sincronizarFilaAcoes();
+  
+  // 3. Recarregar dados do Supabase
+  await carregarFrutiferas();
+  
+  mostrarToast('✅ Sincronização completa!');
+}
 
     function atualizarContadorSync() {
       pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
