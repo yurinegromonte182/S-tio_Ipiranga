@@ -846,6 +846,62 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
+          -34.848717,
+          -7.255138
+        ]
+      },
+      "properties": {
+        "id": 242,
+        "geom": {
+          "type": "Point",
+          "crs": {
+            "type": "name",
+            "properties": {
+              "name": "EPSG:4326"
+            }
+          },
+          "coordinates": [
+            -34.848717,
+            -7.255138
+          ]
+        },
+        "latitude": -7.255138,
+        "longitude": -34.848717,
+        "nome_popular": "Cajueiro",
+        "nome_cientifico": null,
+        "data_plantio": null,
+        "tipo_plantio": null,
+        "altura_total": null,
+        "diametro_copa": null,
+        "data_poda_formacao_1": null,
+        "data_poda_formacao_2": null,
+        "data_poda_formacao_3": null,
+        "data_poda_reducao": null,
+        "data_poda_floracao": null,
+        "data_adubacao_ordinaria": null,
+        "adubacao_frutificacao": null,
+        "irrigacao_ordinaria": null,
+        "irrigacao_floracao": null,
+        "irrigacao_frutificacao": null,
+        "data_irrigacao_ordinaria": "2025-12-08",
+        "data_irrigacao_floracao": null,
+        "data_irrigacao_frutificacao": null,
+        "inicio_colheita": null,
+        "fim_colheita": null,
+        "volume_colhido": null,
+        "foto": null,
+        "updated_at": "2025-12-08T23:11:19.266975+00:00",
+        "ultima_modificacao": "2025-12-04T02:32:34.792165",
+        "ativo": true,
+        "cache_buster": 0,
+        "id_frutifera": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
           -34.8484314838792,
           -7.25551775626279
         ]
@@ -883,14 +939,14 @@
         "irrigacao_ordinaria": null,
         "irrigacao_floracao": null,
         "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": null,
+        "data_irrigacao_ordinaria": "2025-12-08",
         "data_irrigacao_floracao": null,
         "data_irrigacao_frutificacao": null,
         "inicio_colheita": null,
         "fim_colheita": null,
         "volume_colhido": null,
         "foto": null,
-        "updated_at": "2025-12-04T02:32:34.792165+00:00",
+        "updated_at": "2025-12-08T23:11:19.497336+00:00",
         "ultima_modificacao": "2025-12-04T02:32:34.792165",
         "ativo": true,
         "cache_buster": 0,
@@ -939,14 +995,14 @@
         "irrigacao_ordinaria": null,
         "irrigacao_floracao": null,
         "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": null,
+        "data_irrigacao_ordinaria": "2025-12-08",
         "data_irrigacao_floracao": null,
         "data_irrigacao_frutificacao": null,
         "inicio_colheita": null,
         "fim_colheita": null,
         "volume_colhido": null,
         "foto": null,
-        "updated_at": "2025-12-04T02:32:34.792165+00:00",
+        "updated_at": "2025-12-08T23:11:19.729956+00:00",
         "ultima_modificacao": "2025-12-04T02:32:34.792165",
         "ativo": true,
         "cache_buster": 0,
@@ -980,62 +1036,6 @@
         "latitude": -7.25548976544011,
         "longitude": -34.8485316959484,
         "nome_popular": "Mangabeira",
-        "nome_cientifico": null,
-        "data_plantio": null,
-        "tipo_plantio": null,
-        "altura_total": null,
-        "diametro_copa": null,
-        "data_poda_formacao_1": null,
-        "data_poda_formacao_2": null,
-        "data_poda_formacao_3": null,
-        "data_poda_reducao": null,
-        "data_poda_floracao": null,
-        "data_adubacao_ordinaria": null,
-        "adubacao_frutificacao": null,
-        "irrigacao_ordinaria": null,
-        "irrigacao_floracao": null,
-        "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": null,
-        "data_irrigacao_floracao": null,
-        "data_irrigacao_frutificacao": null,
-        "inicio_colheita": null,
-        "fim_colheita": null,
-        "volume_colhido": null,
-        "foto": null,
-        "updated_at": "2025-12-04T02:32:34.792165+00:00",
-        "ultima_modificacao": "2025-12-04T02:32:34.792165",
-        "ativo": true,
-        "cache_buster": 0,
-        "id_frutifera": null
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -34.848717,
-          -7.255138
-        ]
-      },
-      "properties": {
-        "id": 242,
-        "geom": {
-          "type": "Point",
-          "crs": {
-            "type": "name",
-            "properties": {
-              "name": "EPSG:4326"
-            }
-          },
-          "coordinates": [
-            -34.848717,
-            -7.255138
-          ]
-        },
-        "latitude": -7.255138,
-        "longitude": -34.848717,
-        "nome_popular": "Cajueiro",
         "nome_cientifico": null,
         "data_plantio": null,
         "tipo_plantio": null,
