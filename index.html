@@ -739,13 +739,14 @@
 
     <!-- Tab: Mapa -->
     <!-- Tab: Mapa -->
+<!-- Tab: Mapa -->
 <div id="mapa" class="tab-content">
-  <!-- Seção do Mapa (AGORA EM CIMA) -->
   <div class="section">
     <div class="section-title">🗺️ Visualização do Mapa</div>
     
-    <!-- BOTÃO DE SINCRONIZAR (ADICIONADO AQUI) -->
-    <button class="btn btn-secondary" onclick="sincronizarComSupabase()" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%;">
+    <!-- Botão de Sincronizar -->
+    <button class="btn btn-secondary" onclick="sincronizarComSupabase()" 
+            style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; position: relative;">
       🔄 Sincronizar com Banco de Dados
     </button>
     <div id="syncMessage" style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem; text-align: center; min-height: 1.2rem;"></div>
@@ -774,7 +775,7 @@
       </label>
     </div>
 
-    <!-- Legenda de Espécies -->
+    <!-- Legenda -->
     <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
       <div style="font-size: 0.75rem; font-weight: 600; color: #6b7280; margin-bottom: 0.5rem;">LEGENDA POR ESPÉCIE</div>
       <div id="mapLegend">
@@ -798,68 +799,19 @@
     </div>
 
     <div id="mapContainer"></div>
-  </div>
 
-  <!-- Seção de Cadastro (AGORA EMBAIXO) -->
-  <div class="section">
-    <div class="section-title clickable" onclick="toggleCadastroForm()">
-      ➕ Cadastrar Nova Frutífera
-      <span id="cadastroToggleIcon" style="margin-left: auto; font-size: 1.2rem;">▼</span>
-    </div>
-    
-    <div id="cadastroFormContainer">
-      <div class="info-box">
-        🌱 Cadastre e visualize imediatamente no mapa. Use o botão "Sincronizar" acima para enviar ao banco de dados.
+    <!-- CADASTRO (agora dentro da mesma seção) -->
+    <div style="margin-top: 2rem; border-top: 2px solid #e5e7eb; padding-top: 1.5rem;">
+      <div class="section-title clickable" onclick="toggleCadastroForm()" 
+           style="cursor: pointer; padding: 1rem; background: #f0fdf4; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #10b981;">
+        <span style="font-size: 1.2rem; margin-right: 0.5rem;">➕</span>
+        Cadastrar Nova Frutífera
+        <span id="cadastroToggleIcon" style="margin-left: auto; font-size: 1.2rem; transition: transform 0.3s;">▼</span>
       </div>
-
-      <form onsubmit="cadastrarFrutifera(event)">
-        <div class="form-group">
-          <label>🌿 Espécie *</label>
-          <select id="novaEspecie" required>
-            <option value="">Selecione...</option>
-            <option value="Mangabeira">🥭 Mangabeira</option>
-            <option value="Cajueiro">🌰 Cajueiro</option>
-            <option value="Coqueiro">🥥 Coqueiro</option>
-            <option value="Cacau">🍫 Cacau</option>
-          </select>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>📅 Data do Plantio *</label>
-            <input type="date" id="dataPlantio" required>
-          </div>
-          <div class="form-group">
-            <label>🌱 Idade (meses)</label>
-            <input type="number" id="idadeFrutifera" min="0" placeholder="0">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>📍 Localização GPS</label>
-          <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: end;">
-            <input type="text" id="coordenadas" placeholder="Latitude, Longitude" readonly style="margin-bottom: 0;">
-            <button type="button" onclick="obterLocalizacao()" style="padding: 0.75rem 1rem; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; margin-bottom: 0;">
-              📍 Obter GPS
-            </button>
-          </div>
-          <div id="coordDisplay" style="background: #f9fafb; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem; display: none;"></div>
-        </div>
-
-        <div class="form-group">
-          <label>👤 Responsável pelo plantio</label>
-          <input type="text" id="responsavel" placeholder="Nome" value="">
-        </div>
-
-        <button type="submit" class="btn btn-primary">
-          ✅ Cadastrar Frutífera
-        </button>
-      </form>
-      <!-- REMOVA estas linhas do formulário de cadastro -->
-      <!-- <button class="btn btn-secondary" onclick="sincronizarComSupabase()" style="margin-top: 0.5rem;">
-        🔄 Sincronizar com Banco de Dados
-      </button>
-      <div id="syncMessage" style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem; text-align: center;"></div> -->
+      
+      <div id="cadastroFormContainer" class="cadastro-form-container">
+        <!-- Formulário aqui -->
+      </div>
     </div>
   </div>
 </div>
