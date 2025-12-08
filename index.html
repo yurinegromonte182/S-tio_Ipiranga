@@ -1343,112 +1343,85 @@
     }
 
     async function registrarAcao(tipo, frutiferaId) {
-  console.log(`📝 Registrando ${tipo} para frutífera ${frutiferaId}`);
+  console.log(`📝 [REGISTRAR AÇÃO] ${tipo} para ${frutiferaId}`);
   
-   try {
-     const campo = tipo === 'rega' ? 'ultima_rega' : 
-                  tipo === 'poda' ? 'ultima_poda' : 'ultima_colheita';
-    
+  try {
     const dataHoje = new Date().toISOString().split('T')[0];
     
-    const index = frutiferas.findIndex(f => f.id === frutiferaId);
+    // ========== 1. SALVAR NO localStorage (CRÍTICO) ==========
+    console.log('💾 Salvando no localStorage...');
+    
+    // Criar objeto da ação
+    const novaAcao = {
+      tipo: tipo,
+      frutiferaId: String(frutiferaId),
+      data: dataHoje,
+      timestamp: new Date().toISOString(),
+      sincronizado: false
+    };
+    
+    // Buscar ações existentes
+    let acoesArray = [];
+    const acoesSalvas = localStorage.getItem('acoesPendentes');
+    
+    if (acoesSalvas) {
+      try {
+        acoesArray = JSON.parse(acoesSalvas);
+        if (!Array.isArray(acoesArray)) {
+          console.warn('⚠️ Não é array, recriando...');
+          acoesArray = [];
+        }
+      } catch (e) {
+        console.warn('⚠️ Erro ao parsear, recriando...');
+        acoesArray = [];
+      }
+    }
+    
+    // Adicionar nova ação
+    acoesArray.push(novaAcao);
+    
+    // Salvar
+    localStorage.setItem('acoesPendentes', JSON.stringify(acoesArray));
+    
+    console.log('✅ AÇÃO SALVA NO localStorage!');
+    console.log('Ação:', novaAcao);
+    console.log('Total ações:', acoesArray.length);
+    
+    // Verificação imediata
+    setTimeout(() => {
+      const check = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+      console.log('✅ Verificação:', check.length, 'ações no localStorage');
+    }, 100);
+    
+    // ========== 2. ATUALIZAR UI ==========
+    const campo = tipo === 'rega' ? 'ultima_rega' : 
+                  tipo === 'poda' ? 'ultima_poda' : 'ultima_colheita';
+    
+    const index = frutiferas.findIndex(f => f.id == frutiferaId);
     if (index >= 0) {
-      // 1. ATUALIZAR LOCALMENTE
       frutiferas[index][campo] = dataHoje;
       localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
-      
-      // ⭐⭐ CORREÇÃO CRÍTICA: SALVAR NO localStorage CORRETAMENTE ⭐⭐
-      try {
-        // Buscar ou criar array de ações
-        let acoesPendentes = [];
-        const acoesSalvas = localStorage.getItem('acoesPendentes');
-        
-        if (acoesSalvas && acoesSalvas !== 'null' && acoesSalvas !== 'undefined') {
-          try {
-            acoesPendentes = JSON.parse(acoesSalvas);
-            if (!Array.isArray(acoesPendentes)) {
-              console.warn('⚠️ acoesPendentes não é array, recriando...');
-              acoesPendentes = [];
-            }
-          } catch (e) {
-            console.warn('⚠️ Erro ao parsear acoesPendentes:', e);
-            acoesPendentes = [];
-          }
-        }
-        
-        // Criar nova ação
-        const novaAcao = {
-          tipo: tipo,
-          frutiferaId: String(frutiferaId), // Garantir string
-          data: dataHoje,
-          timestamp: new Date().toISOString()
-        };
-        
-        // Adicionar ao array
-        acoesPendentes.push(novaAcao);
-        
-        // Salvar no localStorage
-        localStorage.setItem('acoesPendentes', JSON.stringify(acoesPendentes));
-        
-        console.log('✅ Ação salva no localStorage:', novaAcao);
-        console.log('📊 Total de ações pendentes:', acoesPendentes.length);
-        
-        // Verificar se salvou
-        setTimeout(() => {
-          const verificacao = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
-          console.log('✅ Verificação:', verificacao.length, 'ações no localStorage');
-        }, 100);
-        
-      } catch (storageError) {
-        console.error('❌ ERRO ao salvar no localStorage:', storageError);
-      }
-      // ⭐⭐ FIM DA CORREÇÃO ⭐⭐
-      
-      // Atualizar badge
-      atualizarContadorSync();
     }
     
-    // 2. ATUALIZAR UI
     atualizarTodasAbas();
-    mostrarToast(`✅ ${tipo.charAt(0).toUpperCase() + tipo.slice(1)} registrada!`);
+    mostrarToast(`✅ ${tipo} registrada!`);
+    atualizarContadorSync();
     
-    // 3. TENTAR SINCRONIZAR IMEDIATAMENTE SE ONLINE
+    // ========== 3. SINCRONIZAR ==========
     if (navigator.onLine) {
-      console.log('🌐 Online - tentando sincronizar...');
-      setTimeout(() => sincronizarFilaAcoes(), 1000); // Dar tempo para salvar
-    }
-    
-    // 4. TENTAR SINCRONIZAR COM SUPABASE SE ONLINE
-    if (navigator.onLine) {
-      const campoSupabase = campo === 'ultima_rega' ? 'data_irrigacao_ordinaria' : 
-                            campo === 'ultima_poda' ? 'data_poda_formacao_1' : 
-                            'inicio_colheita';
-      
-      try {
-        const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${frutiferaId}`,
-          {
-            method: 'PATCH',
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=representation'
-            },
-            body: JSON.stringify({ [campoSupabase]: dataHoje })
-          }
-        );
-        
-        if (response.ok) {
-          console.log(`✅ ${tipo} sincronizada com Supabase`);
-        }
-      } catch (supabaseError) {
-        console.log('⚠️ Supabase offline, ação ficará na fila');
-      }
+      console.log('🌐 Online - sincronizando em 1 segundo...');
+      setTimeout(() => {
+        console.log('🔄 Executando sincronizarFilaAcoes()...');
+        sincronizarFilaAcoes().then(() => {
+          console.log('✅ Sincronização completa!');
+        }).catch(err => {
+          console.error('❌ Erro na sincronização:', err);
+        });
+      }, 1000);
     }
     
   } catch (error) {
-    console.error('❌ Erro ao registrar ação:', error);
+    console.error('💥 ERRO em registrarAcao:', error);
   }
 }
 
