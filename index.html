@@ -738,36 +738,43 @@
     </div>
 
     <!-- Tab: Mapa -->
-    <!-- Tab: Mapa -->
+   
 <!-- Tab: Mapa -->
 <div id="mapa" class="tab-content">
   <div class="section">
     <div class="section-title">🗺️ Visualização do Mapa</div>
     
-    <!-- Botão de Sincronizar -->
+    <!-- Botão de Sincronizar (EM CIMA DO MAPA) -->
     <button class="btn btn-secondary" onclick="sincronizarComSupabase()" 
-            style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; position: relative;">
-      🔄 Sincronizar com Banco de Dados
+            style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; position: relative; padding: 0.75rem; border: 2px solid #10b981; background: white; color: #10b981; font-weight: 600; border-radius: 8px; cursor: pointer;">
+      <span>🔄</span>
+      <span id="syncButtonText">Sincronizar com Banco de Dados</span>
     </button>
+    
     <div id="syncMessage" style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem; text-align: center; min-height: 1.2rem;"></div>
     
-    <div class="info-box">
-      📍 Visualize todas as frutíferas georeferenciadas no mapa
+    <div class="info-box" style="margin-bottom: 1rem;">
+      <strong>📍 Visualize todas as frutíferas georeferenciadas no mapa</strong><br>
+      <small>Clique nos pontos para ver detalhes. Use o botão acima para sincronizar novas frutíferas.</small>
     </div>
 
-    <div class="map-controls">
+    <!-- Controles do Mapa -->
+    <div class="map-controls" style="margin-bottom: 1rem;">
       <button class="map-btn" data-basemap="satellite" onclick="changeBasemap('satellite', event)">
-        🛰️ Satélite
+        <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">🛰️</div>
+        <div style="font-size: 0.75rem; font-weight: 600;">Satélite</div>
       </button>
       <button class="map-btn active" data-basemap="orthomosaic" onclick="changeBasemap('orthomosaic', event)">
-        📸 Orthomosaico
+        <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">📸</div>
+        <div style="font-size: 0.75rem; font-weight: 600;">Orthomosaico</div>
       </button>
     </div>
 
-    <div class="layer-toggle">
+    <!-- Toggle da camada de frutíferas -->
+    <div class="layer-toggle" style="margin-bottom: 1rem;">
       <div class="layer-label">
-        <div class="layer-badge" style="color: #10b981;"></div>
-        <span>Frutíferas</span>
+        <div class="layer-badge" style="color: #10b981; background-color: #10b981;"></div>
+        <span style="font-weight: 500;">Frutíferas no mapa</span>
       </div>
       <label class="toggle-switch">
         <input type="checkbox" id="toggleFrutiferas" checked onchange="toggleFrutiferasLayer()">
@@ -775,42 +782,141 @@
       </label>
     </div>
 
-    <!-- Legenda -->
-    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
-      <div style="font-size: 0.75rem; font-weight: 600; color: #6b7280; margin-bottom: 0.5rem;">LEGENDA POR ESPÉCIE</div>
-      <div id="mapLegend">
-        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
-          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #10b981; border: 2px solid #fff;"></div>
-          <span>🥭 Mangabeira</span>
+    <!-- Legenda de Espécies -->
+    <div style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <div style="font-size: 0.8rem; font-weight: 700; color: #374151; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">🌿 Legenda por Espécie</div>
+      <div id="mapLegend" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #10b981; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
+          <span style="font-size: 0.8rem; font-weight: 500;">🥭 Mangabeira</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
-          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #f59e0b; border: 2px solid #fff;"></div>
-          <span>🌰 Cajueiro</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #f59e0b; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
+          <span style="font-size: 0.8rem; font-weight: 500;">🌰 Cajueiro</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem;">
-          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #ef4444; border: 2px solid #fff;"></div>
-          <span>🥥 Coqueiro</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #ef4444; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
+          <span style="font-size: 0.8rem; font-weight: 500;">🥥 Coqueiro</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
-          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #8b5cf6; border: 2px solid #fff;"></div>
-          <span>🍫 Cacau</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #8b5cf6; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
+          <span style="font-size: 0.8rem; font-weight: 500;">🍫 Cacau</span>
         </div>
       </div>
     </div>
 
-    <div id="mapContainer"></div>
+    <!-- Container do Mapa -->
+    <div id="mapContainer" style="width: 100%; height: 50vh; min-height: 400px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; margin-bottom: 2rem;"></div>
 
-    <!-- CADASTRO (agora dentro da mesma seção) -->
-    <div style="margin-top: 2rem; border-top: 2px solid #e5e7eb; padding-top: 1.5rem;">
+    <!-- Seção de Cadastro (EMBAIXO DO MAPA) -->
+    <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; padding: 1.5rem; border: 1px solid #bbf7d0; margin-top: 1rem;">
       <div class="section-title clickable" onclick="toggleCadastroForm()" 
-           style="cursor: pointer; padding: 1rem; background: #f0fdf4; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #10b981;">
-        <span style="font-size: 1.2rem; margin-right: 0.5rem;">➕</span>
-        Cadastrar Nova Frutífera
-        <span id="cadastroToggleIcon" style="margin-left: auto; font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+           style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: white; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #10b981; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.5rem; color: #10b981;">➕</span>
+          <div>
+            <div style="font-weight: 700; color: #1f2937; font-size: 1.1rem;">Cadastrar Nova Frutífera</div>
+            <div style="font-size: 0.8rem; color: #6b7280; margin-top: 0.25rem;">Clique para expandir/recolher</div>
+          </div>
+        </div>
+        <span id="cadastroToggleIcon" style="font-size: 1.5rem; color: #10b981; transition: transform 0.3s ease;">▼</span>
       </div>
       
       <div id="cadastroFormContainer" class="cadastro-form-container">
-        <!-- Formulário aqui -->
+        <div class="info-box" style="background: white; border: 1px solid #bbf7d0; color: #065f46; margin-bottom: 1.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.2rem;">🌱</span>
+            <strong>Como funciona:</strong>
+          </div>
+          <div style="font-size: 0.9rem; line-height: 1.5;">
+            1. Preencha os dados da frutífera<br>
+            2. Clique em "Cadastrar Frutífera"<br>
+            3. A frutífera aparecerá no mapa<br>
+            4. Use o botão "Sincronizar" acima para enviar ao banco de dados
+          </div>
+        </div>
+
+        <form onsubmit="cadastrarFrutifera(event)" id="formCadastroFrutifera" style="background: white; padding: 1.5rem; border-radius: 10px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <!-- Espécie -->
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.2rem;">🌿</span>
+              <span style="font-weight: 600; color: #374151;">Espécie *</span>
+            </label>
+            <select id="novaEspecie" required style="width: 100%; padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1rem; background: white; transition: all 0.2s;" 
+                    onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#d1d5db'">
+              <option value="">Selecione uma espécie...</option>
+              <option value="Mangabeira">🥭 Mangabeira</option>
+              <option value="Cajueiro">🌰 Cajueiro</option>
+              <option value="Coqueiro">🥥 Coqueiro</option>
+              <option value="Cacau">🍫 Cacau</option>
+            </select>
+          </div>
+
+          <!-- Data do Plantio e Idade -->
+          <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0;">
+            <div class="form-group">
+              <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.2rem;">📅</span>
+                <span style="font-weight: 600; color: #374151;">Data do Plantio *</span>
+              </label>
+              <input type="date" id="dataPlantio" required style="width: 100%; padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1rem;">
+            </div>
+            <div class="form-group">
+              <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.2rem;">🌱</span>
+                <span style="font-weight: 600; color: #374151;">Idade (meses)</span>
+              </label>
+              <input type="number" id="idadeFrutifera" min="0" placeholder="Ex: 12" style="width: 100%; padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1rem;">
+            </div>
+          </div>
+
+          <!-- Localização GPS -->
+          <div class="form-group" style="margin: 1.5rem 0;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.2rem;">📍</span>
+              <span style="font-weight: 600; color: #374151;">Localização GPS</span>
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: end;">
+              <input type="text" id="coordenadas" placeholder="Latitude, Longitude" readonly 
+                     style="width: 100%; padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1rem; background: #f9fafb;">
+              <button type="button" onclick="obterLocalizacao()" 
+                      style="padding: 0.75rem 1.25rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: all 0.2s;"
+                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)'"
+                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                <span style="font-size: 1.2rem; margin-right: 0.5rem;">📍</span>
+                Obter GPS
+              </button>
+            </div>
+            <div id="coordDisplay" style="background: #f0f9ff; padding: 0.75rem; border-radius: 6px; font-size: 0.9rem; color: #0c4a6e; margin-top: 0.75rem; display: none; border: 1px solid #bae6fd;"></div>
+          </div>
+
+          <!-- Responsável -->
+          <div class="form-group" style="margin: 1.5rem 0;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.2rem;">👤</span>
+              <span style="font-weight: 600; color: #374151;">Responsável pelo plantio</span>
+            </label>
+            <input type="text" id="responsavel" placeholder="Digite o nome do responsável" 
+                   style="width: 100%; padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1rem;">
+          </div>
+
+          <!-- Botão de Cadastro -->
+          <button type="submit" class="btn btn-primary" 
+                  style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 700; cursor: pointer; margin-top: 1rem; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 0.75rem;"
+                  onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(16, 185, 129, 0.4)'"
+                  onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+            <span style="font-size: 1.5rem;">✅</span>
+            <span>Cadastrar Frutífera</span>
+          </button>
+          
+          <div style="text-align: center; margin-top: 1rem; color: #6b7280; font-size: 0.85rem;">
+            <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+              <span>💡</span> 
+              A frutífera será salva localmente e aparecerá no mapa imediatamente
+            </span>
+          </div>
+        </form>
       </div>
     </div>
   </div>
