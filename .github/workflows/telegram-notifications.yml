@@ -140,56 +140,47 @@ jobs:
             fi
           done
           
-          # Montar mensagem
-          TOTAL=$(jq '.features | length' dados.geojson)
-          
-          # Saudação por horário (horário de Brasília)
-          if [ "$HORA_NUM" -lt 12 ]; then
-            SAUDACAO="☀️ Bom dia"
-          elif [ "$HORA_NUM" -lt 18 ]; then
-            SAUDACAO="⛅ Boa tarde"
-          else
-            SAUDACAO="🌙 Boa noite"
-          fi
-          
-          MESSAGE="${SAUDACAO}!%0A"
-          MESSAGE="${MESSAGE}📅 ${DATA_EXIBICAO} às ${HORA_EXIBICAO}%0A%0A"
-          
-          # Detectar se foi acionado por commit (push)
-          if [ "${{ github.event_name }}" = "push" ]; then
-            MESSAGE="${MESSAGE}🔄 *Atualização automática*%0A"
-            MESSAGE="${MESSAGE}Dados sincronizados do Aplicativo%0A%0A"
-          else
-            MESSAGE="${MESSAGE}🔄 Atualização automática%0A"
-            MESSAGE="${MESSAGE}Dados sincronizados do Aplicativo%0A%0A"
-          fi
-          
-          MESSAGE="${MESSAGE}📋 Total de frutíferas: ${TOTAL}%0A%0A"
-          
-          # Contar ações por tipo
-          URG_COUNT=$(grep -c "^REGA_URG:" /tmp/acoes.txt 2>/dev/null || echo 0)
-          NORM_COUNT=$(grep -c "^REGA_NORM:" /tmp/acoes.txt 2>/dev/null || echo 0)
-          PODA_COUNT=$(grep -c "^PODA:" /tmp/acoes.txt 2>/dev/null || echo 0)
-          COLH_COUNT=$(grep -c "^COLHEITA:" /tmp/acoes.txt 2>/dev/null || echo 0)
-          
-          # Calcular total de TODAS as ações atrasadas (não apenas urgentes)
-          TOTAL_ATRASADAS=$((URG_COUNT + NORM_COUNT + PODA_COUNT + COLH_COUNT))
-          
-          # Montar resumo no formato que você quer
-          MESSAGE="${MESSAGE}🚨 URGENTE: ${TOTAL_ATRASADAS} ações atrasada(s)%0A"
-          MESSAGE="${MESSAGE}💧 Rega: $((URG_COUNT + NORM_COUNT)) planta(s)%0A"
-          MESSAGE="${MESSAGE}✂️ Poda: ${PODA_COUNT} planta(s)%0A"
-          MESSAGE="${MESSAGE}🍊 Colheita: ${COLH_COUNT} planta(s)%0A%0A"
-          MESSAGE="${MESSAGE}💡 Veja detalhes no app"
-          
-          # Limpar arquivo temporário
-          rm -f /tmp/acoes.txt
-          
-          # Enviar notificação
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d text="${MESSAGE}" \
-            -d parse_mode="Markdown"
+          # Montar mensagem final FORMATADA
+
+TOTAL=$(jq '.features | length' dados.geojson)
+
+URG_COUNT=$(grep -c "^REGA_URG:" /tmp/acoes.txt 2>/dev/null || echo 0)
+NORM_COUNT=$(grep -c "^REGA_NORM:" /tmp/acoes.txt 2>/dev/null || echo 0)
+PODA_COUNT=$(grep -c "^PODA:" /tmp/acoes.txt 2>/dev/null || echo 0)
+COLH_COUNT=$(grep -c "^COLHEITA:" /tmp/acoes.txt 2>/dev/null || echo 0)
+
+TOTAL_ATRASADAS=$((URG_COUNT + NORM_COUNT + PODA_COUNT + COLH_COUNT))
+
+# Saudação
+if [ "$HORA_NUM" -lt 12 ]; then
+  SAUDACAO="☀️ Bom dia"
+elif [ "$HORA_NUM" -lt 18 ]; then
+  SAUDACAO="⛅ Boa tarde"
+else
+  SAUDACAO="🌙 Boa noite"
+fi
+
+MESSAGE="${SAUDACAO}!%0A"
+MESSAGE="${MESSAGE}📅 ${DATA_EXIBICAO} às ${HORA_EXIBICAO}%0A%0A"
+
+MESSAGE="${MESSAGE}🔄 Atualização automática%0A"
+MESSAGE="${MESSAGE}Dados sincronizados do Aplicativo %0A%0A"
+
+MESSAGE="${MESSAGE}📋 Total de frutíferas: (${TOTAL})%0A%0A"
+
+MESSAGE="${MESSAGE}🚨 URGENTE: ${TOTAL_ATRASADAS} ações atrasada(s)%0A"
+MESSAGE="${MESSAGE}💧 Rega : $((URG_COUNT + NORM_COUNT)) planta(s)%0A"
+MESSAGE="${MESSAGE}✂️ Poda: ${PODA_COUNT} planta(s)%0A"
+MESSAGE="${MESSAGE}🍊 Colheita: ${COLH_COUNT} planta(s)%0A%0A"
+
+MESSAGE="${MESSAGE}💡 Veja detalhes no app"
+
+# Enviar ao Telegram
+curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+  -d chat_id="${TELEGRAM_CHAT_ID}" \
+  -d text="${MESSAGE}" \
+  -d parse_mode="Markdown"
+
           
           echo "Notificação enviada com sucesso!"
           echo "Horário: ${DATA_EXIBICAO} às ${HORA_EXIBICAO} (Brasília)"
