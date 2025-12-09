@@ -1,5 +1,12 @@
 {
   "type": "FeatureCollection",
+  "name": "Frutíferas do Sítio Ipiranga",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
   "features": [
     {
       "type": "Feature",
@@ -510,6 +517,62 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
+          -34.8484906298612,
+          -7.2553918061888
+        ]
+      },
+      "properties": {
+        "id": 16,
+        "geom": {
+          "type": "Point",
+          "crs": {
+            "type": "name",
+            "properties": {
+              "name": "EPSG:4326"
+            }
+          },
+          "coordinates": [
+            -34.84849062986115,
+            -7.255391806188804
+          ]
+        },
+        "latitude": -7.2553918061888,
+        "longitude": -34.8484906298612,
+        "nome_popular": "Mangabeira",
+        "nome_cientifico": null,
+        "data_plantio": null,
+        "tipo_plantio": null,
+        "altura_total": null,
+        "diametro_copa": null,
+        "data_poda_formacao_1": null,
+        "data_poda_formacao_2": null,
+        "data_poda_formacao_3": null,
+        "data_poda_reducao": null,
+        "data_poda_floracao": null,
+        "data_adubacao_ordinaria": null,
+        "adubacao_frutificacao": null,
+        "irrigacao_ordinaria": null,
+        "irrigacao_floracao": null,
+        "irrigacao_frutificacao": null,
+        "data_irrigacao_ordinaria": "2025-12-09",
+        "data_irrigacao_floracao": null,
+        "data_irrigacao_frutificacao": null,
+        "inicio_colheita": null,
+        "fim_colheita": null,
+        "volume_colhido": null,
+        "foto": null,
+        "updated_at": "2025-12-09T00:39:47.044083+00:00",
+        "ultima_modificacao": "2025-12-04T02:32:34.792165",
+        "ativo": true,
+        "cache_buster": 0,
+        "id_frutifera": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
           -34.8484087109016,
           -7.25547545425248
         ]
@@ -667,62 +730,6 @@
         "volume_colhido": null,
         "foto": null,
         "updated_at": "2025-12-08T23:10:51.699545+00:00",
-        "ultima_modificacao": "2025-12-04T02:32:34.792165",
-        "ativo": true,
-        "cache_buster": 0,
-        "id_frutifera": null
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -34.8484906298612,
-          -7.2553918061888
-        ]
-      },
-      "properties": {
-        "id": 16,
-        "geom": {
-          "type": "Point",
-          "crs": {
-            "type": "name",
-            "properties": {
-              "name": "EPSG:4326"
-            }
-          },
-          "coordinates": [
-            -34.84849062986115,
-            -7.255391806188804
-          ]
-        },
-        "latitude": -7.2553918061888,
-        "longitude": -34.8484906298612,
-        "nome_popular": "Mangabeira",
-        "nome_cientifico": null,
-        "data_plantio": null,
-        "tipo_plantio": null,
-        "altura_total": null,
-        "diametro_copa": null,
-        "data_poda_formacao_1": null,
-        "data_poda_formacao_2": null,
-        "data_poda_formacao_3": null,
-        "data_poda_reducao": null,
-        "data_poda_floracao": null,
-        "data_adubacao_ordinaria": null,
-        "adubacao_frutificacao": null,
-        "irrigacao_ordinaria": null,
-        "irrigacao_floracao": null,
-        "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": "2025-12-08",
-        "data_irrigacao_floracao": null,
-        "data_irrigacao_frutificacao": null,
-        "inicio_colheita": null,
-        "fim_colheita": null,
-        "volume_colhido": null,
-        "foto": null,
-        "updated_at": "2025-12-08T23:10:51.952415+00:00",
         "ultima_modificacao": "2025-12-04T02:32:34.792165",
         "ativo": true,
         "cache_buster": 0,
@@ -15793,5 +15800,17 @@
         "id_frutifera": null
       }
     }
-  ]
+  ],
+  "metadata": {
+    "updated": "2025-12-09T00:39:49.687Z",
+    "total": 282,
+    "withCoordinates": 282,
+    "stats": {
+      "total": 282,
+      "regasAtrasadas": 234,
+      "podasAtrasadas": 269,
+      "colheitasAtrasadas": 269,
+      "totalAtrasadas": 772
+    }
+  }
 }
