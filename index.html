@@ -1071,6 +1071,343 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script>
+
+    // ============================================
+// SISTEMA DE SINCRONIZAÇÃO OTIMIZADO
+// ============================================
+
+class SyncManager {
+  constructor() {
+    this.syncQueue = [];
+    this.isSyncing = false;
+    this.lastSync = null;
+    this.syncInterval = 5 * 60 * 1000; // 5 minutos
+    this.batchSize = 10; // Agrupar até 10 ações
+  }
+
+  // Adicionar ação à fila
+  addToQueue(action) {
+    this.syncQueue.push({
+      ...action,
+      timestamp: Date.now()
+    });
+    
+    // Salvar fila no localStorage
+    localStorage.setItem('syncQueue', JSON.stringify(this.syncQueue));
+    
+    // Se atingiu batch size, sincronizar
+    if (this.syncQueue.length >= this.batchSize) {
+      this.syncNow();
+    } else {
+      // Agendar sync para daqui 30 segundos
+      this.scheduleBatchSync();
+    }
+  }
+
+  // Sincronização em lote
+  async syncBatch() {
+    if (this.isSyncing || this.syncQueue.length === 0) return;
+    
+    this.isSyncing = true;
+    const batch = [...this.syncQueue];
+    
+    try {
+      // Agrupar ações por frutífera
+      const grouped = this.groupByFrutifera(batch);
+      
+      // Enviar em lote para Supabase
+      const promises = Object.entries(grouped).map(([frutiferaId, actions]) => 
+        this.updateFrutifera(frutiferaId, actions)
+      );
+      
+      await Promise.all(promises);
+      
+      // Limpar fila de sucesso
+      this.syncQueue = [];
+      localStorage.setItem('syncQueue', '[]');
+      this.lastSync = Date.now();
+      
+      // Disparar Edge Function apenas UMA vez
+      await this.triggerEdgeFunction();
+      
+      return { success: true, synced: batch.length };
+      
+    } catch (error) {
+      console.error('Erro no batch sync:', error);
+      return { success: false, error };
+    } finally {
+      this.isSyncing = false;
+    }
+  }
+
+  // Agrupar ações por frutífera
+  groupByFrutifera(actions) {
+    return actions.reduce((acc, action) => {
+      if (!acc[action.frutiferaId]) {
+        acc[action.frutiferaId] = {};
+      }
+      
+      // Pegar apenas a ação mais recente de cada tipo
+      if (!acc[action.frutiferaId][action.tipo] || 
+          action.timestamp > acc[action.frutiferaId][action.tipo].timestamp) {
+        acc[action.frutiferaId][action.tipo] = action;
+      }
+      
+      return acc;
+    }, {});
+  }
+
+  // Atualizar frutífera no Supabase
+  async updateFrutifera(frutiferaId, actions) {
+    const updates = {};
+    
+    Object.entries(actions).forEach(([tipo, action]) => {
+      if (tipo === 'rega') updates.data_irrigacao_ordinaria = action.data;
+      if (tipo === 'poda') updates.data_poda_formacao_1 = action.data;
+      if (tipo === 'colheita') updates.inicio_colheita = action.data;
+    });
+    
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${frutiferaId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updates)
+      }
+    );
+    
+    if (!response.ok) throw new Error(`Erro ao atualizar ${frutiferaId}`);
+    return response.json();
+  }
+
+  // Disparar Edge Function apenas uma vez por batch
+  async triggerEdgeFunction() {
+    try {
+      const response = await fetch(
+        'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            trigger: 'batch_sync',
+            timestamp: Date.now()
+          })
+        }
+      );
+      
+      if (response.ok) {
+        console.log('✅ Edge Function disparada com sucesso');
+        return await response.json();
+      }
+    } catch (error) {
+      console.error('⚠️ Erro ao disparar Edge Function:', error);
+    }
+  }
+
+  // Agendar sincronização em lote
+  scheduleBatchSync() {
+    if (this.syncTimer) clearTimeout(this.syncTimer);
+    
+    this.syncTimer = setTimeout(() => {
+      if (this.syncQueue.length > 0 && navigator.onLine) {
+        this.syncBatch();
+      }
+    }, 30000); // 30 segundos
+  }
+
+  // Sincronizar imediatamente
+  async syncNow() {
+    if (this.syncTimer) clearTimeout(this.syncTimer);
+    return await this.syncBatch();
+  }
+
+  // Sincronização inteligente baseada em prioridade
+  async smartSync() {
+    const now = Date.now();
+    const timeSinceLastSync = now - (this.lastSync || 0);
+    
+    // Se passou muito tempo ou tem muitas ações, sincronizar
+    if (timeSinceLastSync > this.syncInterval || this.syncQueue.length >= this.batchSize) {
+      return await this.syncNow();
+    }
+    
+    // Caso contrário, agendar
+    this.scheduleBatchSync();
+  }
+
+  // Carregar fila do localStorage na inicialização
+  loadQueue() {
+    const stored = localStorage.getItem('syncQueue');
+    if (stored) {
+      this.syncQueue = JSON.parse(stored);
+      console.log(`📦 ${this.syncQueue.length} ações na fila`);
+    }
+  }
+}
+
+// ============================================
+// SISTEMA DE CACHE INTELIGENTE
+// ============================================
+
+class CacheStrategy {
+  constructor() {
+    this.CACHE_NAME = 'sitio-ipiranga-v9';
+    this.strategies = {
+      'orthomosaic': 'cache-first-long',  // Cache por 7 dias
+      'supabase': 'network-first-short',   // Rede primeiro, cache 1h
+      'static': 'cache-first-medium'       // Cache por 1 dia
+    };
+  }
+
+  // Estratégia para ortomosaico
+  async cacheFirstLong(request) {
+    const cache = await caches.open(this.CACHE_NAME);
+    const cached = await cache.match(request);
+    
+    if (cached) {
+      const cacheTime = this.getCacheTime(cached);
+      const age = Date.now() - cacheTime;
+      
+      // Cache válido por 7 dias
+      if (age < 7 * 24 * 60 * 60 * 1000) {
+        console.log('🎯 Cache hit (long):', request.url);
+        return cached;
+      }
+    }
+    
+    // Buscar da rede com timeout longo
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30s
+      
+      const response = await fetch(request, { signal: controller.signal });
+      clearTimeout(timeout);
+      
+      if (response.ok) {
+        const cloned = response.clone();
+        await cache.put(request, this.addCacheTime(cloned));
+        return response;
+      }
+    } catch (error) {
+      console.warn('Usando cache antigo:', error);
+    }
+    
+    // Fallback para cache antigo
+    return cached || this.createOfflinePlaceholder(request);
+  }
+
+  // Adicionar timestamp ao cache
+  addCacheTime(response) {
+    const headers = new Headers(response.headers);
+    headers.set('X-Cache-Time', Date.now().toString());
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
+  }
+
+  // Obter tempo do cache
+  getCacheTime(response) {
+    const time = response.headers.get('X-Cache-Time');
+    return time ? parseInt(time) : 0;
+  }
+
+  // Placeholder offline
+  createOfflinePlaceholder(request) {
+    if (request.url.includes('orthomosaic')) {
+      return new Response(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+          <rect fill="#f0fdf4" width="800" height="600"/>
+          <text x="400" y="280" text-anchor="middle" font-size="32" fill="#10b981">
+            🌿 Mapa Offline
+          </text>
+          <text x="400" y="320" text-anchor="middle" font-size="16" fill="#6b7280">
+            Conecte-se para carregar o ortomosaico
+          </text>
+        </svg>`,
+        { headers: { 'Content-Type': 'image/svg+xml' } }
+      );
+    }
+    
+    return new Response('Offline', { status: 503 });
+  }
+}
+
+// ============================================
+// INICIALIZAÇÃO OTIMIZADA
+// ============================================
+
+const syncManager = new SyncManager();
+const cacheStrategy = new CacheStrategy();
+
+// Carregar fila ao iniciar
+syncManager.loadQueue();
+
+// Registrar ação otimizada
+function registrarAcaoOtimizada(tipo, frutiferaId) {
+  // Adicionar à fila
+  syncManager.addToQueue({
+    tipo,
+    frutiferaId,
+    data: new Date().toISOString()
+  });
+  
+  // Atualizar UI local imediatamente
+  const index = frutiferas.findIndex(f => 
+    f.id === frutiferaId || f.fid === frutiferaId
+  );
+  
+  if (index >= 0) {
+    if (tipo === 'rega') frutiferas[index].ultima_rega = new Date().toISOString();
+    if (tipo === 'poda') frutiferas[index].ultima_poda = new Date().toISOString();
+    if (tipo === 'colheita') frutiferas[index].ultima_colheita = new Date().toISOString();
+    
+    localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+  }
+  
+  // Feedback imediato
+  mostrarToast(`✅ ${tipo} registrada! Sincronizando em lote...`);
+  
+  // Atualizar contador
+  atualizarContadorSync();
+}
+
+// Sincronização periódica inteligente
+setInterval(() => {
+  if (navigator.onLine && syncManager.syncQueue.length > 0) {
+    syncManager.smartSync();
+  }
+}, 2 * 60 * 1000); // A cada 2 minutos
+
+// Sincronizar ao voltar online
+window.addEventListener('online', () => {
+  setTimeout(() => syncManager.syncNow(), 2000);
+});
+
+// Sincronizar antes de fechar (se possível)
+window.addEventListener('beforeunload', () => {
+  if (syncManager.syncQueue.length > 0) {
+    syncManager.syncNow();
+  }
+});
+
+// ============================================
+// EXPORTAR PARA USO GLOBAL
+// ============================================
+
+window.syncManager = syncManager;
+window.cacheStrategy = cacheStrategy;
+
+console.log('✅ Sistema de sincronização otimizado carregado');
+ 
   const SUPABASE_URL = 'https://erbefbnjxgpetbetlzya.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmVmYm5qeGdwZXRiZXRsenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzI4ODcsImV4cCI6MjA3NjYwODg4N30.d09pjgddZpNY3Z4cVZ3V4h77aAf_GVGF0sOBTZkZf2A';
 
