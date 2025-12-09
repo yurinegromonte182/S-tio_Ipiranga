@@ -1915,36 +1915,87 @@ window.addEventListener('load', () => {
       event.target.classList.add('active');
     }
 
-    function obterLocalizacao() {
-      if (!navigator.geolocation) {
+    /* ============================================================
+   OBTER LOCALIZAÇÃO (corrigido + otimizado)
+   ============================================================ */
+function obterLocalizacao() {
+
+    if (!navigator.geolocation) {
         mostrarToast('❌ Geolocalização não suportada');
         return;
-      }
-      
-      mostrarToast('📍 Obtendo localização...');
-      
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude.toFixed(6);
-          const lon = position.coords.longitude.toFixed(6);
-          document.getElementById('coordenadas').value = `${lat}, ${lon}`;
-          document.getElementById('coordDisplay').style.display = 'block';
-          document.getElementById('coordDisplay').textContent = `✅ Localização obtida: ${lat}, ${lon}`;
-          mostrarToast('✅ Localização obtida!');
-        },
-        (error) => {
-          console.error('Erro ao obter localização:', error);
-          mostrarToast('❌ Erro ao obter localização');
-        }
-      );
     }
 
-    // Inicialização
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', inicializarApp);
-    } else {
-      inicializarApp();
-    }
-  </script>
+    mostrarToast('📍 Obtendo localização...');
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const lat = position.coords.latitude.toFixed(6);
+            const lon = position.coords.longitude.toFixed(6);
+
+            const coordInput = document.getElementById('coordenadas');
+            const coordDisplay = document.getElementById('coordDisplay');
+
+            if (coordInput) coordInput.value = `${lat}, ${lon}`;
+
+            if (coordDisplay) {
+                coordDisplay.style.display = 'block';
+                coordDisplay.textContent = `✅ Localização obtida: ${lat}, ${lon}`;
+            }
+
+            mostrarToast('✅ Localização obtida!');
+        },
+        (error) => {
+            console.error('Erro ao obter localização:', error);
+
+            let msg = '❌ Erro ao obter localização';
+
+            if (error.code === 1) msg = "❌ Permissão negada";
+            if (error.code === 2) msg = "❌ Localização indisponível";
+            if (error.code === 3) msg = "⏳ Tempo esgotado";
+
+            mostrarToast(msg);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+/* ============================================================
+   INICIALIZAÇÃO (compatível com seu HTML)
+   ============================================================ */
+function inicializarApp() {
+
+    console.log("🚀 Inicializando app...");
+
+    // Oculta loader e exibe app
+    const loader = document.getElementById("appLoader");
+    if (loader) loader.classList.add("hidden");
+
+    const main = document.getElementById("mainApp");
+    if (main) main.classList.add("loaded");
+
+    // Carrega configurações salvas
+    const cfg = JSON.parse(localStorage.getItem("site_config") || "{}");
+    Object.keys(cfg).forEach(k => {
+        const el = document.getElementById(k);
+        if (el) el.value = cfg[k];
+    });
+
+    // Carrega frutíferas + atualiza UI
+    carregarFrutiferas().then(() => {
+        console.log("✅ App inicializado com sucesso!");
+        carregarAcoesHojeDebounced();
+    });
+}
+
+/* ============================================================
+   ACIONAR INICIALIZAÇÃO COMO NO SEU HTML ORIGINAL
+   ============================================================ */
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarApp);
+} else {
+    inicializarApp();
+}
+
+</script>
 </body>
 </html>
