@@ -6,13 +6,7 @@ on:
       - main
     paths:
       - 'dados.geojson'
-  schedule:
-    # 06:00 BR = 09:00 UTC
-    - cron: '0 9 * * *'
-    # 12:00 BR = 15:00 UTC
-    - cron: '0 15 * * *'
-    # 18:00 BR = 21:00 UTC
-    - cron: '0 21 * * *'
+  # REMOVER: schedule (deixar Edge Function gerenciar)
   workflow_dispatch:
 
 jobs:
