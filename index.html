@@ -724,9 +724,9 @@
           <small>As ações são salvas localmente e sincronizadas com o banco de dados</small>
         </div>
         
-        <!-- BOTÃO PARA ZERAR TODAS AS AÇÕES -->
+        <!-- BOTÃO PARA ZERAR TODAS AS AÇÕES - CORRIGIDO -->
         <button class="btn btn-secondary" onclick="zerarTodasAcoes()" 
-                style="margin-bottom: 1rem; background: #ef4444; color: white; border: 2px solid #dc2626;">
+                style="margin-bottom: 1rem; background: #ef4444; color: white; border: 2px solid #dc2626; font-weight: bold;">
           🗑️ Zerar Todas as Ações
         </button>
         
@@ -1216,7 +1216,7 @@
             <div>📅 Plantio: ${formatarData(f.data_plantio) || 'Sem data'}</div>
             <div>💧 Última rega: ${formatarData(f.ultima_rega) || 'Nunca'}</div>
             <div>✂️ Última poda: ${formatarData(f.ultima_poda) || 'Nunca'}</div>
-            ${f.latitude && f.longitude ? `<div>📍 GPS: ${f.latitude.toFixed(6)}, ${f.longitude.toFixed(6)}</div>` : ''}
+            <div>🍊 Última colheita: ${formatarData(f.ultima_colheita) || 'Nunca'}</div>
           </div>
         </div>
       `).join('');
@@ -1257,6 +1257,12 @@
                 <div>
                   <strong style="color: #6b7280; font-size: 0.85rem;">Última Poda:</strong>
                   <div style="margin-top: 0.25rem;">${formatarData(frutifera.ultima_poda)} (${calcularDias(frutifera.ultima_poda)} dias atrás)</div>
+                </div>` : ''}
+                
+                ${frutifera.ultima_colheita ? `
+                <div>
+                  <strong style="color: #6b7280; font-size: 0.85rem;">Última Colheita:</strong>
+                  <div style="margin-top: 0.25rem;">${formatarData(frutifera.ultima_colheita)} (${calcularDias(frutifera.ultima_colheita)} dias atrás)</div>
                 </div>` : ''}
                 
                 ${frutifera.latitude && frutifera.longitude ? `
@@ -1472,7 +1478,7 @@
                   <div class="action-desc">${acao.descricao}</div>
                   <div class="action-meta">
                     Código: ${acao.frutifera.identificacao || acao.frutiferaId}
-                    ${acao.frutifera.latitude && acao.frutifera.longitude ? 
+                    ${acao.frutifera.latitude && acacao.frutifera.longitude ? 
                       `• 📍 ${acao.frutifera.latitude.toFixed(4)}, ${acao.frutifera.longitude.toFixed(4)}` : ''}
                   </div>
                   
@@ -1543,42 +1549,61 @@
       }
     }
 
-    // Função para ZERAR TODAS AS AÇÕES
+    // ⭐⭐ FUNÇÃO ZERAR TODAS AS AÇÕES - CORRIGIDA ⭐⭐
     function zerarTodasAcoes() {
-      if (!confirm('⚠️ Tem certeza que deseja zerar TODAS as ações?\n\nIsso irá remover todas as marcações de ações realizadas.')) {
+      if (!confirm('⚠️ Tem certeza que deseja zerar TODAS as ações?\n\nIsso irá: \n1. Remover todas as marcações de ações realizadas\n2. Resetar os contadores locais\n3. Manter os dados no Supabase')) {
         return;
       }
       
-      // Encontrar e remover todas as chaves de ações do localStorage
-      const keysToRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('action-')) {
-          keysToRemove.push(key);
+      console.log('🔄 Zerando todas as ações...');
+      
+      try {
+        // 1. Encontrar e remover todas as chaves de ações do localStorage
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith('action-')) {
+            keysToRemove.push(key);
+          }
         }
+        
+        console.log(`🗑️ Removendo ${keysToRemove.length} chaves do localStorage...`);
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+          console.log(`✅ Removido: ${key}`);
+        });
+        
+        // 2. Limpar a fila de sincronização de ações
+        localStorage.setItem('acoesPendentes', '[]');
+        
+        // 3. Resetar datas das frutíferas localmente (apenas para exibição)
+        frutiferas.forEach(f => {
+          // Apenas para interface local, não afeta o Supabase
+          f.ultima_rega = null;
+          f.ultima_poda = null;
+          f.ultima_colheita = null;
+        });
+        
+        // 4. Atualizar localStorage
+        localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+        
+        // 5. Atualizar a interface
+        carregarAcoesHoje();
+        atualizarStats();
+        atualizarContadorSync();
+        
+        // 6. Feedback visual
+        mostrarToast('✅ Todas as ações foram zeradas!');
+        
+        // 7. Recarregar para garantir consistência
+        setTimeout(() => {
+          carregarAcoesHojeDebounced();
+        }, 500);
+        
+      } catch (error) {
+        console.error('❌ Erro ao zerar ações:', error);
+        mostrarToast('❌ Erro ao zerar ações');
       }
-      
-      // Remover todas as chaves
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-      
-      // Limpar a fila de sincronização de ações
-      localStorage.setItem('acoesPendentes', '[]');
-      
-      // Resetar datas das frutíferas localmente
-      frutiferas.forEach(f => {
-        f.ultima_rega = null;
-        f.ultima_poda = null;
-        f.ultima_colheita = null;
-      });
-      
-      localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
-      
-      // Atualizar a interface
-      carregarAcoesHoje();
-      atualizarStats();
-      atualizarContadorSync();
-      
-      mostrarToast('✅ Todas as ações foram zeradas!');
     }
 
     // Função auxiliar para obter ícone da espécie
