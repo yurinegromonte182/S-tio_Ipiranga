@@ -980,7 +980,164 @@
         </div>
       </div>
     </div>
+<!-- Adicione este botão na seção de Configurações do seu index.html -->
+<!-- Coloque antes do fechamento da div id="config" -->
 
+<div class="section" style="margin-top: 1.5rem;">
+  <div class="section-title">📱 Notificações</div>
+  
+  <div class="info-box" style="margin-bottom: 1rem;">
+    <strong>🔔 Testar Notificação do Telegram</strong><br>
+    <small>Envia uma notificação com as estatísticas atuais do sistema. 
+    Os valores serão idênticos aos mostrados na aba "Ações".</small>
+  </div>
+  
+  <button class="btn btn-secondary" onclick="enviarNotificacaoManual()" 
+          style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem; transition: all 0.3s;"
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(14, 165, 233, 0.4)'"
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+    <span style="font-size: 1.5rem;">📤</span>
+    <span>Enviar Notificação de Teste</span>
+  </button>
+  
+  <div id="notificacaoStatus" style="font-size: 0.85rem; color: #6b7280; text-align: center; min-height: 1.2rem; margin-top: 0.5rem;"></div>
+  
+  <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+    <div style="display: flex; align-items: start; gap: 0.5rem;">
+      <span style="font-size: 1.2rem;">💡</span>
+      <div style="font-size: 0.85rem; color: #92400e; line-height: 1.5;">
+        <strong>Como funciona a sincronização:</strong><br>
+        1. Você marca ações como concluídas no app<br>
+        2. As ações são salvas no Supabase<br>
+        3. A Edge Function calcula estatísticas<br>
+        4. O Telegram recebe os mesmos números do app
+      </div>
+    </div>
+  </div>
+  
+  <div style="margin-top: 1.5rem; padding: 1rem; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;">
+    <div style="font-size: 0.85rem; color: #0c4a6e;">
+      <strong>📊 Status da Sincronização:</strong><br>
+      <div id="syncStatusDetalhado" style="margin-top: 0.5rem; font-family: monospace; font-size: 0.8rem;">
+        Aguardando sincronização...
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Função melhorada de envio de notificação
+async function enviarNotificacaoManual() {
+  if (!navigator.onLine) {
+    mostrarToast('📡 Você está offline');
+    return;
+  }
+  
+  const button = event.target;
+  const statusEl = document.getElementById('notificacaoStatus');
+  
+  // Desabilitar botão
+  button.disabled = true;
+  button.innerHTML = '<span style="font-size: 1.5rem;">⏳</span> Enviando...';
+  statusEl.textContent = '⏳ Preparando notificação...';
+  statusEl.style.color = '#f59e0b';
+  
+  try {
+    // 1. Salvar configurações primeiro
+    statusEl.textContent = '📝 Sincronizando configurações...';
+    await salvarConfigNaEdgeFunction();
+    
+    // 2. Enviar comando para Edge Function
+    statusEl.textContent = '📤 Enviando notificação...';
+    const response = await fetch(
+      'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson?force=true',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          source: 'manual',
+          timestamp: new Date().toISOString()
+        })
+      }
+    );
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log('📨 Resultado:', result);
+      
+      if (result.telegramSent) {
+        statusEl.textContent = '✅ Notificação enviada com sucesso!';
+        statusEl.style.color = '#059669';
+        mostrarToast('✅ Notificação enviada com sucesso!');
+        
+        // Mostrar detalhes
+        const detalhes = `
+Enviado: ${new Date().toLocaleTimeString('pt-BR')}
+Total: ${result.stats.totalFrutiferas} frutíferas
+Atrasadas: ${result.stats.totalAtrasadas} ações
+├─ Rega: ${result.stats.regasAtrasadas}
+├─ Poda: ${result.stats.podasAtrasadas}
+└─ Colheita: ${result.stats.colheitasAtrasadas}`;
+        
+        const syncStatusEl = document.getElementById('syncStatusDetalhado');
+        if (syncStatusEl) {
+          syncStatusEl.textContent = detalhes;
+        }
+        
+      } else {
+        statusEl.textContent = 'ℹ️ Sem ações atrasadas para notificar';
+        statusEl.style.color = '#0284c7';
+        mostrarToast('ℹ️ Sem ações atrasadas no momento');
+      }
+    } else {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+  } catch (error) {
+    console.error('Erro:', error);
+    statusEl.textContent = '❌ Erro ao enviar notificação';
+    statusEl.style.color = '#dc2626';
+    mostrarToast('❌ Erro ao enviar notificação');
+  } finally {
+    // Reabilitar botão
+    button.disabled = false;
+    button.innerHTML = '<span style="font-size: 1.5rem;">📤</span> <span>Enviar Notificação de Teste</span>';
+    
+    // Limpar status após 5 segundos
+    setTimeout(() => {
+      statusEl.textContent = '';
+      statusEl.style.color = '';
+    }, 5000);
+  }
+}
+
+// Atualizar status de sincronização em tempo real
+function atualizarStatusSync() {
+  const acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+  const pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+  
+  const syncStatusEl = document.getElementById('syncStatusDetalhado');
+  if (syncStatusEl) {
+    if (acoesPendentes.length === 0 && pendingSync.length === 0) {
+      syncStatusEl.textContent = '✅ Tudo sincronizado';
+      syncStatusEl.style.color = '#059669';
+    } else {
+      syncStatusEl.textContent = `
+⏳ Pendente:
+- ${acoesPendentes.length} ação(ões) não sincronizada(s)
+- ${pendingSync.length} frutífera(s) não enviada(s)`;
+      syncStatusEl.style.color = '#f59e0b';
+    }
+  }
+}
+
+// Atualizar status a cada 5 segundos
+setInterval(atualizarStatusSync, 5000);
+atualizarStatusSync();
+</script>
     <!-- Tab: Config -->
     <div id="config" class="tab-content">
       <div class="section">
@@ -1876,7 +2033,9 @@
     atualizarContadorSync();
   }
 
-  async function sincronizarFilaAcoes() {
+ // Adicione esta função no seu index.html, substituindo a função sincronizarFilaAcoes existente
+
+async function sincronizarFilaAcoes() {
   if (!navigator.onLine) {
     console.log('Offline - aguardando conexão');
     mostrarToast('📡 Você está offline. Ação será sincronizada quando conectar.');
@@ -1892,7 +2051,6 @@
   
   console.log(`🔄 Sincronizando ${acoesPendentes.length} ação(ões)...`);
   
-  // Mostrar mensagem específica para ações
   const toast = document.getElementById('toast');
   toast.innerHTML = `
     <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -1943,30 +2101,46 @@
   if (sucessos.length > 0) {
     mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s) com sucesso!`);
     
+    // 🎯 NOVO: Chamar Edge Function para atualizar GitHub e enviar Telegram
     try {
-      const edgeResponse = await fetch('https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
+      // Primeiro, enviar as configurações atuais do PWA
+      await salvarConfigNaEdgeFunction();
+      
+      // Depois, acionar a Edge Function
+      const edgeResponse = await fetch(
+        'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            source: 'pwa',
+            timestamp: new Date().toISOString()
+          })
         }
-      });
+      );
       
       if (edgeResponse.ok) {
         const result = await edgeResponse.json();
-        console.log('✅ GitHub atualizado via Edge Function:', result);
+        console.log('✅ Edge Function executada:', result);
+        
+        if (result.telegramSent) {
+          mostrarToast('📱 Notificação enviada para Telegram!');
+        }
         
         const syncMsg = document.getElementById('syncMessage');
-        if (syncMsg) {
-          syncMsg.innerHTML = `✅ GitHub atualizado! <small>Commit: ${result.commit?.substring(0, 8)}</small>`;
+        if (syncMsg && result.commit) {
+          syncMsg.innerHTML = `✅ GitHub atualizado! <small>Commit: ${result.commit.substring(0, 8)}</small>`;
           syncMsg.style.color = '#059669';
           
           setTimeout(() => {
             syncMsg.innerHTML = '';
           }, 5000);
         }
-        
-        mostrarToast('📱 Notificação enviada para Telegram');
+      } else {
+        console.error('Erro na Edge Function:', await edgeResponse.text());
       }
     } catch (e) {
       console.log('⚠️ Edge Function:', e.message);
@@ -1974,6 +2148,121 @@
   } else if (falhas.length > 0) {
     mostrarToast(`⚠️ Erro ao sincronizar ${falhas.length} ação(ões)`);
   }
+  
+  atualizarContadorSync();
+  await carregarFrutiferas();
+}
+
+// 🎯 NOVA FUNÇÃO: Salvar configurações do PWA no Supabase
+async function salvarConfigNaEdgeFunction() {
+  // Pegar as configurações atuais do localStorage
+  const config = {
+    mang_rega: localStorage.getItem('mang_rega') || '7',
+    mang_poda: localStorage.getItem('mang_poda') || '180',
+    mang_colh: localStorage.getItem('mang_colh') || '90',
+    caju_rega: localStorage.getItem('caju_rega') || '10',
+    caju_poda: localStorage.getItem('caju_poda') || '365',
+    caju_colh: localStorage.getItem('caju_colh') || '60',
+    coq_rega: localStorage.getItem('coq_rega') || '5',
+    coq_poda: localStorage.getItem('coq_poda') || '730',
+    coq_colh: localStorage.getItem('coq_colh') || '30',
+    cac_rega: localStorage.getItem('cac_rega') || '3',
+    cac_poda: localStorage.getItem('cac_poda') || '180',
+    cac_colh: localStorage.getItem('cac_colh') || '120'
+  };
+  
+  // Aqui você pode salvar em uma tabela no Supabase
+  // Por exemplo, criar uma tabela 'config' com um único registro
+  try {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/config?id=eq.1`,
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          id: 1,
+          intervalos: config,
+          updated_at: new Date().toISOString()
+        })
+      }
+    );
+    console.log('✅ Configurações sincronizadas com Supabase');
+  } catch (error) {
+    console.warn('⚠️ Não foi possível sincronizar configurações:', error);
+  }
+}
+
+// 🎯 ATUALIZAR A FUNÇÃO saveConfig também
+function saveConfig() {
+  const config = {};
+  
+  ['mang', 'caju', 'coq', 'cac'].forEach(prefixo => {
+    ['rega', 'poda', 'colh'].forEach(tipo => {
+      const key = `${prefixo}_${tipo}`;
+      const input = document.getElementById(key);
+      if (input) {
+        const valor = input.value;
+        localStorage.setItem(key, valor);
+        config[key] = valor;
+      }
+    });
+  });
+  
+  localStorage.setItem('configIntervalos', JSON.stringify({
+    ...config,
+    timestamp: new Date().toISOString()
+  }));
+  
+  console.log('✅ Configurações salvas:', config);
+  mostrarToast('✅ Configurações salvas!');
+  
+  // 🎯 NOVO: Sincronizar configurações com Supabase
+  salvarConfigNaEdgeFunction();
+  
+  carregarAcoesHojeDebounced();
+}
+
+// 🎯 NOVA FUNÇÃO: Forçar notificação do Telegram manualmente
+async function enviarNotificacaoManual() {
+  if (!navigator.onLine) {
+    mostrarToast('📡 Você está offline');
+    return;
+  }
+  
+  mostrarToast('📤 Enviando notificação...');
+  
+  try {
+    const response = await fetch(
+      'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson?force=true',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (response.ok) {
+      const result = await response.json();
+      if (result.telegramSent) {
+        mostrarToast('✅ Notificação enviada com sucesso!');
+      } else {
+        mostrarToast('ℹ️ Notificação não enviada (sem ações atrasadas)');
+      }
+    } else {
+      mostrarToast('❌ Erro ao enviar notificação');
+    }
+  } catch (error) {
+    console.error('Erro:', error);
+    mostrarToast('❌ Erro ao enviar notificação');
+  }
+}
   
   atualizarContadorSync();
   await carregarFrutiferas();
