@@ -69,62 +69,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -34.8500521373079,
-          -7.25493039362762
-        ]
-      },
-      "properties": {
-        "id": 346,
-        "geom": {
-          "type": "Point",
-          "crs": {
-            "type": "name",
-            "properties": {
-              "name": "EPSG:4326"
-            }
-          },
-          "coordinates": [
-            -34.850052137307884,
-            -7.254930393627623
-          ]
-        },
-        "latitude": -7.25493039362762,
-        "longitude": -34.8500521373079,
-        "nome_popular": "Cacau",
-        "nome_cientifico": null,
-        "data_plantio": null,
-        "tipo_plantio": null,
-        "altura_total": null,
-        "diametro_copa": null,
-        "data_poda_formacao_1": null,
-        "data_poda_formacao_2": null,
-        "data_poda_formacao_3": null,
-        "data_poda_reducao": null,
-        "data_poda_floracao": null,
-        "data_adubacao_ordinaria": null,
-        "adubacao_frutificacao": null,
-        "irrigacao_ordinaria": null,
-        "irrigacao_floracao": null,
-        "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": null,
-        "data_irrigacao_floracao": null,
-        "data_irrigacao_frutificacao": null,
-        "inicio_colheita": null,
-        "fim_colheita": null,
-        "volume_colhido": null,
-        "foto": null,
-        "updated_at": "2025-12-10T16:09:24.609053+00:00",
-        "ultima_modificacao": "2025-12-10T16:09:24.609053",
-        "ativo": true,
-        "cache_buster": 0,
-        "id_frutifera": null
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           -34.8492803282861,
           -7.25537156475515
         ]
@@ -563,62 +507,6 @@
         "foto": null,
         "updated_at": "2025-12-08T23:14:23.304497+00:00",
         "ultima_modificacao": "2025-12-06T13:53:34.528834",
-        "ativo": true,
-        "cache_buster": 0,
-        "id_frutifera": null
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -34.8496723514798,
-          -7.25479359278846
-        ]
-      },
-      "properties": {
-        "id": 333,
-        "geom": {
-          "type": "Point",
-          "crs": {
-            "type": "name",
-            "properties": {
-              "name": "EPSG:4326"
-            }
-          },
-          "coordinates": [
-            -34.84967235147977,
-            -7.254793592788465
-          ]
-        },
-        "latitude": -7.25479359278846,
-        "longitude": -34.8496723514798,
-        "nome_popular": "Cacau",
-        "nome_cientifico": null,
-        "data_plantio": null,
-        "tipo_plantio": null,
-        "altura_total": null,
-        "diametro_copa": null,
-        "data_poda_formacao_1": "2025-12-06",
-        "data_poda_formacao_2": null,
-        "data_poda_formacao_3": null,
-        "data_poda_reducao": null,
-        "data_poda_floracao": null,
-        "data_adubacao_ordinaria": null,
-        "adubacao_frutificacao": null,
-        "irrigacao_ordinaria": null,
-        "irrigacao_floracao": null,
-        "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": "2025-12-08",
-        "data_irrigacao_floracao": null,
-        "data_irrigacao_frutificacao": null,
-        "inicio_colheita": "2025-12-08",
-        "fim_colheita": null,
-        "volume_colhido": null,
-        "foto": null,
-        "updated_at": "2025-12-08T23:14:24.211124+00:00",
-        "ultima_modificacao": "2025-12-06T13:49:48.499487",
         "ativo": true,
         "cache_buster": 0,
         "id_frutifera": null
@@ -2906,14 +2794,14 @@
         "irrigacao_ordinaria": null,
         "irrigacao_floracao": null,
         "irrigacao_frutificacao": null,
-        "data_irrigacao_ordinaria": null,
+        "data_irrigacao_ordinaria": "2025-12-11",
         "data_irrigacao_floracao": null,
         "data_irrigacao_frutificacao": null,
         "inicio_colheita": null,
         "fim_colheita": null,
         "volume_colhido": null,
         "foto": null,
-        "updated_at": "2025-12-04T02:32:34.792165+00:00",
+        "updated_at": "2025-12-11T18:53:35.872098+00:00",
         "ultima_modificacao": "2025-12-04T02:32:34.792165",
         "ativo": true,
         "cache_buster": 0,
@@ -15914,15 +15802,15 @@
     }
   ],
   "metadata": {
-    "updated": "2025-12-11T16:37:27.199Z",
-    "total": 284,
-    "withCoordinates": 284,
+    "updated": "2025-12-11T18:53:41.247Z",
+    "total": 285,
+    "withCoordinates": 282,
     "stats": {
-      "total": 284,
+      "total": 285,
       "regasAtrasadas": 248,
-      "podasAtrasadas": 271,
-      "colheitasAtrasadas": 271,
-      "totalAtrasadas": 790
+      "podasAtrasadas": 272,
+      "colheitasAtrasadas": 272,
+      "totalAtrasadas": 792
     }
   }
 }
