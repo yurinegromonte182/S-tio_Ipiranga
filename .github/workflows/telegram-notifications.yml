@@ -46,107 +46,130 @@ jobs:
           HORA_EXIBICAO=$(date +%H:%M)
           HORA_NUM=$(date +%H)
           
-          # Intervalos por espécie (dias)
-          declare -A REGA_INT=( ["Mangabeira"]=7 ["Cajueiro"]=10 ["Coqueiro"]=5 ["Cacau"]=3 ["default"]=7 )
-          declare -A PODA_INT=( ["Mangabeira"]=180 ["Cajueiro"]=365 ["Coqueiro"]=730 ["Cacau"]=180 ["default"]=180 )
-          declare -A COLH_INT=( ["Mangabeira"]=90 ["Cajueiro"]=60 ["Coqueiro"]=30 ["Cacau"]=120 ["default"]=90 )
+          # Inicializar contadores
+          URG_COUNT=0
+          NORM_COUNT=0
+          PODA_COUNT=0
+          COLH_COUNT=0
+          TOTAL_ATRASADAS=0
           
-          # Função para calcular dias
-          dias_desde() {
-            if [ -z "$1" ] || [ "$1" = "null" ]; then
-              echo "999"
-            else
-              echo $(( ( $(date -d "$HOJE" +%s) - $(date -d "$1" +%s) ) / 86400 ))
-            fi
-          }
+          echo "📊 Processando dados.geojson..."
           
-          # Função para obter intervalo
-          get_intervalo() {
-            local especie=$1
-            local tipo=$2
-            local valor=""
-            
-            case "$tipo" in
-              "rega")
-                case "$especie" in
-                  *"Mangabeira"*) valor=7 ;;
-                  *"Caju"*) valor=10 ;;
-                  *"Coq"*) valor=5 ;;
-                  *"Cacau"*) valor=3 ;;
-                  *) valor=7 ;;
-                esac
-                ;;
-              "poda")
-                case "$especie" in
-                  *"Mangabeira"*) valor=180 ;;
-                  *"Caju"*) valor=365 ;;
-                  *"Coq"*) valor=730 ;;
-                  *"Cacau"*) valor=180 ;;
-                  *) valor=180 ;;
-                esac
-                ;;
-              "colheita")
-                case "$especie" in
-                  *"Mangabeira"*) valor=90 ;;
-                  *"Caju"*) valor=60 ;;
-                  *"Coq"*) valor=30 ;;
-                  *"Cacau"*) valor=120 ;;
-                  *) valor=90 ;;
-                esac
-                ;;
-            esac
-            
-            echo "$valor"
-          }
-          
-          # Processar cada planta
+          # Processar cada planta com a mesma lógica da Edge Function
           jq -c '.features[]' dados.geojson | while read -r feature; do
-            ID=$(echo "$feature" | jq -r '.properties.ID // .properties.fid // "S/N"')
-            NOME=$(echo "$feature" | jq -r '.properties.NOME_POPULAR // .properties.nome_popular // "Planta"')
-            ULT_REGA=$(echo "$feature" | jq -r '.properties.ULTIMA_REGA // .properties.ultima_rega // "null"')
-            ULT_PODA=$(echo "$feature" | jq -r '.properties.ULTIMA_PODA // .properties.ultima_poda // "null"')
-            ULT_COLH=$(echo "$feature" | jq -r '.properties.ULTIMA_COLHEITA // .properties.ultima_colheita // "null"')
+            # Extrair dados (com fallback para diferentes nomes de campos)
+            ESPECIE=$(echo "$feature" | jq -r '
+              .properties.NOME_POPULAR // 
+              .properties.nome_popular // 
+              .properties.nome_cientifico // 
+              .properties.especie // 
+              "Desconhecida"
+            ')
             
-            # Verificar rega
-            INT_R=$(get_intervalo "$NOME" "rega")
-            DIAS_R=$(dias_desde "$ULT_REGA")
+            # Datas (com fallback)
+            DATA_REGA=$(echo "$feature" | jq -r '
+              .properties.data_irrigacao_ordinaria // 
+              .properties.ULTIMA_REGA // 
+              .properties.ultima_rega // 
+              .properties.data_rega // 
+              "null"
+            ')
             
-            if [ "$DIAS_R" -ge $((INT_R + 2)) ]; then
-              echo "REGA_URG:$NOME #$ID - Atrasada $DIAS_R dias" >> /tmp/acoes.txt
-            elif [ "$DIAS_R" -ge "$INT_R" ]; then
-              if [ "$ULT_REGA" = "null" ]; then
-                echo "REGA_NORM:$NOME #$ID - Nunca foi regada" >> /tmp/acoes.txt
+            DATA_PODA=$(echo "$feature" | jq -r '
+              .properties.data_poda_formacao_1 // 
+              .properties.ULTIMA_PODA // 
+              .properties.ultima_poda // 
+              .properties.data_poda // 
+              "null"
+            ')
+            
+            DATA_COLH=$(echo "$feature" | jq -r '
+              .properties.inicio_colheita // 
+              .properties.ULTIMA_COLHEITA // 
+              .properties.ultima_colheita // 
+              .properties.data_colheita // 
+              "null"
+            ')
+            
+            # Função para calcular dias
+            dias_desde() {
+              if [ -z "$1" ] || [ "$1" = "null" ]; then
+                echo "999"
               else
-                echo "REGA_NORM:$NOME #$ID - Há $DIAS_R dias sem regar" >> /tmp/acoes.txt
+                echo $(( ( $(date -d "$HOJE" +%s) - $(date -d "$1" +%s) ) / 86400 ))
+              fi
+            }
+            
+            # Função para obter intervalo (mesma lógica da Edge Function)
+            get_intervalo() {
+              local especie="$1"
+              local tipo="$2"
+              
+              case "$tipo" in
+                "rega")
+                  case "$especie" in
+                    *"Coqueiro"*) echo "5" ;;
+                    *"Cacau"*) echo "3" ;;
+                    *"Cajueiro"*) echo "10" ;;
+                    *"Mangabeira"*) echo "7" ;;
+                    *) echo "7" ;;
+                  esac
+                  ;;
+                "poda")
+                  case "$especie" in
+                    *"Coqueiro"*) echo "730" ;;
+                    *"Cacau"*) echo "180" ;;
+                    *"Cajueiro"*) echo "365" ;;
+                    *"Mangabeira"*) echo "180" ;;
+                    *) echo "180" ;;
+                  esac
+                  ;;
+                "colheita")
+                  case "$especie" in
+                    *"Coqueiro"*) echo "30" ;;
+                    *"Cacau"*) echo "120" ;;
+                    *"Cajueiro"*) echo "60" ;;
+                    *"Mangabeira"*) echo "90" ;;
+                    *) echo "90" ;;
+                  esac
+                  ;;
+                *) echo "0" ;;
+              esac
+            }
+            
+            # Calcular dias desde cada ação
+            DIAS_REGA=$(dias_desde "$DATA_REGA")
+            DIAS_PODA=$(dias_desde "$DATA_PODA")
+            DIAS_COLH=$(dias_desde "$DATA_COLH")
+            
+            # Obter intervalos
+            INT_REGA=$(get_intervalo "$ESPECIE" "rega")
+            INT_PODA=$(get_intervalo "$ESPECIE" "poda")
+            INT_COLH=$(get_intervalo "$ESPECIE" "colheita")
+            
+            # Contar ações atrasadas (mesma lógica da Edge Function)
+            if [ "$DIAS_REGA" -ge "$INT_REGA" ]; then
+              TOTAL_ATRASADAS=$((TOTAL_ATRASADAS + 1))
+              if [ "$DIAS_REGA" -ge $((INT_REGA + 2)) ]; then
+                URG_COUNT=$((URG_COUNT + 1))
+              else
+                NORM_COUNT=$((NORM_COUNT + 1))
               fi
             fi
             
-            # Verificar poda
-            INT_P=$(get_intervalo "$NOME" "poda")
-            DIAS_P=$(dias_desde "$ULT_PODA")
-            
-            if [ "$DIAS_P" -ge "$INT_P" ]; then
-              if [ "$ULT_PODA" = "null" ]; then
-                echo "PODA:$NOME #$ID - Nunca foi podada" >> /tmp/acoes.txt
-              else
-                echo "PODA:$NOME #$ID - Há $DIAS_P dias sem poda" >> /tmp/acoes.txt
-              fi
+            if [ "$DIAS_PODA" -ge "$INT_PODA" ]; then
+              TOTAL_ATRASADAS=$((TOTAL_ATRASADAS + 1))
+              PODA_COUNT=$((PODA_COUNT + 1))
             fi
             
-            # Verificar colheita
-            INT_C=$(get_intervalo "$NOME" "colheita")
-            DIAS_C=$(dias_desde "$ULT_COLH")
-            
-            if [ "$DIAS_C" -ge "$INT_C" ]; then
-              if [ "$ULT_COLH" = "null" ]; then
-                echo "COLHEITA:$NOME #$ID - Verificar frutos" >> /tmp/acoes.txt
-              else
-                echo "COLHEITA:$NOME #$ID - Há $DIAS_C dias sem colheita" >> /tmp/acoes.txt
-              fi
+            if [ "$DIAS_COLH" -ge "$INT_COLH" ]; then
+              TOTAL_ATRASADAS=$((TOTAL_ATRASADAS + 1))
+              COLH_COUNT=$((COLH_COUNT + 1))
             fi
+            
           done
           
-          # Montar mensagem
+          # Total de plantas
           TOTAL=$(jq '.features | length' dados.geojson)
           
           # Saudação por horário (horário de Brasília)
@@ -158,49 +181,57 @@ jobs:
             SAUDACAO="🌙 Boa noite"
           fi
           
-          MESSAGE="${SAUDACAO}!%0A"
-          MESSAGE="${MESSAGE}📅 ${DATA_EXIBICAO} às ${HORA_EXIBICAO}%0A%0A"
+          echo "📊 Estatísticas:"
+          echo "Total plantas: $TOTAL"
+          echo "Atrasadas: $TOTAL_ATRASADAS"
+          echo "Rega URG: $URG_COUNT, NORM: $NORM_COUNT"
+          echo "Poda: $PODA_COUNT"
+          echo "Colheita: $COLH_COUNT"
           
-          # Detectar se foi acionado por commit (push)
-          if [ "${{ github.event_name }}" = "push" ]; then
-            MESSAGE="${MESSAGE}🔄 *Atualização automática*%0A"
-            MESSAGE="${MESSAGE}Dados sincronizados do Aplicativo%0A%0A"
-          else
-            MESSAGE="${MESSAGE}🔄 Atualização automática%0A"
-            MESSAGE="${MESSAGE}Dados sincronizados do Aplicativo%0A%0A"
+          # Montar mensagem (mesmo formato da Edge Function)
+          MESSAGE="${SAUDACAO}!
+📅 ${DATA_EXIBICAO} às ${HORA_EXIBICAO}
+
+🔄 Atualização automática
+Dados sincronizados do Aplicativo 
+
+📋 Total de frutíferas: ${TOTAL}"
+
+          # Adicionar seção de URGENTE apenas se houver atrasos
+          if [ "$TOTAL_ATRASADAS" -gt 0 ]; then
+            MESSAGE="${MESSAGE}
+
+🚨 URGENTE: ${TOTAL_ATRASADAS} ação(ões) atrasada(s)
+💧 Rega: $((URG_COUNT + NORM_COUNT)) planta(s)
+✂️ Poda: ${PODA_COUNT} planta(s)
+🍊 Colheita: ${COLH_COUNT} planta(s)"
           fi
           
-          MESSAGE="${MESSAGE}📋 Total de frutíferas: ${TOTAL}%0A%0A"
+          MESSAGE="${MESSAGE}
+
+💡 Veja detalhes no app"
           
-          # Contar ações por tipo
-          URG_COUNT=$(grep -c "^REGA_URG:" /tmp/acoes.txt 2>/dev/null || echo 0)
-          NORM_COUNT=$(grep -c "^REGA_NORM:" /tmp/acoes.txt 2>/dev/null || echo 0)
-          PODA_COUNT=$(grep -c "^PODA:" /tmp/acoes.txt 2>/dev/null || echo 0)
-          COLH_COUNT=$(grep -c "^COLHEITA:" /tmp/acoes.txt 2>/dev/null || echo 0)
+          # Remover quebras de linha duplas
+          MESSAGE=$(echo "$MESSAGE" | sed '/^$/N;/^\n$/D')
           
-          # Calcular total de TODAS as ações atrasadas (não apenas urgentes)
-          TOTAL_ATRASADAS=$((URG_COUNT + NORM_COUNT + PODA_COUNT + COLH_COUNT))
+          # Converter quebras de linha para %0A
+          MESSAGE=$(echo "$MESSAGE" | sed ':a;N;$!ba;s/\n/%0A/g')
           
-          # Montar resumo no formato que você quer
-          MESSAGE="${MESSAGE}🚨 URGENTE: ${TOTAL_ATRASADAS} ações atrasada(s)%0A"
-          MESSAGE="${MESSAGE}💧 Rega: $((URG_COUNT + NORM_COUNT)) planta(s)%0A"
-          MESSAGE="${MESSAGE}✂️ Poda: ${PODA_COUNT} planta(s)%0A"
-          MESSAGE="${MESSAGE}🍊 Colheita: ${COLH_COUNT} planta(s)%0A%0A"
-          MESSAGE="${MESSAGE}💡 Veja detalhes no app"
+          echo "📤 Enviando mensagem para Telegram..."
+          echo "Mensagem:"
+          echo -e "${MESSAGE//%0A/\\n}"
           
-          # Limpar arquivo temporário
-          rm -f /tmp/acoes.txt
-          
-          # Enviar notificação
+          # Enviar notificação (SEM parse_mode ou com "HTML" se preferir)
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d text="${MESSAGE}" \
-            -d parse_mode="Markdown"
+            -d text="${MESSAGE}"
           
-          echo "Notificação enviada com sucesso!"
-          echo "Horário: ${DATA_EXIBICAO} às ${HORA_EXIBICAO} (Brasília)"
-          echo "Total de frutíferas: ${TOTAL}"
-          echo "Ações atrasadas: ${TOTAL_ATRASADAS}"
+          if [ $? -eq 0 ]; then
+            echo "✅ Notificação enviada com sucesso!"
+          else
+            echo "❌ Erro ao enviar notificação"
+            exit 1
+          fi
           
       - name: Resumo estatístico (apenas 06h)
         if: github.event.schedule == '0 9 * * *'
