@@ -2034,43 +2034,31 @@ atualizarStatusSync();
   }
 
  
+// -----------------------------------------------------------
+// 1. Sincronização da fila de ações
+// -----------------------------------------------------------
 async function sincronizarFilaAcoes() {
   if (!navigator.onLine) {
-    console.log('Offline - aguardando conexão');
     mostrarToast('📡 Você está offline. Ação será sincronizada quando conectar.');
     return;
   }
-  
+
   let acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
-  
-  if (acoesPendentes.length === 0) {
-    console.log('Nenhuma ação pendente para sincronizar');
-    return;
-  }
-  
-  console.log(`🔄 Sincronizando ${acoesPendentes.length} ação(ões)...`);
-  
-  const toast = document.getElementById('toast');
-  toast.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 0.5rem;">
-      <span>🔄</span>
-      <div>
-        Sincronizando ${acoesPendentes.length} ação(ões)...
-        <div style="font-size: 0.8rem; opacity: 0.8;">Por favor, aguarde</div>
-      </div>
-    </div>
-  `;
-  toast.className = 'toast show';
-  
+
+  if (acoesPendentes.length === 0) return;
+
+  mostrarToast(`🔄 Sincronizando ${acoesPendentes.length} ação(ões)...`);
+
   const sucessos = [];
   const falhas = [];
-  
+
   for (const acao of acoesPendentes) {
+    const campoSupabase =
+      acao.tipo === 'rega' ? 'data_irrigacao_ordinaria' :
+      acao.tipo === 'poda' ? 'data_poda_formacao_1' :
+      'inicio_colheita';
+
     try {
-      const campoSupabase = acao.tipo === 'rega' ? 'data_irrigacao_ordinaria' : 
-                            acao.tipo === 'poda' ? 'data_poda_formacao_1' : 
-                            'inicio_colheita';
-      
       const response = await fetch(
         `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${acao.frutiferaId}`,
         {
@@ -2083,26 +2071,23 @@ async function sincronizarFilaAcoes() {
           body: JSON.stringify({ [campoSupabase]: acao.data })
         }
       );
-      
-      if (response.ok) {
-        sucessos.push(acao);
-        console.log(`✅ ${acao.tipo} sincronizada para ID ${acao.frutiferaId}`);
-      } else {
-        falhas.push(acao);
-      }
-    } catch (error) {
+
+      if (response.ok) sucessos.push(acao);
+      else falhas.push(acao);
+
+    } catch (e) {
       falhas.push(acao);
     }
   }
-  
+
   localStorage.setItem('acoesPendentes', JSON.stringify(falhas));
-  
+
   if (sucessos.length > 0) {
-    mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s) com sucesso!`);
-    
+    mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s)!`);
+
     try {
       await salvarConfigNaEdgeFunction();
-      
+
       const edgeResponse = await fetch(
         'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson',
         {
@@ -2117,40 +2102,31 @@ async function sincronizarFilaAcoes() {
           })
         }
       );
-      
+
       if (edgeResponse.ok) {
         const result = await edgeResponse.json();
-        console.log('✅ Edge Function executada:', result);
-        
-        if (result.telegramSent) {
-          mostrarToast('📱 Notificação enviada para Telegram!');
-        }
-        
-        const syncMsg = document.getElementById('syncMessage');
-        if (syncMsg && result.commit) {
-          syncMsg.innerHTML = `✅ GitHub atualizado! <small>Commit: ${result.commit.substring(0, 8)}</small>`;
-          syncMsg.style.color = '#059669';
-          
-          setTimeout(() => {
-            syncMsg.innerHTML = '';
-          }, 5000);
-        }
-      } else {
-        console.error('Erro na Edge Function:', await edgeResponse.text());
+        console.log('Edge:', result);
+        if (result.telegramSent) mostrarToast('📱 Notificação enviada ao Telegram!');
       }
+
     } catch (e) {
-      console.log('⚠️ Edge Function:', e.message);
+      console.warn('Edge error:', e.message);
     }
+
   } else if (falhas.length > 0) {
     mostrarToast(`⚠️ Erro ao sincronizar ${falhas.length} ação(ões)`);
   }
-  
+
   atualizarContadorSync();
   await carregarFrutiferas();
 }
 
+
+
+// -----------------------------------------------------------
+// 2. Salvar Config no Supabase (edge)
+// -----------------------------------------------------------
 async function salvarConfigNaEdgeFunction() {
-  // Pegar as configurações atuais do localStorage
   const config = {
     mang_rega: localStorage.getItem('mang_rega') || '7',
     mang_poda: localStorage.getItem('mang_poda') || '180',
@@ -2165,9 +2141,7 @@ async function salvarConfigNaEdgeFunction() {
     cac_poda: localStorage.getItem('cac_poda') || '180',
     cac_colh: localStorage.getItem('cac_colh') || '120'
   };
-  
-  // Aqui você pode salvar em uma tabela no Supabase
-  // Por exemplo, criar uma tabela 'config' com um único registro
+
   try {
     await fetch(
       `${SUPABASE_URL}/rest/v1/config?id=eq.1`,
@@ -2186,18 +2160,25 @@ async function salvarConfigNaEdgeFunction() {
         })
       }
     );
-    console.log('✅ Configurações sincronizadas com Supabase');
-  } catch (error) {
-    console.warn('⚠️ Não foi possível sincronizar configurações:', error);
+
+    console.log('Config salva na Edge');
+
+  } catch (e) {
+    console.warn('Erro salvando config:', e);
   }
 }
 
-function saveConfig() {
+
+
+// -----------------------------------------------------------
+// 3. Salvar Configurações Locais (Corrigido: agora async)
+// -----------------------------------------------------------
+async function saveConfig() {
   const config = {};
-  
-  ['mang', 'caju', 'coq', 'cac'].forEach(prefixo => {
+
+  ['mang', 'caju', 'coq', 'cac'].forEach(pref => {
     ['rega', 'poda', 'colh'].forEach(tipo => {
-      const key = `${prefixo}_${tipo}`;
+      const key = `${pref}_${tipo}`;
       const input = document.getElementById(key);
       if (input) {
         const valor = input.value;
@@ -2206,424 +2187,119 @@ function saveConfig() {
       }
     });
   });
-  
-  localStorage.setItem('configIntervalos', JSON.stringify({
-    ...config,
-    timestamp: new Date().toISOString()
-  }));
-  
-  console.log('✅ Configurações salvas:', config);
-  mostrarToast('✅ Configurações salvas!');
-  
-  // 🎯 NOVO: Sincronizar configurações com Supabase
-  salvarConfigNaEdgeFunction();
-  
+
+  localStorage.setItem('configIntervalos',
+    JSON.stringify({
+      ...config,
+      timestamp: new Date().toISOString()
+    })
+  );
+
+  mostrarToast('Configurações salvas!');
+  await salvarConfigNaEdgeFunction();
   carregarAcoesHojeDebounced();
 }
 
-  
-  atualizarContadorSync();
-  await carregarFrutiferas();
+
+
+// -----------------------------------------------------------
+// 4. Sincronizar Tudo
+// -----------------------------------------------------------
+async function sincronizarTudo() {
+  if (!navigator.onLine) {
+    mostrarToast('📡 Você está offline');
+    return;
+  }
+
+  mostrarToast('🔄 Sincronizando tudo...');
+
+  await sincronizarComSupabase?.();
+  await sincronizarFilaAcoes();
+
+  mostrarToast('✅ Sincronização completa!');
 }
 
-  async function sincronizarTudo() {
-    if (!navigator.onLine) {
-      mostrarToast('📡 Você está offline');
-      return;
-    }
-    
-    mostrarToast('🔄 Sincronizando tudo...');
-    
-    await sincronizarComSupabase();
-    await sincronizarFilaAcoes();
-    
-    mostrarToast('✅ Sincronização completa!');
-  }
 
-  function atualizarContadorSync() {
-    const acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
-    const pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
-    const total = acoesPendentes.length + pendingSync.length;
-    
-    const statusEl = document.getElementById('syncStatus');
-    if (statusEl) {
-      if (total > 0) {
-        statusEl.innerHTML = `
-          <span style="display: flex; align-items: center; gap: 5px;">
-            <span style="background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold;">
-              ${total}
-            </span>
-            <span>pendente(s)</span>
-          </span>
-        `;
-        statusEl.style.color = '#f59e0b';
-      } else {
-        statusEl.innerHTML = '✅ Sincronizado';
-        statusEl.style.color = '#10b981';
-      }
-    }
-  }
 
-  // ⭐⭐ FUNÇÕES DE CONFIGURAÇÃO CORRIGIDAS ⭐⭐
-  function loadConfig() {
-    const defaults = {
-      mang_rega: 7, mang_poda: 180, mang_colh: 90,
-      caju_rega: 10, caju_poda: 365, caju_colh: 60,
-      coq_rega: 5, coq_poda: 730, coq_colh: 30,
-      cac_rega: 3, cac_poda: 180, cac_colh: 120
-    };
-    
-    Object.keys(defaults).forEach(key => {
-      const input = document.getElementById(key);
-      if (input) {
-        const valor = localStorage.getItem(key) || defaults[key];
-        input.value = valor;
-      }
-    });
-  }
+// -----------------------------------------------------------
+// 5. Contador de Sync
+// -----------------------------------------------------------
+function atualizarContadorSync() {
+  const acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+  const pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+  const total = acoesPendentes.length + pendingSync.length;
 
-  function saveConfig() {
-    const config = {};
-    
-    ['mang', 'caju', 'coq', 'cac'].forEach(prefixo => {
-      ['rega', 'poda', 'colh'].forEach(tipo => {
-        const key = `${prefixo}_${tipo}`;
-        const input = document.getElementById(key);
-        if (input) {
-          const valor = input.value;
-          localStorage.setItem(key, valor);
-          config[key] = valor;
-        }
-      });
-    });
-    
-    localStorage.setItem('configIntervalos', JSON.stringify({
-      ...config,
-      timestamp: new Date().toISOString()
-    }));
-    
-    console.log('✅ Configurações salvas:', config);
-    mostrarToast('✅ Configurações salvas!');
-    
-    carregarAcoesHojeDebounced();
-  }
+  const el = document.getElementById('syncStatus');
 
-  // ⭐⭐ FUNÇÕES DE INTERVALO OTIMIZADAS ⭐⭐
-  function obterIntervaloRega(frutifera) {
-    const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-    const config = JSON.parse(localStorage.getItem('configIntervalos') || '{}');
-    
-    if (especie.includes('coqueiro')) return parseInt(config.coq_rega || localStorage.getItem('coq_rega') || '5');
-    if (especie.includes('cacau')) return parseInt(config.cac_rega || localStorage.getItem('cac_rega') || '3');
-    if (especie.includes('mangabeira')) return parseInt(config.mang_rega || localStorage.getItem('mang_rega') || '7');
-    if (especie.includes('caju')) return parseInt(config.caju_rega || localStorage.getItem('caju_rega') || '10');
-    return 7;
-  }
+  if (!el) return;
 
-  function obterIntervaloPoda(frutifera) {
-    const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-    const config = JSON.parse(localStorage.getItem('configIntervalos') || '{}');
-    
-    if (especie.includes('coqueiro')) return parseInt(config.coq_poda || localStorage.getItem('coq_poda') || '730');
-    if (especie.includes('cacau')) return parseInt(config.cac_poda || localStorage.getItem('cac_poda') || '180');
-    if (especie.includes('mangabeira')) return parseInt(config.mang_poda || localStorage.getItem('mang_poda') || '180');
-    if (especie.includes('caju')) return parseInt(config.caju_poda || localStorage.getItem('caju_poda') || '365');
-    return 180;
-  }
+  if (total > 0) {
+    el.innerHTML = `
+      <span style="display:flex;align-items:center;gap:5px;">
+        <span style="background:#ef4444;color:white;padding:2px 8px;border-radius:10px;font-size:0.8rem;font-weight:bold;">
+          ${total}
+        </span> pendente(s)
+      </span>
+    `;
+    el.style.color = '#f59e0b';
 
-  function obterIntervaloColheita(frutifera) {
-    const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-    const config = JSON.parse(localStorage.getItem('configIntervalos') || '{}');
-    
-    if (especie.includes('coqueiro')) return parseInt(config.coq_colh || localStorage.getItem('coq_colh') || '30');
-    if (especie.includes('cacau')) return parseInt(config.cac_colh || localStorage.getItem('cac_colh') || '120');
-    if (especie.includes('mangabeira')) return parseInt(config.mang_colh || localStorage.getItem('mang_colh') || '90');
-    if (especie.includes('caju')) return parseInt(config.caju_colh || localStorage.getItem('caju_colh') || '60');
-    return 90;
-  }
-
-  // ⭐⭐ INICIALIZAÇÃO ATUALIZADA ⭐⭐
-  async function inicializarApp() {
-    console.log('🚀 Inicializando app...');
-    
-    try {
-      loadConfig(); // Carrega configurações primeiro
-      atualizarContadorSync();
-      await carregarFrutiferas();
-      
-      document.getElementById('appLoader').classList.add('hidden');
-      document.getElementById('mainApp').classList.add('loaded');
-      
-      // Status online/offline
-      const statusDot = document.getElementById('statusDot');
-      const statusText = document.getElementById('statusText');
-      
-      if (navigator.onLine) {
-        if (statusDot) statusDot.className = 'status-dot';
-        if (statusText) statusText.textContent = 'Online';
-        
-        // Sincronizar automaticamente quando online
-        setTimeout(() => {
-          sincronizarTudo();
-        }, 3000);
-      } else {
-        if (statusDot) statusDot.className = 'status-dot offline';
-        if (statusText) statusText.textContent = 'Offline';
-      }
-      
-      console.log('✅ App inicializado com sucesso!');
-      
-    } catch (error) {
-      console.error('❌ Erro na inicialização:', error);
-      document.getElementById('appLoader').classList.add('hidden');
-      document.getElementById('mainApp').classList.add('loaded');
-    }
-  }
-
-  // Event listeners otimizados
-  window.addEventListener('online', () => {
-    document.getElementById('statusDot').className = 'status-dot';
-    document.getElementById('statusText').textContent = 'Online';
-    mostrarToast('🌐 Conectado! Sincronizando...');
-    
-    setTimeout(() => {
-      sincronizarTudo();
-    }, 2000);
-  });
-
-  window.addEventListener('offline', () => {
-    document.getElementById('statusDot').className = 'status-dot offline';
-    document.getElementById('statusText').textContent = 'Offline';
-    mostrarToast('📡 Você está offline');
-  });
-
-  // Funções do mapa e auxiliares (mantidas iguais)
-  function inicializarMapa() {
-    if (map) return;
-    
-    map = L.map('mapContainer').setView([-7.1195, -34.8450], 13);
-    
-    baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Esri, Maxar',
-      maxZoom: 19
-    });
-    
-    const orthoBounds = [
-      [-7.2567123407225420, -34.8508400655581880],
-      [-7.2534701604245848, -34.8470106189991711]
-    ];
-
-    orthomosaicLayer = L.imageOverlay('orthomosaic.jpeg', orthoBounds, {
-      opacity: 1,
-      attribution: 'Ortomosaico Sítio Ipiranga'
-    }).addTo(map);
-
-    frutiferasLayer = L.layerGroup().addTo(map);
-    map.fitBounds(orthoBounds);
-    atualizarMapa();
-  }
-
-  function atualizarMapa() {
-    if (!map || !frutiferasLayer) return;
-    
-    frutiferasLayer.clearLayers();
-    markers = {};
-    
-    const bounds = [];
-    
-    frutiferas.forEach(f => {
-      if (f.latitude && f.longitude) {
-        const color = speciesColors[f.especie] || '#10b981';
-        
-        const marker = L.circleMarker([f.latitude, f.longitude], {
-          radius: 8,
-          fillColor: color,
-          color: '#fff',
-          weight: 2,
-          opacity: 1,
-          fillOpacity: 0.8
-        });
-
-        const popupContent = `
-          <div class="popup-content">
-            <h3>${f.nome_popular || f.especie}</h3>
-            <div class="info-row">
-              <span class="info-label">Código:</span>
-              <span class="info-value">${f.identificacao || f.id}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Data Plantio:</span>
-              <span class="info-value">${formatarData(f.data_plantio) || 'Não informado'}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Última Rega:</span>
-              <span class="info-value">${formatarData(f.ultima_rega) || 'Nunca'}</span>
-            </div>
-            ${f.altura_total ? `
-            <div class="info-row">
-              <span class="info-label">Altura:</span>
-              <span class="info-value">${f.altura_total} m</span>
-            </div>` : ''}
-          </div>
-        `;
-
-        marker.bindPopup(popupContent);
-        frutiferasLayer.addLayer(marker);
-        markers[f.id] = marker;
-        bounds.push([f.latitude, f.longitude]);
-      }
-    });
-
-    if (bounds.length > 0) {
-      map.fitBounds(bounds, { padding: [50, 50] });
-    }
-  }
-
-  function changeBasemap(basemapType, event) {
-    document.querySelectorAll('.map-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    
-    Object.values(baseLayers).forEach(layer => {
-      if (map.hasLayer(layer)) map.removeLayer(layer);
-    });
-    
-    if (orthomosaicLayer && map.hasLayer(orthomosaicLayer)) {
-      map.removeLayer(orthomosaicLayer);
-    }
-    
-    if (basemapType === 'orthomosaic') {
-      orthomosaicLayer.addTo(map);
-      const orthoBounds = [
-        [-7.2567123407225420, -34.8508400655581880],
-        [-7.2534701604245848, -34.8470106189991711]
-      ];
-      map.fitBounds(orthoBounds);
-    } else if (basemapType === 'satellite') {
-      baseLayers.satellite.addTo(map);
-      const markerBounds = Object.values(markers).map(m => m.getLatLng());
-      if (markerBounds.length > 0) {
-        map.fitBounds(markerBounds, { padding: [50, 50] });
-      }
-    }
-  }
-
-  function toggleFrutiferasLayer() {
-    const isChecked = document.getElementById('toggleFrutiferas').checked;
-    if (isChecked) {
-      frutiferasLayer.addTo(map);
-    } else {
-      map.removeLayer(frutiferasLayer);
-    }
-  }
-
-  function toggleCadastroForm() {
-    const container = document.getElementById('cadastroFormContainer');
-    const icon = document.getElementById('cadastroToggleIcon');
-    
-    if (container.classList.contains('collapsed')) {
-      container.classList.remove('collapsed');
-      icon.textContent = '▼';
-    } else {
-      container.classList.add('collapsed');
-      icon.textContent = '▶';
-    }
-  }
-
-  function calcularDias(dataString) {
-    if (!dataString) return 999;
-    const data = new Date(dataString);
-    const hoje = new Date();
-    const diff = hoje - data;
-    return Math.floor(diff / (1000 * 60 * 60 * 24));
-  }
-
-  function formatarData(dataString) {
-    if (!dataString) return null;
-    const data = new Date(dataString);
-    return data.toLocaleDateString('pt-BR');
-  }
-
-  function mostrarToast(mensagem) {
-    const toast = document.getElementById('toast');
-    toast.textContent = mensagem;
-    toast.className = 'toast show';
-    
-    setTimeout(() => {
-      toast.className = 'toast';
-    }, 3000);
-  }
-
-  function switchTab(event, tabName) {
-    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    
-    event.target.classList.add('active');
-    document.getElementById(tabName).classList.add('active');
-    
-    if (tabName === 'mapa') {
-      setTimeout(() => {
-        if (!map) {
-          inicializarMapa();
-        } else {
-          map.invalidateSize();
-          atualizarMapa();
-        }
-      }, 100);
-    }
-  }
-
-  function filterAcoes(event, filtro) {
-    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    currentFilter = filtro;
-    carregarAcoesHojeDebounced();
-  }
-
-  function filtrarFrutiferas() {
-    const query = document.getElementById('searchFrutifera').value.toLowerCase();
-    const cards = document.querySelectorAll('.frutifera-card');
-    
-    cards.forEach(card => {
-      const text = card.textContent.toLowerCase();
-      card.style.display = text.includes(query) ? 'block' : 'none';
-    });
-  }
-
-  function filterHistorico(event, periodo) {
-    document.querySelectorAll('#historico .filter-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-  }
-
-  function obterLocalizacao() {
-    if (!navigator.geolocation) {
-      mostrarToast('❌ Geolocalização não suportada');
-      return;
-    }
-    
-    mostrarToast('📍 Obtendo localização...');
-    
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude.toFixed(6);
-        const lon = position.coords.longitude.toFixed(6);
-        document.getElementById('coordenadas').value = `${lat}, ${lon}`;
-        document.getElementById('coordDisplay').style.display = 'block';
-        document.getElementById('coordDisplay').textContent = `✅ Localização obtida: ${lat}, ${lon}`;
-        mostrarToast('✅ Localização obtida!');
-      },
-      (error) => {
-        console.error('Erro ao obter localização:', error);
-        mostrarToast('❌ Erro ao obter localização');
-      }
-    );
-  }
-
-  // Inicialização
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', inicializarApp);
   } else {
-    inicializarApp();
+    el.innerHTML = '✅ Sincronizado';
+    el.style.color = '#10b981';
   }
+}
+
+
+
+// -----------------------------------------------------------
+// 6. Inicialização Principal (CORRIGIDA – antes tinha await solto)
+// -----------------------------------------------------------
+async function inicializarApp() {
+  try {
+    loadConfig();
+    atualizarContadorSync();
+    await carregarFrutiferas();
+
+    const loader = document.getElementById('appLoader');
+    const main = document.getElementById('mainApp');
+
+    loader?.classList.add('hidden');
+    main?.classList.add('loaded');
+
+    if (navigator.onLine) {
+      setTimeout(() => sincronizarTudo(), 2000);
+    }
+
+  } catch (e) {
+    console.error('Erro inicializando app', e);
+  }
+}
+
+
+
+// -----------------------------------------------------------
+// 7. Listeners Online/Offline
+// -----------------------------------------------------------
+window.addEventListener('online', () => {
+  mostrarToast('🌐 Conectado! Sincronizando...');
+  setTimeout(() => sincronizarTudo(), 1500);
+});
+
+window.addEventListener('offline', () => {
+  mostrarToast('📡 Você está offline');
+});
+
+
+
+// -----------------------------------------------------------
+// 8. Start do App
+// -----------------------------------------------------------
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', inicializarApp);
+} else {
+  inicializarApp();
+}
+
  </script>
 
 </body>
