@@ -992,13 +992,13 @@
     Os valores serão idênticos aos mostrados na aba "Ações".</small>
   </div>
   
-  <button class="btn btn-secondary" onclick="enviarNotificacaoManual()" 
-          style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem; transition: all 0.3s;"
-          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(14, 165, 233, 0.4)'"
-          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-    <span style="font-size: 1.5rem;">📤</span>
-    <span>Enviar Notificação de Teste</span>
-  </button>
+  <button class="btn btn-secondary" onclick="enviarNotificacaoManual(event)" 
+        style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem; transition: all 0.3s;"
+        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(14, 165, 233, 0.4)'"
+        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+  <span style="font-size: 1.5rem;">📤</span>
+  <span>Enviar Notificação de Teste</span>
+</button>
   
   <div id="notificacaoStatus" style="font-size: 0.85rem; color: #6b7280; text-align: center; min-height: 1.2rem; margin-top: 0.5rem;"></div>
   
@@ -2100,12 +2100,9 @@ async function sincronizarFilaAcoes() {
   if (sucessos.length > 0) {
     mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s) com sucesso!`);
     
-    // 🎯 NOVO: Chamar Edge Function para atualizar GitHub e enviar Telegram
     try {
-      // Primeiro, enviar as configurações atuais do PWA
       await salvarConfigNaEdgeFunction();
       
-      // Depois, acionar a Edge Function
       const edgeResponse = await fetch(
         'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson',
         {
@@ -2152,7 +2149,6 @@ async function sincronizarFilaAcoes() {
   await carregarFrutiferas();
 }
 
-// 🎯 NOVA FUNÇÃO: Salvar configurações do PWA no Supabase
 async function salvarConfigNaEdgeFunction() {
   // Pegar as configurações atuais do localStorage
   const config = {
@@ -2196,7 +2192,6 @@ async function salvarConfigNaEdgeFunction() {
   }
 }
 
-// 🎯 ATUALIZAR A FUNÇÃO saveConfig também
 function saveConfig() {
   const config = {};
   
@@ -2226,42 +2221,6 @@ function saveConfig() {
   carregarAcoesHojeDebounced();
 }
 
-// 🎯 NOVA FUNÇÃO: Forçar notificação do Telegram manualmente
-async function enviarNotificacaoManual() {
-  if (!navigator.onLine) {
-    mostrarToast('📡 Você está offline');
-    return;
-  }
-  
-  mostrarToast('📤 Enviando notificação...');
-  
-  try {
-    const response = await fetch(
-      'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson?force=true',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    
-    if (response.ok) {
-      const result = await response.json();
-      if (result.telegramSent) {
-        mostrarToast('✅ Notificação enviada com sucesso!');
-      } else {
-        mostrarToast('ℹ️ Notificação não enviada (sem ações atrasadas)');
-      }
-    } else {
-      mostrarToast('❌ Erro ao enviar notificação');
-    }
-  } catch (error) {
-    console.error('Erro:', error);
-    mostrarToast('❌ Erro ao enviar notificação');
-  }
-}
   
   atualizarContadorSync();
   await carregarFrutiferas();
