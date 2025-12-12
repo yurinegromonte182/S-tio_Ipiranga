@@ -2249,6 +2249,23 @@ function atualizarContadorSync() {
   }
 }
 
+    function loadConfig() {
+  const defaults = {
+    mang_rega: 7, mang_poda: 180, mang_colh: 90,
+    caju_rega: 10, caju_poda: 365, caju_colh: 60,
+    coq_rega: 5, coq_poda: 730, coq_colh: 30,
+    cac_rega: 3, cac_poda: 180, cac_colh: 120
+  };
+
+  Object.keys(defaults).forEach(key => {
+    const input = document.getElementById(key);
+    if (input) {
+      const valor = localStorage.getItem(key) || defaults[key];
+      input.value = valor;
+    }
+  });
+}
+
 
 
 // -----------------------------------------------------------
