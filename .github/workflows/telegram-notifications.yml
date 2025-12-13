@@ -1,0 +1,231 @@
+name: Notificações Telegram - Sincronização Automática
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dados.geojson'
+  schedule:
+    # 06:00 BR = 09:00 UTC
+    - cron: '0 9 * * *'
+    # 12:00 BR = 15:00 UTC
+    - cron: '0 15 * * *'
+    # 18:00 BR = 21:00 UTC
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+
+jobs:
+  notify-telegram:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Processar ações e notificar Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          # Instalar jq para processar JSON
+          sudo apt-get update
+          sudo apt-get install -y jq
+          
+          # Configurar fuso horário de Brasília
+          export TZ='America/Sao_Paulo'
+          
+          echo "🔄 Iniciando processamento..."
+          
+          # Data atual no horário de Brasília
+          DATA_EXIBICAO=$(date +%d/%m/%Y)
+          HORA_EXIBICAO=$(date +%H:%M)
+          HORA_NUM=$(date +%H)
+          
+          # Inicializar contadores
+          URG_COUNT=0
+          NORM_COUNT=0
+          PODA_COUNT=0
+          COLH_COUNT=0
+          TOTAL_ATRASADAS=0
+          
+          echo "📊 Lendo dados.geojson..."
+          
+          # Total de plantas
+          TOTAL=$(jq '.features | length' dados.geojson)
+          echo "📈 Total de plantas encontradas: $TOTAL"
+          
+          # Verificar se o arquivo existe e tem dados
+          if [ ! -f "dados.geojson" ] || [ "$TOTAL" -eq 0 ]; then
+            echo "❌ Arquivo dados.geojson não encontrado ou vazio"
+            exit 1
+          fi
+          
+          # Processar cada planta
+          for i in $(seq 0 $((TOTAL - 1))); do
+            echo "🌱 Processando planta $((i + 1))/$TOTAL..."
+            
+            # Extrair dados usando jq de forma mais segura
+            ESPECIE=$(jq -r ".features[$i].properties.NOME_POPULAR // \"Desconhecida\"" dados.geojson)
+            
+            DATA_REGA=$(jq -r ".features[$i].properties.data_irrigacao_ordinaria // \"\"" dados.geojson)
+            DATA_PODA=$(jq -r ".features[$i].properties.data_poda_formacao_1 // \"\"" dados.geojson)
+            DATA_COLH=$(jq -r ".features[$i].properties.inicio_colheita // \"\"" dados.geojson)
+            
+            # Debug: mostrar dados da primeira planta
+            if [ $i -eq 0 ]; then
+              echo "   Exemplo - Espécie: $ESPECIE"
+              echo "   Rega: $DATA_REGA"
+              echo "   Poda: $DATA_PODA"
+              echo "   Colheita: $DATA_COLH"
+            fi
+            
+            # Função para calcular dias
+            dias_desde() {
+              local data="$1"
+              if [ -z "$data" ] || [ "$data" = "null" ] || [ "$data" = "" ]; then
+                echo "999"
+                return
+              fi
+              
+              # Converter data para formato padrão (YYYY-MM-DD)
+              # Tenta detectar o formato da data
+              if [[ "$data" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2} ]]; then
+                # Já está no formato correto
+                data_hoje=$(date +%Y-%m-%d)
+                if command -v dateutils.ddiff &> /dev/null; then
+                  echo $(( ( $(date -d "$data_hoje" +%s) - $(date -d "$data" +%s) ) / 86400 ))
+                else
+                  # Fallback simples
+                  echo "30"
+                fi
+              elif [[ "$data" =~ ^[0-9]{2}/[0-9]{2}/[0-9]{4} ]]; then
+                # Formato DD/MM/YYYY
+                data_reformatada=$(echo "$data" | awk -F'/' '{print $3"-"$2"-"$1}')
+                data_hoje=$(date +%Y-%m-%d)
+                if command -v dateutils.ddiff &> /dev/null; then
+                  echo $(( ( $(date -d "$data_hoje" +%s) - $(date -d "$data_reformatada" +%s) ) / 86400 ))
+                else
+                  echo "30"
+                fi
+              else
+                echo "30"
+              fi
+            }
+            
+            # Obter intervalos
+            get_intervalo() {
+              local especie="$1"
+              local tipo="$2"
+              
+              case "$tipo" in
+                "rega")
+                  case "$especie" in
+                    *"Coqueiro"*|*"coqueiro"*) echo "5" ;;
+                    *"Cacau"*|*"cacau"*) echo "3" ;;
+                    *"Cajueiro"*|*"cajueiro"*) echo "10" ;;
+                    *"Mangabeira"*|*"mangabeira"*) echo "7" ;;
+                    *) echo "7" ;;
+                  esac
+                  ;;
+                "poda")
+                  case "$especie" in
+                    *"Coqueiro"*|*"coqueiro"*) echo "730" ;;
+                    *"Cacau"*|*"cacau"*) echo "180" ;;
+                    *"Cajueiro"*|*"cajueiro"*) echo "365" ;;
+                    *"Mangabeira"*|*"mangabeira"*) echo "180" ;;
+                    *) echo "180" ;;
+                  esac
+                  ;;
+                "colheita")
+                  case "$especie" in
+                    *"Coqueiro"*|*"coqueiro"*) echo "30" ;;
+                    *"Cacau"*|*"cacau"*) echo "120" ;;
+                    *"Cajueiro"*|*"cajueiro"*) echo "60" ;;
+                    *"Mangabeira"*|*"mangabeira"*) echo "90" ;;
+                    *) echo "90" ;;
+                  esac
+                  ;;
+                *) echo "0" ;;
+              esac
+            }
+            
+            # Calcular dias desde cada ação
+            DIAS_REGA=$(dias_desde "$DATA_REGA")
+            DIAS_PODA=$(dias_desde "$DATA_PODA")
+            DIAS_COLH=$(dias_desde "$DATA_COLH")
+            
+            # Obter intervalos
+            INT_REGA=$(get_intervalo "$ESPECIE" "rega")
+            INT_PODA=$(get_intervalo "$ESPECIE" "poda")
+            INT_COLH=$(get_intervalo "$ESPECIE" "colheita")
+            
+            # Contar ações atrasadas
+            if [ "$DIAS_REGA" -ge "$INT_REGA" ]; then
+              TOTAL_ATRASADAS=$((TOTAL_ATRASADAS + 1))
+              if [ "$DIAS_REGA" -ge $((INT_REGA + 2)) ]; then
+                URG_COUNT=$((URG_COUNT + 1))
+              else
+                NORM_COUNT=$((NORM_COUNT + 1))
+              fi
+            fi
+            
+            if [ "$DIAS_PODA" -ge "$INT_PODA" ]; then
+              TOTAL_ATRASADAS=$((TOTAL_ATRASADAS + 1))
+              PODA_COUNT=$((PODA_COUNT + 1))
+            fi
+            
+            if [ "$DIAS_COLH" -ge "$INT_COLH" ]; then
+              TOTAL_ATRASADAS=$((TOTAL_ATRASADAS + 1))
+              COLH_COUNT=$((COLH_COUNT + 1))
+            fi
+            
+          done
+          
+          echo "📊 Estatísticas finais:"
+          echo "   Total plantas: $TOTAL"
+          echo "   Total atrasadas: $TOTAL_ATRASADAS"
+          echo "   Rega URG: $URG_COUNT"
+          echo "   Rega NORM: $NORM_COUNT"
+          echo "   Poda: $PODA_COUNT"
+          echo "   Colheita: $COLH_COUNT"
+          
+          # Saudação por horário
+          if [ "$HORA_NUM" -lt 12 ]; then
+            SAUDACAO="☀️ Bom dia"
+          elif [ "$HORA_NUM" -lt 18 ]; then
+            SAUDACAO="⛅ Boa tarde"
+          else
+            SAUDACAO="🌙 Boa noite"
+          fi
+          
+          # Montar mensagem
+          MESSAGE="${SAUDACAO}!"
+          MESSAGE="${MESSAGE}%0A📅 ${DATA_EXIBICAO} às ${HORA_EXIBICAO}"
+          MESSAGE="${MESSAGE}%0A%0A🔄 Atualização automática"
+          MESSAGE="${MESSAGE}%0ADados sincronizados do Aplicativo"
+          MESSAGE="${MESSAGE}%0A%0A📋 Total de frutíferas: ${TOTAL}"
+          
+          # Adicionar seção de URGENTE apenas se houver atrasos
+          if [ "$TOTAL_ATRASADAS" -gt 0 ]; then
+            MESSAGE="${MESSAGE}%0A%0A🚨 URGENTE: ${TOTAL_ATRASADAS} ação(ões) atrasada(s)"
+            MESSAGE="${MESSAGE}%0A💧 Rega: $((URG_COUNT + NORM_COUNT)) planta(s)"
+            MESSAGE="${MESSAGE}%0A✂️ Poda: ${PODA_COUNT} planta(s)"
+            MESSAGE="${MESSAGE}%0A🍊 Colheita: ${COLH_COUNT} planta(s)"
+          fi
+          
+          MESSAGE="${MESSAGE}%0A%0A💡 Veja detalhes no app"
+          
+          echo "📤 Enviando mensagem para Telegram..."
+          echo "Mensagem formatada:"
+          echo -e "${MESSAGE//%0A/\\n}"
+          
+          # Enviar notificação
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="${MESSAGE}"
