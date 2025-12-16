@@ -1,7 +1,12 @@
-name: Telegram Notifications
+name: Telegram Notifications (Scheduled)
 
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: "0 9 * * *"   # 06:00 Brasil
+    - cron: "0 15 * * *"  # 12:00 Brasil
+    - cron: "0 21 * * *"  # 18:00 Brasil
+
+  workflow_dispatch: # permite rodar manualmente também
 
 jobs:
   notify:
