@@ -1772,7 +1772,7 @@
     }
   }
 
-  async function sincronizarComSupabase() {
+ async function sincronizarComSupabase() {
     if (!navigator.onLine) {
       mostrarToast('📡 Você está offline. Conecte-se à internet para sincronizar.');
       return;
@@ -1802,6 +1802,7 @@
     
     let sucessos = 0;
     let erros = 0;
+    const frutiferasCadastradas = [];
     
     for (const frutifera of pendingSync) {
       try {
@@ -1812,7 +1813,8 @@
             headers: {
               'apikey': SUPABASE_ANON_KEY,
               'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
             },
             body: JSON.stringify({
               nome_popular: frutifera.especie,
@@ -1837,6 +1839,12 @@
             frutiferas[index].pendingSync = false;
           }
           
+          frutiferasCadastradas.push({
+            especie: frutifera.especie,
+            id: resultado.id,
+            data_plantio: frutifera.data_plantio
+          });
+          
           sucessos++;
         } else {
           erros++;
@@ -1858,11 +1866,42 @@
       syncButton.innerHTML = '<span>🔄</span> Sincronizar com Banco de Dados';
     }
     
-    if (erros === 0) {
+    if (erros === 0 && frutiferasCadastradas.length > 0) {
       syncMsg.textContent = `✅ ${sucessos} item(ns) sincronizado(s) com sucesso!`;
       syncMsg.style.color = '#059669';
       mostrarToast(`✅ ${sucessos} frutífera(s) sincronizada(s) com sucesso!`);
-    } else {
+      
+      try {
+        console.log('📨 Enviando notificação de cadastro ao Telegram...');
+        
+        const edgeResponse = await fetch(
+          'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              trigger: 'cadastro',
+              frutiferas: frutiferasCadastradas
+            })
+          }
+        );
+        
+        if (edgeResponse.ok) {
+          const result = await edgeResponse.json();
+          console.log('✅ Notificação de cadastro enviada:', result);
+          
+          if (result.telegramSent) {
+            mostrarToast('📱 Cadastro notificado no Telegram');
+          }
+        }
+      } catch (edgeError) {
+        console.error('⚠️ Erro ao notificar cadastro:', edgeError);
+      }
+      
+    } else if (erros > 0) {
       syncMsg.textContent = `⚠️ ${sucessos} sucesso(s), ${erros} erro(s)`;
       syncMsg.style.color = '#dc2626';
       mostrarToast(`⚠️ ${sucessos} sucesso(s), ${erros} erro(s)`);
@@ -1875,7 +1914,6 @@
     
     atualizarContadorSync();
   }
-
   async function sincronizarFilaAcoes() {
   if (!navigator.onLine) {
     console.log('Offline - aguardando conexão');
@@ -1892,7 +1930,6 @@
   
   console.log(`🔄 Sincronizando ${acoesPendentes.length} ação(ões)...`);
   
-  // Mostrar mensagem específica para ações
   const toast = document.getElementById('toast');
   toast.innerHTML = `
     <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -1944,32 +1981,54 @@
     mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s) com sucesso!`);
     
     try {
-      const edgeResponse = await fetch('https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
+      console.log('📨 Chamando Edge Function para enviar notificação...');
+      
+      const edgeResponse = await fetch(
+        'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            trigger: 'user_action',
+            actions: sucessos.map(a => ({
+              tipo: a.tipo,
+              frutiferaId: a.frutiferaId,
+              data: a.data
+            }))
+          })
         }
-      });
+      );
       
       if (edgeResponse.ok) {
         const result = await edgeResponse.json();
-        console.log('✅ GitHub atualizado via Edge Function:', result);
+        console.log('✅ Edge Function executada:', result);
         
-        const syncMsg = document.getElementById('syncMessage');
-        if (syncMsg) {
-          syncMsg.innerHTML = `✅ GitHub atualizado! <small>Commit: ${result.commit?.substring(0, 8)}</small>`;
-          syncMsg.style.color = '#059669';
+        if (result.telegramSent) {
+          mostrarToast('📱 Notificação enviada para Telegram');
           
-          setTimeout(() => {
-            syncMsg.innerHTML = '';
-          }, 5000);
+          const syncMsg = document.getElementById('syncMessage');
+          if (syncMsg) {
+            syncMsg.innerHTML = `✅ Notificação enviada! <small>${sucessos.length} ação(ões) registrada(s)</small>`;
+            syncMsg.style.color = '#059669';
+            
+            setTimeout(() => {
+              syncMsg.innerHTML = '';
+            }, 5000);
+          }
+        } else {
+          console.log('ℹ️ Telegram não foi enviado (sem ações atrasadas adicionais)');
         }
-        
-        mostrarToast('📱 Notificação enviada para Telegram');
+      } else {
+        const errorText = await edgeResponse.text();
+        console.error('❌ Erro na Edge Function:', errorText);
+        mostrarToast('⚠️ Ações salvas, mas notificação falhou');
       }
-    } catch (e) {
-      console.log('⚠️ Edge Function:', e.message);
+    } catch (edgeError) {
+      console.error('❌ Erro ao chamar Edge Function:', edgeError);
+      mostrarToast('⚠️ Ações salvas, mas notificação falhou');
     }
   } else if (falhas.length > 0) {
     mostrarToast(`⚠️ Erro ao sincronizar ${falhas.length} ação(ões)`);
@@ -2378,6 +2437,97 @@
     inicializarApp();
   }
  </script>
+  <script>
+/* ===============================
+   EDGE FUNCTION CONFIG
+================================ */
+const EDGE_FUNCTION_URL =
+  "https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson";
+
+/* ===============================
+   COLETAR AÇÕES JÁ CALCULADAS
+   (não duplica regras)
+================================ */
+function coletarAcoesAtuais() {
+  const acoes = [];
+
+  frutiferas.forEach(f => {
+    const especie = f.nome_popular || f.especie;
+
+    const diasRega = f.ultima_rega ? calcularDias(f.ultima_rega) : 999;
+    if (diasRega >= obterIntervaloRega(f)) {
+      acoes.push({
+        tipo: "rega",
+        especie,
+        frutifera_id: f.id || f.fid,
+        dias: diasRega
+      });
+    }
+
+    const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
+    if (diasPoda >= obterIntervaloPoda(f)) {
+      acoes.push({
+        tipo: "poda",
+        especie,
+        frutifera_id: f.id || f.fid,
+        dias: diasPoda
+      });
+    }
+
+    const diasColheita = f.ultima_colheita ? calcularDias(f.ultima_colheita) : 999;
+    if (diasColheita >= obterIntervaloColheita(f)) {
+      acoes.push({
+        tipo: "colheita",
+        especie,
+        frutifera_id: f.id || f.fid,
+        dias: diasColheita
+      });
+    }
+  });
+
+  return acoes;
+}
+
+/* ===============================
+   ENVIAR PARA EDGE FUNCTION
+================================ */
+async function enviarAcoesParaEdgeFunction() {
+  const acoes = coletarAcoesAtuais();
+
+  if (acoes.length === 0) {
+    mostrarToast("✅ Nenhuma ação pendente");
+    return;
+  }
+
+  const payload = {
+    origem: "pwa",
+    timestamp: new Date().toISOString(),
+    perfil: perfilAtual,
+    acoes
+  };
+
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) throw new Error("Erro ao enviar");
+
+    mostrarToast("📡 Ações enviadas ao servidor");
+
+  } catch (err) {
+    console.error(err);
+    mostrarToast("❌ Falha ao enviar ações");
+  }
+}
+</script>
+
 
 </body>
 </html>
