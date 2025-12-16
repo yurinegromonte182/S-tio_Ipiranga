@@ -8,11 +8,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Call Edge Function
-  run: |
-    curl -s -X POST "$EDGE_FUNCTION_URL?force=true" \
-      -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-      -H "apikey: $SUPABASE_SERVICE_ROLE_KEY"
-  env:
-    EDGE_FUNCTION_URL: ${{ secrets.EDGE_FUNCTION_URL }}
-    SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      - name: Call Edge Function (force telegram)
+        run: |
+          curl -s -X POST "$EDGE_FUNCTION_URL?force=true" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY"
+        env:
+          EDGE_FUNCTION_URL: ${{ secrets.EDGE_FUNCTION_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
