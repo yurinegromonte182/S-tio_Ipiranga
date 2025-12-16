@@ -1,9 +1,6 @@
-name: Telegram Notifications (Single Source of Truth)
+name: Telegram Notifications
 
 on:
-  schedule:
-    # Executa todo dia às 07:00 da manhã (horário UTC ≈ 04:00 Brasil)
-    - cron: "0 7 * * *"
   workflow_dispatch:
 
 jobs:
@@ -11,12 +8,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-     - name: Call Edge Function
-  run: |
-    curl -s -X POST "$EDGE_FUNCTION_URL" \
-      -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-      -H "apikey: $SUPABASE_SERVICE_ROLE_KEY"
-  env:
-    EDGE_FUNCTION_URL: ${{ secrets.EDGE_FUNCTION_URL }}
-    SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
+      - name: Call Edge Function
+        run: |
+          curl -s -X POST "$EDGE_FUNCTION_URL" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY"
+        env:
+          EDGE_FUNCTION_URL: ${{ secrets.EDGE_FUNCTION_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
