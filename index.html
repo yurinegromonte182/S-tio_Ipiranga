@@ -1439,29 +1439,43 @@
       </div>
 
       <div id="content-${especieId}" class="especie-content" style="display: none;">
-        ${acoesVisiveis.map(acao => {
-          const frutiferaId = acao.frutifera.id || acao.frutifera.fid || acao.frutifera.identificacao;
-          const actionId = `action-${frutiferaId}-${acao.tipo}`;
-          const isDone = localStorage.getItem(actionId) === 'true';
-
-          return `
-            <div class="action-item ${acao.urgencia}">
-              <div class="action-title">
-                ${acao.urgencia === 'urgent' ? '🚨' :
-                  acao.tipo === 'rega' ? '💧' :
-                  acao.tipo === 'poda' ? '✂️' : '🍊'}
-                ${acao.titulo}
-              </div>
-
-              <div class="action-desc">${acao.descricao}</div>
-
-              <button class="btn btn-primary"
-                      onclick="toggleAction('${acao.tipo}', '${frutiferaId}', '${actionId}', event)">
-                ${isDone ? '↶ Desmarcar' : '✅ Marcar como feito'}
-              </button>
+        ${acoesVisiveis.map(acao => `
+          <div class="action-item ${acao.urgencia}">
+            <div class="action-title">
+              ${
+                  acao.urgencia === 'urgent'
+                    ? '🚨'
+                    : acao.tipo === 'rega'
+                    ? '💧'
+                    : acao.tipo === 'poda'
+                    ? '✂️'
+                    : '🍊'
+              }
+              ${acao.titulo}
             </div>
-          `;
-        }).join('')}
+
+            <div class="action-desc">${acao.descricao}</div>
+
+            <button class="btn btn-primary"
+                    onclick="toggleAction(
+                      '${acao.tipo}',
+                      '${acao.frutifera.id || acao.frutifera.fid || acao.frutifera.identificacao}',
+                      'action-${acao.frutifera.id || acao.frutifera.fid || acao.frutifera.identificacao}-${acao.tipo}',
+                      event
+                    )">
+             ${
+               localStorage.getItem(
+                 'action-' +
+                 (acao.frutifera.id || acao.frutifera.fid || acao.frutifera.identificacao) +
+                 '-' + acao.tipo
+               ) === 'true'
+                 ? '↶ Desmarcar'
+                 : '✅ Marcar como feito'
+             }
+           </button>
+         </div>
+       `).join('')}
+
 
         ${acoesFiltradas.length > acoesVisiveis.length ? `
           <button class="btn btn-secondary"
