@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1070,165 +1069,140 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  
   <script>
+  // ===== CONFIGURAÇÕES GLOBAIS =====
   const SUPABASE_URL = 'https://erbefbnjxgpetbetlzya.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmVmYm5qeGdwZXRiZXRsenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzI4ODcsImV4cCI6MjA3NjYwODg4N30.d09pjgddZpNY3Z4cVZ3V4h77aAf_GVGF0sOBTZkZf2A';
-
-  // ===== PAGINAÇÃO DE AÇÕES =====
-  <script>
-/* ================= CONFIG ================= */
-const ACOES_POR_PAGINA = 30;
-let paginaAtualPorEspecie = {};
-let frutiferas = [];
-let currentFilter = 'todas';
-
-/* ================= HELPERS ================= */
-function calcularDias(data) {
-  if (!data) return 999;
-  const d = new Date(data);
-  return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function obterIntervaloRega(f) {
-  return 7;
-}
-function obterIntervaloPoda(f) {
-  return 180;
-}
-function obterIntervaloColheita(f) {
-  return 90;
-}
-
-/* ================= FILTRO ================= */
-function filterAcoes(event, tipo) {
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  currentFilter = tipo;
-  carregarAcoesHoje();
-}
-
-/* ================= PAGINAÇÃO ================= */
-function carregarMaisAcoes(especie) {
-  paginaAtualPorEspecie[especie]++;
-  carregarAcoesHoje();
-}
-
-/* ================= TOGGLE ================= */
-function toggleEspecieSection(id) {
-  const content = document.getElementById(`content-${id}`);
-  const toggle = document.getElementById(`toggle-${id}`);
-  if (!content) return;
-
-  const aberto = content.style.display === 'block';
-  content.style.display = aberto ? 'none' : 'block';
-  toggle.style.transform = aberto ? 'rotate(0deg)' : 'rotate(180deg)';
-}
-
-/* ================= AÇÕES ================= */
-function carregarAcoesHoje() {
-  const container = document.getElementById('acoesHoje');
-  if (!container) return;
-
-  const especies = {
-    Mangabeira: { icone: '🥭', acoes: [] },
-    Cajueiro:   { icone: '🌰', acoes: [] },
-    Coqueiro:   { icone: '🥥', acoes: [] },
-    Cacau:      { icone: '🍫', acoes: [] }
+  const EDGE_FUNCTION_URL = "https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson";
+  
+  // ===== VARIÁVEIS GLOBAIS =====
+  let frutiferas = [];
+  let pendingSync = [];
+  let map = null;
+  let markers = {};
+  let frutiferasLayer = null;
+  let orthomosaicLayer = null;
+  let baseLayers = { satellite: null };
+  let currentFilter = 'todas';
+  const speciesColors = {
+    'Mangabeira': '#10b981',
+    'Cajueiro': '#f59e0b',
+    'Coqueiro': '#ef4444',
+    'Cacau': '#8b5cf6'
   };
+  
+  // Configurações de paginação
+  const ACOES_POR_PAGINA = 10;
+  let paginaAtualPorEspecie = {};
+  
+  // ===== FUNÇÕES UTILITÁRIAS =====
+  function calcularDias(dataString) {
+    if (!dataString) return 999;
+    const data = new Date(dataString);
+    const hoje = new Date();
+    const diff = hoje - data;
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  }
 
-  frutiferas.forEach(f => {
-    const especie = f.especie || f.nome_popular;
-    if (!especies[especie]) return;
+  function formatarData(dataString) {
+    if (!dataString) return null;
+    const data = new Date(dataString);
+    return data.toLocaleDateString('pt-BR');
+  }
 
-    if (calcularDias(f.ultima_rega) >= obterIntervaloRega(f)) {
-      especies[especie].acoes.push({
-        tipo: 'rega',
-        titulo: `Regar ${especie}`,
-        desc: `Última rega há ${calcularDias(f.ultima_rega)} dias`,
-        icon: '💧'
-      });
+  function mostrarToast(mensagem) {
+    const toast = document.getElementById('toast');
+    toast.textContent = mensagem;
+    toast.className = 'toast show';
+    
+    setTimeout(() => {
+      toast.className = 'toast';
+    }, 3000);
+  }
+
+  // ===== FUNÇÕES DE INTERVALO =====
+  function obterIntervaloRega(frutifera) {
+    const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
+    const config = JSON.parse(localStorage.getItem('configIntervalos') || '{}');
+    
+    if (especie.includes('coqueiro')) return parseInt(config.coq_rega || localStorage.getItem('coq_rega') || '5');
+    if (especie.includes('cacau')) return parseInt(config.cac_rega || localStorage.getItem('cac_rega') || '3');
+    if (especie.includes('mangabeira')) return parseInt(config.mang_rega || localStorage.getItem('mang_rega') || '7');
+    if (especie.includes('caju')) return parseInt(config.caju_rega || localStorage.getItem('caju_rega') || '10');
+    return 7;
+  }
+
+  function obterIntervaloPoda(frutifera) {
+    const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
+    const config = JSON.parse(localStorage.getItem('configIntervalos') || '{}');
+    
+    if (especie.includes('coqueiro')) return parseInt(config.coq_poda || localStorage.getItem('coq_poda') || '730');
+    if (especie.includes('cacau')) return parseInt(config.cac_poda || localStorage.getItem('cac_poda') || '180');
+    if (especie.includes('mangabeira')) return parseInt(config.mang_poda || localStorage.getItem('mang_poda') || '180');
+    if (especie.includes('caju')) return parseInt(config.caju_poda || localStorage.getItem('caju_poda') || '365');
+    return 180;
+  }
+
+  function obterIntervaloColheita(frutifera) {
+    const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
+    const config = JSON.parse(localStorage.getItem('configIntervalos') || '{}');
+    
+    if (especie.includes('coqueiro')) return parseInt(config.coq_colh || localStorage.getItem('coq_colh') || '30');
+    if (especie.includes('cacau')) return parseInt(config.cac_colh || localStorage.getItem('cac_colh') || '120');
+    if (especie.includes('mangabeira')) return parseInt(config.mang_colh || localStorage.getItem('mang_colh') || '90');
+    if (especie.includes('caju')) return parseInt(config.caju_colh || localStorage.getItem('caju_colh') || '60');
+    return 90;
+  }
+
+  // ===== FUNÇÕES DE AÇÕES =====
+  function carregarMaisAcoes(especie) {
+    if (!paginaAtualPorEspecie[especie]) {
+      paginaAtualPorEspecie[especie] = 1;
     }
+    paginaAtualPorEspecie[especie]++;
+    carregarAcoesHoje();
+  }
 
-    if (calcularDias(f.ultima_poda) >= obterIntervaloPoda(f)) {
-      especies[especie].acoes.push({
-        tipo: 'poda',
-        titulo: `Podar ${especie}`,
-        desc: `Última poda há ${calcularDias(f.ultima_poda)} dias`,
-        icon: '✂️'
-      });
+  function filterAcoes(event, filtro) {
+    paginaAtualPorEspecie = {};
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    currentFilter = filtro;
+    carregarAcoesHoje();
+  }
+
+  function toggleEspecieSection(especieId) {
+    const content = document.getElementById(`content-${especieId}`);
+    const toggle = document.getElementById(`toggle-${especieId}`);
+    const header = toggle ? toggle.closest('.especie-header') : null;
+
+    if (!content || !toggle) return;
+
+    const aberto = content.style.display === 'block';
+
+    if (aberto) {
+      // FECHAR
+      content.style.display = 'none';
+      toggle.style.transform = 'rotate(0deg)';
+
+      if (header) {
+        header.style.boxShadow = 'none';
+        header.style.borderColor = '#e5e7eb';
+      }
+    } else {
+      // ABRIR
+      content.style.display = 'block';
+      toggle.style.transform = 'rotate(180deg)';
+
+      if (header) {
+        header.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.15)';
+        header.style.borderColor = '#10b981';
+      }
     }
-
-    if (calcularDias(f.ultima_colheita) >= obterIntervaloColheita(f)) {
-      especies[especie].acoes.push({
-        tipo: 'colheita',
-        titulo: `Colher ${especie}`,
-        desc: `Última colheita há ${calcularDias(f.ultima_colheita)} dias`,
-        icon: '🍊'
-      });
-    }
-  });
-
-  let html = '';
-
-  Object.entries(especies).forEach(([especie, dados]) => {
-    if (!paginaAtualPorEspecie[especie]) paginaAtualPorEspecie[especie] = 1;
-
-    let lista = dados.acoes;
-    if (currentFilter !== 'todas') {
-      lista = lista.filter(a => a.tipo === currentFilter);
-    }
-
-    if (lista.length === 0) return;
-
-    const limite = paginaAtualPorEspecie[especie] * ACOES_POR_PAGINA;
-    const visiveis = lista.slice(0, limite);
-    const id = especie.toLowerCase();
-
-    html += `
-      <div class="section">
-        <div class="section-title clickable" onclick="toggleEspecieSection('${id}')">
-          ${dados.icone} ${especie} (${lista.length})
-          <span id="toggle-${id}" style="float:right">▼</span>
-        </div>
-
-        <div id="content-${id}" style="display:none">
-          ${visiveis.map(a => `
-            <div class="action-item">
-              <div class="action-title">${a.icon} ${a.titulo}</div>
-              <div class="action-desc">${a.desc}</div>
-            </div>
-          `).join('')}
-
-          ${lista.length > visiveis.length ? `
-            <button class="btn btn-secondary" onclick="carregarMaisAcoes('${especie}')">
-              ⬇️ Carregar mais (${lista.length - visiveis.length})
-            </button>
-          ` : ''}
-        </div>
-      </div>
-    `;
-  });
-
-  container.innerHTML = html || `
-    <div class="info-box success-box">
-      ✅ Nenhuma ação pendente
-    </div>
-  `;
-}
-
-/* ================= MOCK (para não quebrar) ================= */
-frutiferas = [
-  { especie:'Mangabeira', ultima_rega:'2024-12-01', ultima_poda:null, ultima_colheita:null },
-  { especie:'Cajueiro', ultima_rega:'2024-11-01', ultima_poda:'2023-01-01', ultima_colheita:null }
-];
-
-carregarAcoesHoje();
-</script>
-
   }
 
   function carregarAcoesHoje() {
-    console.log('📋 carregarAcoesHoje() executando...');
     const container = document.getElementById('acoesHoje');
     if (!container) return;
     
@@ -1240,6 +1214,7 @@ carregarAcoesHoje();
           <p><small>Cadastre frutíferas para ver as ações pendentes</small></p>
         </div>
       `;
+      document.getElementById('actionCount').textContent = '📋 0 ações';
       return;
     }
     
@@ -1322,125 +1297,105 @@ carregarAcoesHoje();
     let html = '';
     
     Object.entries(acoesPorEspecie).forEach(([especie, dados]) => {
-  const totalEspecie = dados.rega.length + dados.poda.length + dados.colheita.length;
-  if (totalEspecie === 0) return;
+      const totalEspecie = dados.rega.length + dados.poda.length + dados.colheita.length;
+      if (totalEspecie === 0) return;
 
-  // ===== FILTRO =====
-  let acoesFiltradas = [];
-  if (currentFilter === 'todas') {
-    acoesFiltradas = [...dados.rega, ...dados.poda, ...dados.colheita];
-  } else if (currentFilter === 'urgente') {
-    acoesFiltradas = [
-      ...dados.rega.filter(a => a.urgencia === 'urgent'),
-      ...dados.poda.filter(a => a.urgencia === 'urgent'),
-      ...dados.colheita.filter(a => a.urgencia === 'urgent')
-    ];
-  } else if (currentFilter === 'rega') {
-    acoesFiltradas = dados.rega;
-  } else if (currentFilter === 'poda') {
-    acoesFiltradas = dados.poda;
-  } else if (currentFilter === 'colheita') {
-    acoesFiltradas = dados.colheita;
-  }
+      // ===== FILTRO =====
+      let acoesFiltradas = [];
+      if (currentFilter === 'todas') {
+        acoesFiltradas = [...dados.rega, ...dados.poda, ...dados.colheita];
+      } else if (currentFilter === 'urgente') {
+        acoesFiltradas = [
+          ...dados.rega.filter(a => a.urgencia === 'urgent'),
+          ...dados.poda.filter(a => a.urgencia === 'urgent'),
+          ...dados.colheita.filter(a => a.urgencia === 'urgent')
+        ];
+      } else if (currentFilter === 'rega') {
+        acoesFiltradas = dados.rega;
+      } else if (currentFilter === 'poda') {
+        acoesFiltradas = dados.poda;
+      } else if (currentFilter === 'colheita') {
+        acoesFiltradas = dados.colheita;
+      }
 
-  if (acoesFiltradas.length === 0) return;
+      if (acoesFiltradas.length === 0) return;
 
-  // ===== PAGINAÇÃO =====
-  if (!paginaAtualPorEspecie[especie]) {
-    paginaAtualPorEspecie[especie] = 1;
-  }
+      // ===== PAGINAÇÃO =====
+      if (!paginaAtualPorEspecie[especie]) {
+        paginaAtualPorEspecie[especie] = 1;
+      }
 
-  const inicio = 0;
-  const fim = paginaAtualPorEspecie[especie] * ACOES_POR_PAGINA;
-  const acoesVisiveis = acoesFiltradas.slice(inicio, fim);
+      const inicio = 0;
+      const fim = paginaAtualPorEspecie[especie] * ACOES_POR_PAGINA;
+      const acoesVisiveis = acoesFiltradas.slice(inicio, fim);
 
-  const especieId = especie.toLowerCase().replace(/\s+/g, '-');
+      const especieId = especie.toLowerCase().replace(/\s+/g, '-');
 
-  html += `
-    <div class="especie-section" style="margin-bottom: 1.5rem;">
-      <div class="especie-header"
-           onclick="toggleEspecieSection('${especieId}')"
-           style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-                  border: 1px solid #e5e7eb;
-                  border-radius: 10px;
-                  padding: 1rem;
-                  cursor: pointer;
-                  display: flex;
-                  align-items: center;
-                  justify-content: space-between;
-                  margin-bottom: 0.5rem;">
+      html += `
+        <div class="especie-section" style="margin-bottom: 1.5rem;">
+          <div class="especie-header"
+               onclick="toggleEspecieSection('${especieId}')"
+               style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+                      border: 1px solid #e5e7eb;
+                      border-radius: 10px;
+                      padding: 1rem;
+                      cursor: pointer;
+                      display: flex;
+                      align-items: center;
+                      justify-content: space-between;
+                      margin-bottom: 0.5rem;">
 
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <span style="font-size: 1.5rem;">${dados.icone}</span>
-          <div>
-            <div style="font-weight: 700; font-size: 1.1rem;">${especie}</div>
-            <div style="font-size: 0.85rem; color: #6b7280;">
-              ${acoesFiltradas.length} ação(ões) pendente(s)
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.5rem;">${dados.icone}</span>
+              <div>
+                <div style="font-weight: 700; font-size: 1.1rem;">${especie}</div>
+                <div style="font-size: 0.85rem; color: #6b7280;">
+                  ${acoesFiltradas.length} ação(ões) pendente(s)
+                </div>
+              </div>
             </div>
+
+            <span id="toggle-${especieId}"
+                  style="font-size: 1.2rem; color: #10b981; transition: transform 0.3s;">
+              ▼
+            </span>
           </div>
-        </div>
 
-        <span id="toggle-${especieId}"
-              style="font-size: 1.2rem; color: #10b981; transition: transform 0.3s;">
-          ▼
-        </span>
-      </div>
+          <div id="content-${especieId}" class="especie-content" style="display: none;">
+            ${acoesVisiveis.map(acao => {
+              const frutiferaId = acao.frutifera.id || acao.frutifera.fid || acao.frutifera.identificacao;
+              const actionId = `action-${frutiferaId}-${acao.tipo}`;
+              const isDone = localStorage.getItem(actionId) === 'true';
 
-      <div id="content-${especieId}" class="especie-content" style="display: none;">
-        ${acoesVisiveis.map(acao => {
-  const frutiferaId =
-    acao.frutifera.id ||
-    acao.frutifera.fid ||
-    acao.frutifera.identificacao;
+              return `
+                <div class="action-item ${acao.urgencia}">
+                  <div class="action-title">
+                    ${acao.urgencia === 'urgent' ? '🚨' : acao.tipo === 'rega' ? '💧' : acao.tipo === 'poda' ? '✂️' : '🍊'}
+                    ${acao.titulo}
+                  </div>
 
-  const actionId = `action-${frutiferaId}-${acao.tipo}`;
-  const isDone = localStorage.getItem(actionId) === 'true';
+                  <div class="action-desc">${acao.descricao}</div>
 
-  return `
-    <div class="action-item ${acao.urgencia}">
-      <div class="action-title">
-        ${
-          acao.urgencia === 'urgent'
-            ? '🚨'
-            : acao.tipo === 'rega'
-            ? '💧'
-            : acao.tipo === 'poda'
-            ? '✂️'
-            : '🍊'
-        }
-        ${acao.titulo}
-      </div>
-
-      <div class="action-desc">${acao.descricao}</div>
-
-      <button class="btn btn-primary"
-              onclick="toggleAction(
-                '${acao.tipo}',
-                '${frutiferaId}',
-                '${actionId}',
-                event
-              )">
-        ${isDone ? '↶ Desmarcar' : '✅ Marcar como feito'}
-      </button>
-    </div>
-  `;
-}).join('')}
-
-
-
-        ${acoesFiltradas.length > acoesVisiveis.length ? `
-          <button class="btn btn-secondary"
-                  style="margin-top: 1rem;"
-                  onclick="carregarMaisAcoes('${especie}')">
-            ⬇️ Carregar mais (${acoesFiltradas.length - acoesVisiveis.length})
-          </button>
-        ` : ''}
-      </div>
-    </div>
-  `;
-});
-
+                  <button class="btn btn-primary"
+                          onclick="toggleAction(
+                            '${acao.tipo}',
+                            '${frutiferaId}',
+                            '${actionId}',
+                            event
+                          )">
+                    ${isDone ? '↶ Desmarcar' : '✅ Marcar como feito'}
+                  </button>
+                </div>
+              `;
             }).join('')}
+
+            ${acoesFiltradas.length > acoesVisiveis.length ? `
+              <button class="btn btn-secondary"
+                      style="margin-top: 1rem;"
+                      onclick="carregarMaisAcoes('${especie}')">
+                ⬇️ Carregar mais (${acoesFiltradas.length - acoesVisiveis.length})
+              </button>
+            ` : ''}
           </div>
         </div>
       `;
@@ -1455,303 +1410,181 @@ carregarAcoesHoje();
       `;
     }
     
-  container.innerHTML = html;
-    
-    // Inicializar todas as seções fechadas (minimizadas)
-    Object.keys(acoesPorEspecie).forEach(especie => {
-      const especieId = especie.toLowerCase().replace(/\s+/g, '-');
-      const content = document.getElementById(`content-${especieId}`);
-      const toggle = document.getElementById(`toggle-${especieId}`);
-      if (content && toggle) {
-        content.style.maxHeight = '0px';
-        toggle.style.transform = 'rotate(0deg)';
-      }
-    });
+    container.innerHTML = html;
   }
-
- function toggleEspecieSection(especieId) {
-  const content = document.getElementById(`content-${especieId}`);
-  const toggle = document.getElementById(`toggle-${especieId}`);
-  const header = toggle ? toggle.closest('.especie-header') : null;
-
-  if (!content || !toggle) return;
-
-  const aberto = content.style.display === 'block';
-
-  if (aberto) {
-    // FECHAR
-    content.style.display = 'none';
-    toggle.style.transform = 'rotate(0deg)';
-
-    if (header) {
-      header.style.boxShadow = 'none';
-      header.style.borderColor = '#e5e7eb';
-    }
-  } else {
-    // ABRIR
-    content.style.display = 'block';
-    toggle.style.transform = 'rotate(180deg)';
-
-    if (header) {
-      header.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.15)';
-      header.style.borderColor = '#10b981';
-    }
-  }
-}
 
   function toggleAction(tipo, frutiferaId, actionId, event) {
-  event.stopPropagation();
-  
-  const button = event.target;
-  const actionItem = button.closest('.action-item');
-  const isDone = localStorage.getItem(actionId) === 'true';
-  
-  if (!isDone) {
-    // Marcar como feito
-    localStorage.setItem(actionId, 'true');
-    actionItem.classList.add('completed');
+    event.stopPropagation();
     
-    // Mudar aparência do botão
-    button.innerHTML = '<span style="font-size: 1.1rem; margin-right: 0.5rem;">↶</span> Desmarcar';
-    button.className = 'action-button btn-undo';
-    button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-    button.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.3)';
+    const button = event.target;
+    const actionItem = button.closest('.action-item');
+    const isDone = localStorage.getItem(actionId) === 'true';
     
-    // Registrar a ação para sincronização
-    setTimeout(() => registrarAcao(tipo, frutiferaId), 300);
+    if (!isDone) {
+      // Marcar como feito
+      localStorage.setItem(actionId, 'true');
+      actionItem.classList.add('completed');
+      
+      // Mudar aparência do botão
+      button.innerHTML = '<span style="font-size: 1.1rem; margin-right: 0.5rem;">↶</span> Desmarcar';
+      button.className = 'action-button btn-undo';
+      button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+      button.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.3)';
+      
+      // Registrar a ação para sincronização
+      setTimeout(() => registrarAcao(tipo, frutiferaId), 300);
+      
+      // Mensagem imediata
+      const statusDot = document.getElementById('statusDot');
+      if (navigator.onLine && statusDot && !statusDot.classList.contains('offline')) {
+        mostrarToast('✅ Ação registrada! Sincronizando...');
+      } else {
+        mostrarToast('✅ Ação registrada! Sincronizará quando online.');
+      }
+      
+    } else {
+      // Desmarcar
+      localStorage.removeItem(actionId);
+      actionItem.classList.remove('completed');
+      
+      // Restaurar botão original
+      button.innerHTML = '<span style="font-size: 1.1rem; margin-right: 0.5rem;">✅</span> Marcar como feito';
+      button.className = 'action-button btn-do';
+      button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+      button.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+      
+      mostrarToast('↶ Ação desmarcada');
+    }
     
-    // Mensagem imediata
-    const statusDot = document.getElementById('statusDot');
-    if (navigator.onLine && statusDot && !statusDot.classList.contains('offline')) {
+    // Efeito visual
+    button.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+      button.style.transform = 'scale(1)';
+    }, 150);
+  }
+
+  function registrarAcao(tipo, frutiferaId) {
+    const acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+    
+    acoesPendentes.push({
+      tipo: tipo,
+      frutiferaId: frutiferaId,
+      data: new Date().toISOString(),
+      timestamp: Date.now()
+    });
+    
+    localStorage.setItem('acoesPendentes', JSON.stringify(acoesPendentes));
+    
+    // Atualizar localmente na lista de frutíferas
+    const index = frutiferas.findIndex(f => 
+      f.id === frutiferaId || f.fid === frutiferaId || f.identificacao === frutiferaId
+    );
+    
+    if (index >= 0) {
+      if (tipo === 'rega') {
+        frutiferas[index].ultima_rega = new Date().toISOString();
+      } else if (tipo === 'poda') {
+        frutiferas[index].ultima_poda = new Date().toISOString();
+      } else if (tipo === 'colheita') {
+        frutiferas[index].ultima_colheita = new Date().toISOString();
+      }
+      
+      localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+    }
+    
+    atualizarContadorSync();
+    
+    // VERIFICAR SE ESTÁ ONLINE ANTES DE MOSTRAR MENSAGEM
+    if (navigator.onLine) {
       mostrarToast('✅ Ação registrada! Sincronizando...');
+      // Tentar sincronizar imediatamente se estiver online
+      setTimeout(() => {
+        sincronizarFilaAcoes();
+      }, 500);
     } else {
       mostrarToast('✅ Ação registrada! Sincronizará quando online.');
     }
     
-  } else {
-    // Desmarcar
-    localStorage.removeItem(actionId);
-    actionItem.classList.remove('completed');
-    
-    // Restaurar botão original
-    button.innerHTML = '<span style="font-size: 1.1rem; margin-right: 0.5rem;">✅</span> Marcar como feito';
-    button.className = 'action-button btn-do';
-    button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-    button.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
-    
-    mostrarToast('↶ Ação desmarcada');
-  }
-  
-  // Efeito visual
-  button.style.transform = 'scale(0.95)';
-  setTimeout(() => {
-    button.style.transform = 'scale(1)';
-  }, 150);
-}
-
-  function registrarAcao(tipo, frutiferaId) {
-  const acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
-  
-  acoesPendentes.push({
-    tipo: tipo,
-    frutiferaId: frutiferaId,
-    data: new Date().toISOString(),
-    timestamp: Date.now()
-  });
-  
-  localStorage.setItem('acoesPendentes', JSON.stringify(acoesPendentes));
-  
-  // Atualizar localmente na lista de frutíferas
-  const index = frutiferas.findIndex(f => 
-    f.id === frutiferaId || f.fid === frutiferaId || f.identificacao === frutiferaId
-  );
-  
-  if (index >= 0) {
-    if (tipo === 'rega') {
-      frutiferas[index].ultima_rega = new Date().toISOString();
-    } else if (tipo === 'poda') {
-      frutiferas[index].ultima_poda = new Date().toISOString();
-    } else if (tipo === 'colheita') {
-      frutiferas[index].ultima_colheita = new Date().toISOString();
-    }
-    
-    localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
-  }
-  
-  atualizarContadorSync();
-  
-  // VERIFICAR SE ESTÁ ONLINE ANTES DE MOSTRAR MENSAGEM
-  if (navigator.onLine) {
-    mostrarToast('✅ Ação registrada! Sincronizando...');
-    // Tentar sincronizar imediatamente se estiver online
-    setTimeout(() => {
-      sincronizarFilaAcoes();
-    }, 500);
-  } else {
-    mostrarToast('✅ Ação registrada! Sincronizará quando online.');
-  }
-  
-  // Recarregar ações para atualizar a interface
-  carregarAcoesHojeDebounced();
-}
-
-  function atualizarStats() {
-    const totalFrutiferas = frutiferas.length;
-    
-    // Calcular estatísticas
-    let totalPendencias = 0;
-    let totalUrgentes = 0;
-    const especiesUnicas = new Set();
-    
-    frutiferas.forEach(f => {
-      // Contar espécies únicas
-      especiesUnicas.add(f.especie || f.nome_popular);
-      
-      // Calcular pendencias para esta frutífera
-      const diasRega = f.ultima_rega ? calcularDias(f.ultima_rega) : 999;
-      const intervaloRega = obterIntervaloRega(f);
-      
-      if (diasRega >= intervaloRega) {
-        totalPendencias++;
-        if (diasRega >= (intervaloRega + 2)) {
-          totalUrgentes++;
-        }
-      }
-      
-      const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
-      const intervaloPoda = obterIntervaloPoda(f);
-      
-      if (diasPoda >= intervaloPoda) {
-        totalPendencias++;
-        if (diasPoda >= (intervaloPoda + 30)) { // Poda mais tolerante
-          totalUrgentes++;
-        }
-      }
-    });
-    
-    // Atualizar os elementos HTML
-    if (document.getElementById('statTotal')) {
-      document.getElementById('statTotal').textContent = totalFrutiferas;
-    }
-    
-    if (document.getElementById('statPend')) {
-      document.getElementById('statPend').textContent = totalPendencias;
-    }
-    
-    if (document.getElementById('statUrg')) {
-      document.getElementById('statUrg').textContent = totalUrgentes;
-    }
-    
-    if (document.getElementById('statEsp')) {
-      document.getElementById('statEsp').textContent = especiesUnicas.size;
-    }
-    
-    // Atualizar resumo por espécie
-    const speciesSummary = document.getElementById('speciesSummary');
-    if (speciesSummary) {
-      // Contar por espécie
-      const especiesContagem = {};
-      frutiferas.forEach(f => {
-        const especie = f.especie || f.nome_popular || 'Desconhecida';
-        especiesContagem[especie] = (especiesContagem[especie] || 0) + 1;
-      });
-      
-      // Gerar HTML do resumo
-      if (Object.keys(especiesContagem).length === 0) {
-        speciesSummary.innerHTML = '<div class="empty-state">Nenhuma espécie cadastrada</div>';
-      } else {
-        let html = '';
-        Object.entries(especiesContagem).forEach(([especie, quantidade]) => {
-          const percentual = ((quantidade / totalFrutiferas) * 100).toFixed(1);
-          html += `
-            <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border-left: 4px solid #10b981;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-                <span style="font-weight: 600; font-size: 0.95rem;">${especie}</span>
-                <span style="font-weight: 700; color: #059669;">${quantidade}</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
-                  <div style="height: 100%; background: #10b981; width: ${percentual}%;"></div>
-                </div>
-                <span style="font-size: 0.8rem; color: #6b7280;">${percentual}%</span>
-              </div>
-            </div>
-          `;
-        });
-        speciesSummary.innerHTML = html;
-      }
-    }
+    // Recarregar ações para atualizar a interface
+    carregarAcoesHoje();
   }
 
-  async function cadastrarFrutifera(event) {
-    event.preventDefault();
-    
-    const especie = document.getElementById('novaEspecie').value;
-    const dataPlantio = document.getElementById('dataPlantio').value;
-    const coordenadas = document.getElementById('coordenadas').value;
-    const responsavel = document.getElementById('responsavel').value;
-    
-    if (!especie) {
-      mostrarToast('❌ Selecione uma espécie');
+  // ===== FUNÇÕES DE SINCRONIZAÇÃO =====
+  async function sincronizarFilaAcoes() {
+    if (!navigator.onLine) {
+      console.log('Offline - aguardando conexão');
+      mostrarToast('📡 Você está offline. Ação será sincronizada quando conectar.');
       return;
     }
     
-    let lat = null, lon = null;
-    if (coordenadas) {
-      const coords = coordenadas.split(',').map(c => parseFloat(c.trim()));
-      lat = coords[0];
-      lon = coords[1];
+    let acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+    
+    if (acoesPendentes.length === 0) {
+      console.log('Nenhuma ação pendente para sincronizar');
+      return;
     }
     
-    const fidTemp = `${especie.substring(0, 3).toUpperCase()}-${Date.now()}`;
+    console.log(`🔄 Sincronizando ${acoesPendentes.length} ação(ões)...`);
     
-    const novaFrutifera = {
-      id: null,
-      fid: fidTemp,
-      especie: especie,
-      nome_popular: especie,
-      identificacao: fidTemp,
-      data_plantio: dataPlantio,
-      latitude: lat,
-      longitude: lon,
-      responsavel: responsavel,
-      ultima_rega: null,
-      ultima_poda: null,
-      ultima_colheita: null,
-      created_at: new Date().toISOString(),
-      pendingSync: true
-    };
+    const toast = document.getElementById('toast');
+    toast.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span>🔄</span>
+        <div>
+          Sincronizando ${acoesPendentes.length} ação(ões)...
+          <div style="font-size: 0.8rem; opacity: 0.8;">Por favor, aguarde</div>
+        </div>
+      </div>
+    `;
+    toast.className = 'toast show';
     
-    try {
-      pendingSync.push(novaFrutifera);
-      localStorage.setItem('pendingSync', JSON.stringify(pendingSync));
-      
-      frutiferas.push(novaFrutifera);
-      localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
-      
-      atualizarTodasAbas();
-      mostrarToast('✅ Frutífera cadastrada! Clique em "Sincronizar" para enviar ao banco.');
-      
-      event.target.reset();
-      document.getElementById('coordDisplay').style.display = 'none';
-      
-      if (document.getElementById('mapa').classList.contains('active') && map) {
-        atualizarMapa();
-        const container = document.getElementById('cadastroFormContainer');
-        const icon = document.getElementById('cadastroToggleIcon');
-        container.classList.add('collapsed');
-        icon.textContent = '▶';
+    const sucessos = [];
+    const falhas = [];
+    
+    for (const acao of acoesPendentes) {
+      try {
+        const campoSupabase = acao.tipo === 'rega' ? 'data_irrigacao_ordinaria' : 
+                              acao.tipo === 'poda' ? 'data_poda_formacao_1' : 
+                              'inicio_colheita';
+        
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${acao.frutiferaId}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ [campoSupabase]: acao.data })
+          }
+        );
+        
+        if (response.ok) {
+          sucessos.push(acao);
+          console.log(`✅ ${acao.tipo} sincronizada para ID ${acao.frutiferaId}`);
+        } else {
+          falhas.push(acao);
+        }
+      } catch (error) {
+        falhas.push(acao);
       }
-      
-      atualizarContadorSync();
-      
-    } catch (error) {
-      console.error('❌ Erro ao cadastrar frutífera:', error);
-      mostrarToast('❌ Erro ao cadastrar frutífera');
     }
+    
+    localStorage.setItem('acoesPendentes', JSON.stringify(falhas));
+    
+    if (sucessos.length > 0) {
+      mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s) com sucesso!`);
+      console.log(`✅ ${sucessos.length} ação(ões) sincronizada(s) - notificação via relatório programado`);
+    } else if (falhas.length > 0) {
+      mostrarToast(`⚠️ Erro ao sincronizar ${falhas.length} ação(ões)`);
+    }
+    
+    atualizarContadorSync();
+    await carregarFrutiferas();
   }
 
-async function sincronizarComSupabase() {
+  async function sincronizarComSupabase() {
     if (!navigator.onLine) {
       mostrarToast('📡 Você está offline. Conecte-se à internet para sincronizar.');
       return;
@@ -1856,80 +1689,7 @@ async function sincronizarComSupabase() {
     }, 5000);
     
     atualizarContadorSync();
-               }
-  async function sincronizarFilaAcoes() {
-  if (!navigator.onLine) {
-    console.log('Offline - aguardando conexão');
-    mostrarToast('📡 Você está offline. Ação será sincronizada quando conectar.');
-    return;
   }
-  
-  let acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
-  
-  if (acoesPendentes.length === 0) {
-    console.log('Nenhuma ação pendente para sincronizar');
-    return;
-  }
-  
-  console.log(`🔄 Sincronizando ${acoesPendentes.length} ação(ões)...`);
-  
-  const toast = document.getElementById('toast');
-  toast.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 0.5rem;">
-      <span>🔄</span>
-      <div>
-        Sincronizando ${acoesPendentes.length} ação(ões)...
-        <div style="font-size: 0.8rem; opacity: 0.8;">Por favor, aguarde</div>
-      </div>
-    </div>
-  `;
-  toast.className = 'toast show';
-  
-  const sucessos = [];
-  const falhas = [];
-  
-  for (const acao of acoesPendentes) {
-    try {
-      const campoSupabase = acao.tipo === 'rega' ? 'data_irrigacao_ordinaria' : 
-                            acao.tipo === 'poda' ? 'data_poda_formacao_1' : 
-                            'inicio_colheita';
-      
-      const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${acao.frutiferaId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ [campoSupabase]: acao.data })
-        }
-      );
-      
-      if (response.ok) {
-        sucessos.push(acao);
-        console.log(`✅ ${acao.tipo} sincronizada para ID ${acao.frutiferaId}`);
-      } else {
-        falhas.push(acao);
-      }
-    } catch (error) {
-      falhas.push(acao);
-    }
-  }
-  
-  localStorage.setItem('acoesPendentes', JSON.stringify(falhas));
-  
-  if (sucessos.length > 0) {
-    mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s) com sucesso!`);
-    console.log(`✅ ${sucessos.length} ação(ões) sincronizada(s) - notificação via relatório programado`);
-  } else if (falhas.length > 0) {
-    mostrarToast(`⚠️ Erro ao sincronizar ${falhas.length} ação(ões)`);
-  }
-  
-  atualizarContadorSync();
-  await carregarFrutiferas();
-}
 
   async function sincronizarTudo() {
     if (!navigator.onLine) {
@@ -1969,7 +1729,198 @@ async function sincronizarComSupabase() {
     }
   }
 
-  // ⭐⭐ FUNÇÕES DE CONFIGURAÇÃO CORRIGIDAS ⭐⭐
+  // ===== FUNÇÕES DE CARREGAMENTO DE DADOS =====
+  async function carregarFrutiferas() {
+    try {
+      // Carregar do localStorage primeiro
+      const localFrutiferas = JSON.parse(localStorage.getItem('frutiferas') || '[]');
+      frutiferas = localFrutiferas;
+      
+      // Tentar carregar do Supabase se estiver online
+      if (navigator.onLine) {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/frutiferas?select=*`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          }
+        );
+        
+        if (response.ok) {
+          const supabaseFrutiferas = await response.json();
+          
+          // Mesclar dados (prioridade para Supabase)
+          const frutiferasMap = new Map();
+          
+          // Adicionar frutíferas do localStorage primeiro
+          localFrutiferas.forEach(f => {
+            if (f.id) {
+              frutiferasMap.set(f.id, f);
+            } else if (f.fid) {
+              frutiferasMap.set(f.fid, f);
+            }
+          });
+          
+          // Sobrescrever com dados do Supabase
+          supabaseFrutiferas.forEach(f => {
+            if (f.id) {
+              frutiferasMap.set(f.id, f);
+            }
+          });
+          
+          frutiferas = Array.from(frutiferasMap.values());
+          localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+        }
+      }
+      
+      atualizarTodasAbas();
+      return true;
+    } catch (error) {
+      console.error('Erro ao carregar frutíferas:', error);
+      mostrarToast('⚠️ Erro ao carregar dados');
+      return false;
+    }
+  }
+
+  function atualizarTodasAbas() {
+    document.getElementById('frutiferaCount').textContent = `📊 ${frutiferas.length} frutíferas`;
+    
+    // Atualizar lista de frutíferas
+    const frutiferasList = document.getElementById('frutiferasList');
+    if (frutiferasList) {
+      if (frutiferas.length === 0) {
+        frutiferasList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🌱</div>
+            <p>Nenhuma frutífera cadastrada.</p>
+          </div>
+        `;
+      } else {
+        let html = '';
+        frutiferas.forEach(f => {
+          html += `
+            <div class="frutifera-card">
+              <div class="frutifera-header">
+                <div class="frutifera-name">${f.nome_popular || f.especie || 'Frutífera'}</div>
+                <div style="font-size: 0.75rem; color: #6b7280;">${f.identificacao || f.id || ''}</div>
+              </div>
+              <div class="frutifera-info">
+                <div>📅 Plantio: ${formatarData(f.data_plantio) || 'Não informado'}</div>
+                <div>💧 Última rega: ${formatarData(f.ultima_rega) || 'Nunca'}</div>
+                <div>✂️ Última poda: ${formatarData(f.ultima_poda) || 'Nunca'}</div>
+                ${f.latitude && f.longitude ? 
+                  `<div>📍 Localização: ${f.latitude.toFixed(4)}, ${f.longitude.toFixed(4)}</div>` : ''}
+              </div>
+            </div>
+          `;
+        });
+        frutiferasList.innerHTML = html;
+      }
+    }
+    
+    // Atualizar estatísticas
+    atualizarStats();
+    
+    // Atualizar ações
+    carregarAcoesHoje();
+    
+    // Atualizar mapa se estiver visível
+    if (map && document.getElementById('mapa').classList.contains('active')) {
+      atualizarMapa();
+    }
+  }
+
+  function atualizarStats() {
+    const totalFrutiferas = frutiferas.length;
+    
+    // Calcular estatísticas
+    let totalPendencias = 0;
+    let totalUrgentes = 0;
+    const especiesUnicas = new Set();
+    
+    frutiferas.forEach(f => {
+      // Contar espécies únicas
+      especiesUnicas.add(f.especie || f.nome_popular);
+      
+      // Calcular pendencias para esta frutífera
+      const diasRega = f.ultima_rega ? calcularDias(f.ultima_rega) : 999;
+      const intervaloRega = obterIntervaloRega(f);
+      
+      if (diasRega >= intervaloRega) {
+        totalPendencias++;
+        if (diasRega >= (intervaloRega + 2)) {
+          totalUrgentes++;
+        }
+      }
+      
+      const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
+      const intervaloPoda = obterIntervaloPoda(f);
+      
+      if (diasPoda >= intervaloPoda) {
+        totalPendencias++;
+        if (diasPoda >= (intervaloPoda + 30)) { // Poda mais tolerante
+          totalUrgentes++;
+        }
+      }
+    });
+    
+    // Atualizar os elementos HTML
+    if (document.getElementById('statTotal')) {
+      document.getElementById('statTotal').textContent = totalFrutiferas;
+    }
+    
+    if (document.getElementById('statPend')) {
+      document.getElementById('statPend').textContent = totalPendencias;
+    }
+    
+    if (document.getElementById('statUrg')) {
+      document.getElementById('statUrg').textContent = totalUrgentes;
+    }
+    
+    if (document.getElementById('statEsp')) {
+      document.getElementById('statEsp').textContent = especiesUnicas.size;
+    }
+    
+    // Atualizar resumo por espécie
+    const speciesSummary = document.getElementById('speciesSummary');
+    if (speciesSummary) {
+      // Contar por espécie
+      const especiesContagem = {};
+      frutiferas.forEach(f => {
+        const especie = f.especie || f.nome_popular || 'Desconhecida';
+        especiesContagem[especie] = (especiesContagem[especie] || 0) + 1;
+      });
+      
+      // Gerar HTML do resumo
+      if (Object.keys(especiesContagem).length === 0) {
+        speciesSummary.innerHTML = '<div class="empty-state">Nenhuma espécie cadastrada</div>';
+      } else {
+        let html = '';
+        Object.entries(especiesContagem).forEach(([especie, quantidade]) => {
+          const percentual = totalFrutiferas > 0 ? ((quantidade / totalFrutiferas) * 100).toFixed(1) : '0';
+          html += `
+            <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border-left: 4px solid #10b981;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                <span style="font-weight: 600; font-size: 0.95rem;">${especie}</span>
+                <span style="font-weight: 700; color: #059669;">${quantidade}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+                  <div style="height: 100%; background: #10b981; width: ${percentual}%;"></div>
+                </div>
+                <span style="font-size: 0.8rem; color: #6b7280;">${percentual}%</span>
+              </div>
+            </div>
+          `;
+        });
+        speciesSummary.innerHTML = html;
+      }
+    }
+  }
+
+  // ===== FUNÇÕES DE CONFIGURAÇÃO =====
   function loadConfig() {
     const defaults = {
       mang_rega: 7, mang_poda: 180, mang_colh: 90,
@@ -2010,99 +1961,10 @@ async function sincronizarComSupabase() {
     console.log('✅ Configurações salvas:', config);
     mostrarToast('✅ Configurações salvas!');
     
-    carregarAcoesHojeDebounced();
+    carregarAcoesHoje();
   }
 
-  // ⭐⭐ FUNÇÕES DE INTERVALO OTIMIZADAS ⭐⭐
-  function obterIntervaloRega(frutifera) {
-    const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-    const config = JSON.parse(localStorage.getItem('configIntervalos') || '{}');
-    
-    if (especie.includes('coqueiro')) return parseInt(config.coq_rega || localStorage.getItem('coq_rega') || '5');
-    if (especie.includes('cacau')) return parseInt(config.cac_rega || localStorage.getItem('cac_rega') || '3');
-    if (especie.includes('mangabeira')) return parseInt(config.mang_rega || localStorage.getItem('mang_rega') || '7');
-    if (especie.includes('caju')) return parseInt(config.caju_rega || localStorage.getItem('caju_rega') || '10');
-    return 7;
-  }
-
-  function obterIntervaloPoda(frutifera) {
-    const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-    const config = JSON.parse(localStorage.getItem('configIntervalos') || '{}');
-    
-    if (especie.includes('coqueiro')) return parseInt(config.coq_poda || localStorage.getItem('coq_poda') || '730');
-    if (especie.includes('cacau')) return parseInt(config.cac_poda || localStorage.getItem('cac_poda') || '180');
-    if (especie.includes('mangabeira')) return parseInt(config.mang_poda || localStorage.getItem('mang_poda') || '180');
-    if (especie.includes('caju')) return parseInt(config.caju_poda || localStorage.getItem('caju_poda') || '365');
-    return 180;
-  }
-
-  function obterIntervaloColheita(frutifera) {
-    const especie = (frutifera.especie || frutifera.nome_popular || '').toLowerCase();
-    const config = JSON.parse(localStorage.getItem('configIntervalos') || '{}');
-    
-    if (especie.includes('coqueiro')) return parseInt(config.coq_colh || localStorage.getItem('coq_colh') || '30');
-    if (especie.includes('cacau')) return parseInt(config.cac_colh || localStorage.getItem('cac_colh') || '120');
-    if (especie.includes('mangabeira')) return parseInt(config.mang_colh || localStorage.getItem('mang_colh') || '90');
-    if (especie.includes('caju')) return parseInt(config.caju_colh || localStorage.getItem('caju_colh') || '60');
-    return 90;
-  }
-
-  // ⭐⭐ INICIALIZAÇÃO ATUALIZADA ⭐⭐
-  async function inicializarApp() {
-    console.log('🚀 Inicializando app...');
-    
-    try {
-      loadConfig(); // Carrega configurações primeiro
-      atualizarContadorSync();
-      await carregarFrutiferas();
-      
-      document.getElementById('appLoader').classList.add('hidden');
-      document.getElementById('mainApp').classList.add('loaded');
-      
-      // Status online/offline
-      const statusDot = document.getElementById('statusDot');
-      const statusText = document.getElementById('statusText');
-      
-      if (navigator.onLine) {
-        if (statusDot) statusDot.className = 'status-dot';
-        if (statusText) statusText.textContent = 'Online';
-        
-        // Sincronizar automaticamente quando online
-        setTimeout(() => {
-          sincronizarTudo();
-        }, 3000);
-      } else {
-        if (statusDot) statusDot.className = 'status-dot offline';
-        if (statusText) statusText.textContent = 'Offline';
-      }
-      
-      console.log('✅ App inicializado com sucesso!');
-      
-    } catch (error) {
-      console.error('❌ Erro na inicialização:', error);
-      document.getElementById('appLoader').classList.add('hidden');
-      document.getElementById('mainApp').classList.add('loaded');
-    }
-  }
-
-  // Event listeners otimizados
-  window.addEventListener('online', () => {
-    document.getElementById('statusDot').className = 'status-dot';
-    document.getElementById('statusText').textContent = 'Online';
-    mostrarToast('🌐 Conectado! Sincronizando...');
-    
-    setTimeout(() => {
-      sincronizarTudo();
-    }, 2000);
-  });
-
-  window.addEventListener('offline', () => {
-    document.getElementById('statusDot').className = 'status-dot offline';
-    document.getElementById('statusText').textContent = 'Offline';
-    mostrarToast('📡 Você está offline');
-  });
-
-  // Funções do mapa e auxiliares (mantidas iguais)
+  // ===== FUNÇÕES DO MAPA =====
   function inicializarMapa() {
     if (map) return;
     
@@ -2221,6 +2083,7 @@ async function sincronizarComSupabase() {
     }
   }
 
+  // ===== FUNÇÕES DE CADASTRO =====
   function toggleCadastroForm() {
     const container = document.getElementById('cadastroFormContainer');
     const icon = document.getElementById('cadastroToggleIcon');
@@ -2234,70 +2097,72 @@ async function sincronizarComSupabase() {
     }
   }
 
-  function calcularDias(dataString) {
-    if (!dataString) return 999;
-    const data = new Date(dataString);
-    const hoje = new Date();
-    const diff = hoje - data;
-    return Math.floor(diff / (1000 * 60 * 60 * 24));
-  }
-
-  function formatarData(dataString) {
-    if (!dataString) return null;
-    const data = new Date(dataString);
-    return data.toLocaleDateString('pt-BR');
-  }
-
-  function mostrarToast(mensagem) {
-    const toast = document.getElementById('toast');
-    toast.textContent = mensagem;
-    toast.className = 'toast show';
+  async function cadastrarFrutifera(event) {
+    event.preventDefault();
     
-    setTimeout(() => {
-      toast.className = 'toast';
-    }, 3000);
-  }
-
-  function switchTab(event, tabName) {
-    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    const especie = document.getElementById('novaEspecie').value;
+    const dataPlantio = document.getElementById('dataPlantio').value;
+    const coordenadas = document.getElementById('coordenadas').value;
+    const responsavel = document.getElementById('responsavel').value;
     
-    event.target.classList.add('active');
-    document.getElementById(tabName).classList.add('active');
-    
-    if (tabName === 'mapa') {
-      setTimeout(() => {
-        if (!map) {
-          inicializarMapa();
-        } else {
-          map.invalidateSize();
-          atualizarMapa();
-        }
-      }, 100);
+    if (!especie) {
+      mostrarToast('❌ Selecione uma espécie');
+      return;
     }
-  }
-
-  function filterAcoes(event, filtro) {
-    paginaAtualPorEspecie = {};
-    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    currentFilter = filtro;
-    carregarAcoesHojeDebounced();
-  }
-
-  function filtrarFrutiferas() {
-    const query = document.getElementById('searchFrutifera').value.toLowerCase();
-    const cards = document.querySelectorAll('.frutifera-card');
     
-    cards.forEach(card => {
-      const text = card.textContent.toLowerCase();
-      card.style.display = text.includes(query) ? 'block' : 'none';
-    });
-  }
-
-  function filterHistorico(event, periodo) {
-    document.querySelectorAll('#historico .filter-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
+    let lat = null, lon = null;
+    if (coordenadas) {
+      const coords = coordenadas.split(',').map(c => parseFloat(c.trim()));
+      lat = coords[0];
+      lon = coords[1];
+    }
+    
+    const fidTemp = `${especie.substring(0, 3).toUpperCase()}-${Date.now()}`;
+    
+    const novaFrutifera = {
+      id: null,
+      fid: fidTemp,
+      especie: especie,
+      nome_popular: especie,
+      identificacao: fidTemp,
+      data_plantio: dataPlantio,
+      latitude: lat,
+      longitude: lon,
+      responsavel: responsavel,
+      ultima_rega: null,
+      ultima_poda: null,
+      ultima_colheita: null,
+      created_at: new Date().toISOString(),
+      pendingSync: true
+    };
+    
+    try {
+      pendingSync.push(novaFrutifera);
+      localStorage.setItem('pendingSync', JSON.stringify(pendingSync));
+      
+      frutiferas.push(novaFrutifera);
+      localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+      
+      atualizarTodasAbas();
+      mostrarToast('✅ Frutífera cadastrada! Clique em "Sincronizar" para enviar ao banco.');
+      
+      event.target.reset();
+      document.getElementById('coordDisplay').style.display = 'none';
+      
+      if (document.getElementById('mapa').classList.contains('active') && map) {
+        atualizarMapa();
+        const container = document.getElementById('cadastroFormContainer');
+        const icon = document.getElementById('cadastroToggleIcon');
+        container.classList.add('collapsed');
+        icon.textContent = '▶';
+      }
+      
+      atualizarContadorSync();
+      
+    } catch (error) {
+      console.error('❌ Erro ao cadastrar frutífera:', error);
+      mostrarToast('❌ Erro ao cadastrar frutífera');
+    }
   }
 
   function obterLocalizacao() {
@@ -2324,111 +2189,179 @@ async function sincronizarComSupabase() {
     );
   }
 
+  // ===== FUNÇÕES DE NAVEGAÇÃO =====
+  function switchTab(event, tabName) {
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById(tabName).classList.add('active');
+    
+    if (tabName === 'mapa') {
+      setTimeout(() => {
+        if (!map) {
+          inicializarMapa();
+        } else {
+          map.invalidateSize();
+          atualizarMapa();
+        }
+      }, 100);
+    }
+  }
+
+  function filtrarFrutiferas() {
+    const query = document.getElementById('searchFrutifera').value.toLowerCase();
+    const cards = document.querySelectorAll('.frutifera-card');
+    
+    cards.forEach(card => {
+      const text = card.textContent.toLowerCase();
+      card.style.display = text.includes(query) ? 'block' : 'none';
+    });
+  }
+
+  function filterHistorico(event, periodo) {
+    document.querySelectorAll('#historico .filter-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+
+  // ===== FUNÇÕES DE EDGE FUNCTION =====
+  function coletarAcoesAtuais() {
+    const acoes = [];
+
+    frutiferas.forEach(f => {
+      const especie = f.nome_popular || f.especie;
+
+      const diasRega = f.ultima_rega ? calcularDias(f.ultima_rega) : 999;
+      if (diasRega >= obterIntervaloRega(f)) {
+        acoes.push({
+          tipo: "rega",
+          especie,
+          frutifera_id: f.id || f.fid,
+          dias: diasRega
+        });
+      }
+
+      const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
+      if (diasPoda >= obterIntervaloPoda(f)) {
+        acoes.push({
+          tipo: "poda",
+          especie,
+          frutifera_id: f.id || f.fid,
+          dias: diasPoda
+        });
+      }
+
+      const diasColheita = f.ultima_colheita ? calcularDias(f.ultima_colheita) : 999;
+      if (diasColheita >= obterIntervaloColheita(f)) {
+        acoes.push({
+          tipo: "colheita",
+          especie,
+          frutifera_id: f.id || f.fid,
+          dias: diasColheita
+        });
+      }
+    });
+
+    return acoes;
+  }
+
+  async function enviarAcoesParaEdgeFunction() {
+    const acoes = coletarAcoesAtuais();
+
+    if (acoes.length === 0) {
+      mostrarToast("✅ Nenhuma ação pendente");
+      return;
+    }
+
+    const payload = {
+      origem: "pwa",
+      timestamp: new Date().toISOString(),
+      perfil: "gestor",
+      acoes
+    };
+
+    try {
+      const res = await fetch(EDGE_FUNCTION_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error("Erro ao enviar");
+
+      mostrarToast("📡 Ações enviadas ao servidor");
+
+    } catch (err) {
+      console.error(err);
+      mostrarToast("❌ Falha ao enviar ações");
+    }
+  }
+
+  // ===== INICIALIZAÇÃO =====
+  async function inicializarApp() {
+    console.log('🚀 Inicializando app...');
+    
+    try {
+      loadConfig(); // Carrega configurações primeiro
+      atualizarContadorSync();
+      await carregarFrutiferas();
+      
+      document.getElementById('appLoader').classList.add('hidden');
+      document.getElementById('mainApp').classList.add('loaded');
+      
+      // Status online/offline
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      
+      if (navigator.onLine) {
+        if (statusDot) statusDot.className = 'status-dot';
+        if (statusText) statusText.textContent = 'Online';
+        
+        // Sincronizar automaticamente quando online
+        setTimeout(() => {
+          sincronizarTudo();
+        }, 3000);
+      } else {
+        if (statusDot) statusDot.className = 'status-dot offline';
+        if (statusText) statusText.textContent = 'Offline';
+      }
+      
+      console.log('✅ App inicializado com sucesso!');
+      
+    } catch (error) {
+      console.error('❌ Erro na inicialização:', error);
+      document.getElementById('appLoader').classList.add('hidden');
+      document.getElementById('mainApp').classList.add('loaded');
+    }
+  }
+
+  // Event listeners
+  window.addEventListener('online', () => {
+    document.getElementById('statusDot').className = 'status-dot';
+    document.getElementById('statusText').textContent = 'Online';
+    mostrarToast('🌐 Conectado! Sincronizando...');
+    
+    setTimeout(() => {
+      sincronizarTudo();
+    }, 2000);
+  });
+
+  window.addEventListener('offline', () => {
+    document.getElementById('statusDot').className = 'status-dot offline';
+    document.getElementById('statusText').textContent = 'Offline';
+    mostrarToast('📡 Você está offline');
+  });
+
   // Inicialização
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', inicializarApp);
   } else {
     inicializarApp();
   }
- </script>
-  <script>
-/* ===============================
-   EDGE FUNCTION CONFIG
-================================ */
-const EDGE_FUNCTION_URL =
-  "https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson";
-
-
-function carregarMaisAcoes(especie) {
-  paginaAtualPorEspecie[especie]++;
-  carregarAcoesHoje();
-}
-   
-
-/* ===============================
-   COLETAR AÇÕES JÁ CALCULADAS
-   (não duplica regras)
-================================ */
-function coletarAcoesAtuais() {
-  const acoes = [];
-
-  frutiferas.forEach(f => {
-    const especie = f.nome_popular || f.especie;
-
-    const diasRega = f.ultima_rega ? calcularDias(f.ultima_rega) : 999;
-    if (diasRega >= obterIntervaloRega(f)) {
-      acoes.push({
-        tipo: "rega",
-        especie,
-        frutifera_id: f.id || f.fid,
-        dias: diasRega
-      });
-    }
-
-    const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
-    if (diasPoda >= obterIntervaloPoda(f)) {
-      acoes.push({
-        tipo: "poda",
-        especie,
-        frutifera_id: f.id || f.fid,
-        dias: diasPoda
-      });
-    }
-
-    const diasColheita = f.ultima_colheita ? calcularDias(f.ultima_colheita) : 999;
-    if (diasColheita >= obterIntervaloColheita(f)) {
-      acoes.push({
-        tipo: "colheita",
-        especie,
-        frutifera_id: f.id || f.fid,
-        dias: diasColheita
-      });
-    }
-  });
-
-  return acoes;
-}
-
-/* ===============================
-   ENVIAR PARA EDGE FUNCTION
-================================ */
-async function enviarAcoesParaEdgeFunction() {
-  const acoes = coletarAcoesAtuais();
-
-  if (acoes.length === 0) {
-    mostrarToast("✅ Nenhuma ação pendente");
-    return;
-  }
-
-  const payload = {
-    origem: "pwa",
-    timestamp: new Date().toISOString(),
-    perfil: perfilAtual,
-    acoes
-  };
-
-  try {
-    const res = await fetch(EDGE_FUNCTION_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) throw new Error("Erro ao enviar");
-
-    mostrarToast("📡 Ações enviadas ao servidor");
-
-  } catch (err) {
-    console.error(err);
-    mostrarToast("❌ Falha ao enviar ações");
-  }
-}
-</script>
-
-
+  </script>
 </body>
 </html>
