@@ -1075,208 +1075,156 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmVmYm5qeGdwZXRiZXRsenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzI4ODcsImV4cCI6MjA3NjYwODg4N30.d09pjgddZpNY3Z4cVZ3V4h77aAf_GVGF0sOBTZkZf2A';
 
   // ===== PAGINAÇÃO DE AÇÕES =====
-  const ACOES_POR_PAGINA = 30; // pode ajustar (20, 30, 50)
-  let paginaAtualPorEspecie = {};
-  let frutiferas = [];
-  let historico = [];
-  let perfilAtual = localStorage.getItem('perfilAtual') || 'Default';
-  let currentFilter = 'todas';
-  let pendingSync = [];
-  
-  // Variáveis do mapa
-  let map;
-  let baseLayers = {};
-  let orthomosaicLayer;
-  let frutiferasLayer;
-  let markers = {};
-  let speciesColors = {
-    'Mangabeira': '#10b981',
-    'Cajueiro': '#f59e0b',
-    'Coqueiro': '#ef4444',
-    'Cacau': '#8b5cf6'
+  <script>
+/* ================= CONFIG ================= */
+const ACOES_POR_PAGINA = 30;
+let paginaAtualPorEspecie = {};
+let frutiferas = [];
+let currentFilter = 'todas';
+
+/* ================= HELPERS ================= */
+function calcularDias(data) {
+  if (!data) return 999;
+  const d = new Date(data);
+  return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function obterIntervaloRega(f) {
+  return 7;
+}
+function obterIntervaloPoda(f) {
+  return 180;
+}
+function obterIntervaloColheita(f) {
+  return 90;
+}
+
+/* ================= FILTRO ================= */
+function filterAcoes(event, tipo) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  currentFilter = tipo;
+  carregarAcoesHoje();
+}
+
+/* ================= PAGINAÇÃO ================= */
+function carregarMaisAcoes(especie) {
+  paginaAtualPorEspecie[especie]++;
+  carregarAcoesHoje();
+}
+
+/* ================= TOGGLE ================= */
+function toggleEspecieSection(id) {
+  const content = document.getElementById(`content-${id}`);
+  const toggle = document.getElementById(`toggle-${id}`);
+  if (!content) return;
+
+  const aberto = content.style.display === 'block';
+  content.style.display = aberto ? 'none' : 'block';
+  toggle.style.transform = aberto ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+/* ================= AÇÕES ================= */
+function carregarAcoesHoje() {
+  const container = document.getElementById('acoesHoje');
+  if (!container) return;
+
+  const especies = {
+    Mangabeira: { icone: '🥭', acoes: [] },
+    Cajueiro:   { icone: '🌰', acoes: [] },
+    Coqueiro:   { icone: '🥥', acoes: [] },
+    Cacau:      { icone: '🍫', acoes: [] }
   };
 
-  // ⭐⭐ DEBOUNCE PARA EVITAR CHAMADAS DUPLICADAS ⭐⭐
-  let debounceTimer;
-  function debounce(func, wait) {
-    return function executedFunction(...args) {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => func.apply(this, args), wait);
-    };
-  }
+  frutiferas.forEach(f => {
+    const especie = f.especie || f.nome_popular;
+    if (!especies[especie]) return;
 
-  async function carregarFrutiferas() {
-    console.log('🔥 Carregando frutíferas do Supabase...');
-    
-    try {
-      if (navigator.onLine) {
-        const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/frutiferas?select=*&nome_popular=in.(Mangabeira,Cajueiro,Coqueiro,Cacau)`,
-          {
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            }
-          }
-        );
-        
-        if (response.ok) {
-          const dados = await response.json();
-          
-          frutiferas = dados.map(f => ({
-            id: f.id,
-            fid: f.fid,
-            especie: f.nome_popular,
-            nome_popular: f.nome_popular,
-            identificacao: f.fid,
-            data_plantio: f.data_plantio || null,
-            ultima_rega: f.data_irrigacao_ordinaria || null,
-            ultima_poda: f.data_poda_formacao_1 || null,
-            ultima_colheita: f.inicio_colheita || null,
-            latitude: f.latitude || null,
-            longitude: f.longitude || null,
-            altura_total: f.altura_total || null,
-            diametro_copa: f.diametro_copa || null,
-            created_at: f.created_at || new Date().toISOString()
-          }));
-          
-          localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
-          console.log(`✅ ${frutiferas.length} frutíferas carregadas do Supabase`);
-          atualizarTodasAbas();
-          
-          if (document.getElementById('mapa').classList.contains('active')) {
-            atualizarMapa();
-          }
-        } else {
-          console.error('Erro na resposta do Supabase:', response.status);
-          carregarDoCache();
-        }
-      } else {
-        console.log('📡 Modo offline - carregando do cache');
-        carregarDoCache();
-      }
-      
-    } catch (error) {
-      console.error('❌ Erro ao carregar frutíferas:', error);
-      mostrarToast('⚠️ Erro ao carregar. Usando dados locais.');
-      carregarDoCache();
+    if (calcularDias(f.ultima_rega) >= obterIntervaloRega(f)) {
+      especies[especie].acoes.push({
+        tipo: 'rega',
+        titulo: `Regar ${especie}`,
+        desc: `Última rega há ${calcularDias(f.ultima_rega)} dias`,
+        icon: '💧'
+      });
     }
-  }
 
-  function carregarDoCache() {
-    const frutiferasLocal = JSON.parse(localStorage.getItem('frutiferas') || '[]');
-    if (frutiferasLocal.length > 0) {
-      frutiferas = frutiferasLocal;
-      console.log(`📦 ${frutiferas.length} frutíferas do cache local`);
-      atualizarTodasAbas();
+    if (calcularDias(f.ultima_poda) >= obterIntervaloPoda(f)) {
+      especies[especie].acoes.push({
+        tipo: 'poda',
+        titulo: `Podar ${especie}`,
+        desc: `Última poda há ${calcularDias(f.ultima_poda)} dias`,
+        icon: '✂️'
+      });
     }
-  }
 
-  function atualizarTodasAbas() {
-    console.log('🔄 Atualizando UI com', frutiferas.length, 'frutíferas');
-    
-    document.getElementById('frutiferaCount').textContent = `📊 ${frutiferas.length} frutíferas`;
-    
-    atualizarListaFrutiferas();
-    atualizarStats();
-    carregarAcoesHojeDebounced();
-  }
-
-  function atualizarListaFrutiferas() {
-    const lista = document.getElementById('frutiferasList');
-    if (!lista) return;
-    
-    if (frutiferas.length === 0) {
-      lista.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">🌱</div>
-          <p>Nenhuma frutífera cadastrada ainda.</p>
-          <p><small>Vá para a aba "Mapa" para adicionar sua primeira frutífera!</small></p>
-        </div>
-      `;
-      return;
+    if (calcularDias(f.ultima_colheita) >= obterIntervaloColheita(f)) {
+      especies[especie].acoes.push({
+        tipo: 'colheita',
+        titulo: `Colher ${especie}`,
+        desc: `Última colheita há ${calcularDias(f.ultima_colheita)} dias`,
+        icon: '🍊'
+      });
     }
-    
-    lista.innerHTML = frutiferas.map(f => `
-      <div class="frutifera-card" onclick="mostrarDetalhesFrutifera('${f.id || f.fid}')">
-        <div class="frutifera-header">
-          <div class="frutifera-name">${f.nome_popular || f.especie}</div>
-          <span class="badge">${f.identificacao || f.id || f.fid}</span>
-        </div>
-        <div class="frutifera-info">
-          <div>📅 Plantio: ${formatarData(f.data_plantio) || 'Sem data'}</div>
-          <div>💧 Última rega: ${formatarData(f.ultima_rega) || 'Nunca'}</div>
-          <div>✂️ Última poda: ${formatarData(f.ultima_poda) || 'Nunca'}</div>
-          ${f.latitude && f.longitude ? `<div>📍 GPS: ${f.latitude.toFixed(6)}, ${f.longitude.toFixed(6)}</div>` : ''}
-        </div>
-      </div>
-    `).join('');
-  }
+  });
 
-  function mostrarDetalhesFrutifera(id) {
-    const frutifera = frutiferas.find(f => f.id === id || f.fid === id);
-    if (!frutifera) return;
-    
-    const modalHTML = `
-      <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center;">
-        <div style="background: white; border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="margin: 0; color: #10b981;">${frutifera.nome_popular || frutifera.especie}</h3>
-            <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">×</button>
-          </div>
-          
-          <div style="margin-bottom: 1rem;">
-            <div style="display: grid; gap: 0.75rem;">
-              <div>
-                <strong style="color: #6b7280; font-size: 0.85rem;">Código:</strong>
-                <div style="margin-top: 0.25rem;">${frutifera.identificacao || frutifera.id || frutifera.fid}</div>
-              </div>
-              
-              ${frutifera.data_plantio ? `
-              <div>
-                <strong style="color: #6b7280; font-size: 0.85rem;">Data do Plantio:</strong>
-                <div style="margin-top: 0.25rem;">${formatarData(frutifera.data_plantio)}</div>
-              </div>` : ''}
-              
-              ${frutifera.ultima_rega ? `
-              <div>
-                <strong style="color: #6b7280; font-size: 0.85rem;">Última Rega:</strong>
-                <div style="margin-top: 0.25rem;">${formatarData(frutifera.ultima_rega)} (${calcularDias(frutifera.ultima_rega)} dias atrás)</div>
-              </div>` : ''}
-              
-              ${frutifera.ultima_poda ? `
-              <div>
-                <strong style="color: #6b7280; font-size: 0.85rem;">Última Poda:</strong>
-                <div style="margin-top: 0.25rem;">${formatarData(frutifera.ultima_poda)} (${calcularDias(frutifera.ultima_poda)} dias atrás)</div>
-              </div>` : ''}
-              
-              ${frutifera.latitude && frutifera.longitude ? `
-              <div>
-                <strong style="color: #6b7280; font-size: 0.85rem;">Localização:</strong>
-                <div style="margin-top: 0.25rem;">${frutifera.latitude.toFixed(6)}, ${frutifera.longitude.toFixed(6)}</div>
-              </div>` : ''}
+  let html = '';
+
+  Object.entries(especies).forEach(([especie, dados]) => {
+    if (!paginaAtualPorEspecie[especie]) paginaAtualPorEspecie[especie] = 1;
+
+    let lista = dados.acoes;
+    if (currentFilter !== 'todas') {
+      lista = lista.filter(a => a.tipo === currentFilter);
+    }
+
+    if (lista.length === 0) return;
+
+    const limite = paginaAtualPorEspecie[especie] * ACOES_POR_PAGINA;
+    const visiveis = lista.slice(0, limite);
+    const id = especie.toLowerCase();
+
+    html += `
+      <div class="section">
+        <div class="section-title clickable" onclick="toggleEspecieSection('${id}')">
+          ${dados.icone} ${especie} (${lista.length})
+          <span id="toggle-${id}" style="float:right">▼</span>
+        </div>
+
+        <div id="content-${id}" style="display:none">
+          ${visiveis.map(a => `
+            <div class="action-item">
+              <div class="action-title">${a.icon} ${a.titulo}</div>
+              <div class="action-desc">${a.desc}</div>
             </div>
-          </div>
-          
-          <button onclick="this.parentElement.parentElement.remove()" style="width: 100%; padding: 0.75rem; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-            Fechar
-          </button>
+          `).join('')}
+
+          ${lista.length > visiveis.length ? `
+            <button class="btn btn-secondary" onclick="carregarMaisAcoes('${especie}')">
+              ⬇️ Carregar mais (${lista.length - visiveis.length})
+            </button>
+          ` : ''}
         </div>
       </div>
     `;
-    
-    const modal = document.createElement('div');
-    modal.innerHTML = modalHTML;
-    document.body.appendChild(modal.firstElementChild);
-  }
+  });
 
-  // ⭐⭐ VERSÃO COM DEBOUNCE PARA EVITAR CHAMADAS DUPLICADAS ⭐⭐
-  function carregarAcoesHojeDebounced() {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      console.log('✅ [ÚNICA] Chamando carregarAcoesHoje()');
-      carregarAcoesHoje();
-    }, 300);
+  container.innerHTML = html || `
+    <div class="info-box success-box">
+      ✅ Nenhuma ação pendente
+    </div>
+  `;
+}
+
+/* ================= MOCK (para não quebrar) ================= */
+frutiferas = [
+  { especie:'Mangabeira', ultima_rega:'2024-12-01', ultima_poda:null, ultima_colheita:null },
+  { especie:'Cajueiro', ultima_rega:'2024-11-01', ultima_poda:'2023-01-01', ultima_colheita:null }
+];
+
+carregarAcoesHoje();
+</script>
+
   }
 
   function carregarAcoesHoje() {
