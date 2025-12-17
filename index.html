@@ -1507,27 +1507,35 @@
     });
   }
 
-  function toggleEspecieSection(especieId) {
-    const content = document.getElementById(`content-${especieId}`);
-    const toggle = document.getElementById(`toggle-${especieId}`);
-    const header = toggle.closest('.especie-header');
-    
-    if (content.style.maxHeight === '0px' || content.style.maxHeight === '') {
-      content.style.maxHeight = '2000px';
-      toggle.style.transform = 'rotate(180deg)';
-      if (header) {
-        header.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.15)';
-        header.style.borderColor = '#10b981';
-      }
-    } else {
-      content.style.maxHeight = '0px';
-      toggle.style.transform = 'rotate(0deg)';
-      if (header) {
-        header.style.boxShadow = 'none';
-        header.style.borderColor = '#e5e7eb';
-      }
+function toggleEspecieSection(especieId) {
+  const content = document.getElementById(`content-${especieId}`);
+  const toggle = document.getElementById(`toggle-${especieId}`);
+  const header = toggle ? toggle.closest('.especie-header') : null;
+
+  if (!content || !toggle) return;
+
+  const aberto = content.style.display === 'block';
+
+  if (aberto) {
+    // FECHAR
+    content.style.display = 'none';
+    toggle.style.transform = 'rotate(0deg)';
+
+    if (header) {
+      header.style.boxShadow = 'none';
+      header.style.borderColor = '#e5e7eb';
+    }
+  } else {
+    // ABRIR
+    content.style.display = 'block';
+    toggle.style.transform = 'rotate(180deg)';
+
+    if (header) {
+      header.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.15)';
+      header.style.borderColor = '#10b981';
     }
   }
+}
 
   function toggleAction(tipo, frutiferaId, actionId, event) {
   event.stopPropagation();
