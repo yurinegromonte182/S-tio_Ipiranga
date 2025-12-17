@@ -1772,7 +1772,7 @@
     }
   }
 
- async function sincronizarComSupabase() {
+async function sincronizarComSupabase() {
     if (!navigator.onLine) {
       mostrarToast('📡 Você está offline. Conecte-se à internet para sincronizar.');
       return;
@@ -1802,7 +1802,6 @@
     
     let sucessos = 0;
     let erros = 0;
-    const frutiferasCadastradas = [];
     
     for (const frutifera of pendingSync) {
       try {
@@ -1839,12 +1838,6 @@
             frutiferas[index].pendingSync = false;
           }
           
-          frutiferasCadastradas.push({
-            especie: frutifera.especie,
-            id: resultado.id,
-            data_plantio: frutifera.data_plantio
-          });
-          
           sucessos++;
         } else {
           erros++;
@@ -1866,40 +1859,11 @@
       syncButton.innerHTML = '<span>🔄</span> Sincronizar com Banco de Dados';
     }
     
-    if (erros === 0 && frutiferasCadastradas.length > 0) {
+    if (erros === 0 && sucessos > 0) {
       syncMsg.textContent = `✅ ${sucessos} item(ns) sincronizado(s) com sucesso!`;
       syncMsg.style.color = '#059669';
       mostrarToast(`✅ ${sucessos} frutífera(s) sincronizada(s) com sucesso!`);
-      
-      try {
-        console.log('📨 Enviando notificação de cadastro ao Telegram...');
-        
-        const edgeResponse = await fetch(
-          'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson',
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              trigger: 'cadastro',
-              frutiferas: frutiferasCadastradas
-            })
-          }
-        );
-        
-        if (edgeResponse.ok) {
-          const result = await edgeResponse.json();
-          console.log('✅ Notificação de cadastro enviada:', result);
-          
-          if (result.telegramSent) {
-            mostrarToast('📱 Cadastro notificado no Telegram');
-          }
-        }
-      } catch (edgeError) {
-        console.error('⚠️ Erro ao notificar cadastro:', edgeError);
-      }
+      console.log(`✅ ${sucessos} frutífera(s) cadastrada(s) - notificação via relatório programado`);
       
     } else if (erros > 0) {
       syncMsg.textContent = `⚠️ ${sucessos} sucesso(s), ${erros} erro(s)`;
@@ -1913,7 +1877,7 @@
     }, 5000);
     
     atualizarContadorSync();
-  }
+               }
   async function sincronizarFilaAcoes() {
   if (!navigator.onLine) {
     console.log('Offline - aguardando conexão');
@@ -1979,57 +1943,7 @@
   
   if (sucessos.length > 0) {
     mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s) com sucesso!`);
-    
-    try {
-      console.log('📨 Chamando Edge Function para enviar notificação...');
-      
-      const edgeResponse = await fetch(
-        'https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            trigger: 'user_action',
-            actions: sucessos.map(a => ({
-              tipo: a.tipo,
-              frutiferaId: a.frutiferaId,
-              data: a.data
-            }))
-          })
-        }
-      );
-      
-      if (edgeResponse.ok) {
-        const result = await edgeResponse.json();
-        console.log('✅ Edge Function executada:', result);
-        
-        if (result.telegramSent) {
-          mostrarToast('📱 Notificação enviada para Telegram');
-          
-          const syncMsg = document.getElementById('syncMessage');
-          if (syncMsg) {
-            syncMsg.innerHTML = `✅ Notificação enviada! <small>${sucessos.length} ação(ões) registrada(s)</small>`;
-            syncMsg.style.color = '#059669';
-            
-            setTimeout(() => {
-              syncMsg.innerHTML = '';
-            }, 5000);
-          }
-        } else {
-          console.log('ℹ️ Telegram não foi enviado (sem ações atrasadas adicionais)');
-        }
-      } else {
-        const errorText = await edgeResponse.text();
-        console.error('❌ Erro na Edge Function:', errorText);
-        mostrarToast('⚠️ Ações salvas, mas notificação falhou');
-      }
-    } catch (edgeError) {
-      console.error('❌ Erro ao chamar Edge Function:', edgeError);
-      mostrarToast('⚠️ Ações salvas, mas notificação falhou');
-    }
+    console.log(`✅ ${sucessos.length} ação(ões) sincronizada(s) - notificação via relatório programado`);
   } else if (falhas.length > 0) {
     mostrarToast(`⚠️ Erro ao sincronizar ${falhas.length} ação(ões)`);
   }
