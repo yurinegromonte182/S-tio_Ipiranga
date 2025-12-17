@@ -818,10 +818,10 @@
                 <div style="font-size: 0.8rem; color: #6b7280; margin-top: 0.25rem;">Clique para expandir/recolher</div>
               </div>
             </div>
-            <span id="cadastroToggleIcon" style="font-size: 1.5rem; color: #10b981; transition: transform 0.3s ease;">▼</span>
+            <span id="cadastroToggleIcon" style="font-size: 1.5rem; color: #10b981; transition: transform 0.3s ease;">▶</span>
           </div>
           
-          <div id="cadastroFormContainer" class="cadastro-form-container">
+          <div id="cadastroFormContainer" class="cadastro-form-container collapsed">
             <div class="info-box" style="background: white; border: 1px solid #bbf7d0; color: #065f46; margin-bottom: 1.5rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
                 <span style="font-size: 1.2rem;">🌱</span>
@@ -1493,16 +1493,16 @@
       `;
     }
     
-    container.innerHTML = html;
+  container.innerHTML = html;
     
-    // Inicializar todas as seções abertas
+    // Inicializar todas as seções fechadas (minimizadas)
     Object.keys(acoesPorEspecie).forEach(especie => {
       const especieId = especie.toLowerCase().replace(/\s+/g, '-');
       const content = document.getElementById(`content-${especieId}`);
       const toggle = document.getElementById(`toggle-${especieId}`);
       if (content && toggle) {
-        content.style.maxHeight = '2000px';
-        toggle.style.transform = 'rotate(180deg)';
+        content.style.maxHeight = '0px';
+        toggle.style.transform = 'rotate(0deg)';
       }
     });
   }
@@ -1510,13 +1510,22 @@
   function toggleEspecieSection(especieId) {
     const content = document.getElementById(`content-${especieId}`);
     const toggle = document.getElementById(`toggle-${especieId}`);
+    const header = toggle.closest('.especie-header');
     
     if (content.style.maxHeight === '0px' || content.style.maxHeight === '') {
       content.style.maxHeight = '2000px';
       toggle.style.transform = 'rotate(180deg)';
+      if (header) {
+        header.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.15)';
+        header.style.borderColor = '#10b981';
+      }
     } else {
       content.style.maxHeight = '0px';
       toggle.style.transform = 'rotate(0deg)';
+      if (header) {
+        header.style.boxShadow = 'none';
+        header.style.borderColor = '#e5e7eb';
+      }
     }
   }
 
