@@ -1276,6 +1276,12 @@
     }, 300);
   }
 
+    function carregarMaisAcoes(especie) {
+      paginaAtualPorEspecie[especie]++;
+      carregarAcoesHoje();
+    }
+
+
   function carregarAcoesHoje() {
     console.log('📋 carregarAcoesHoje() executando...');
     const container = document.getElementById('acoesHoje');
@@ -2399,12 +2405,12 @@ async function sincronizarComSupabase() {
     }
   }
 
-  function filterAcoes(event, filtro) {
-    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    currentFilter = filtro;
-    carregarAcoesHojeDebounced();
-  }
+  function filterAcoes(event, tipo) {
+  paginaAtualPorEspecie = {}; // 🔥 RESET OBRIGATÓRIO
+  currentFilter = tipo;
+  carregarAcoesHoje();
+}
+
 
   function filtrarFrutiferas() {
     const query = document.getElementById('searchFrutifera').value.toLowerCase();
