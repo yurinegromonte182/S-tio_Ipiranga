@@ -1392,7 +1392,16 @@
       }
       
       if (acoesFiltradas.length === 0) return;
-      
+      if (!paginaAtualPorEspecie[especie]) {
+  paginaAtualPorEspecie[especie] = 1;
+}
+
+const inicio = 0;
+const fim = paginaAtualPorEspecie[especie] * ACOES_POR_PAGINA;
+
+const acoesVisiveis = acoesFiltradas.slice(inicio, fim);
+
+         
       // Gerar seção da espécie (acordeão)
       const especieId = especie.toLowerCase().replace(/\s+/g, '-');
       html += `
@@ -1422,7 +1431,7 @@
           
           <div id="content-${especieId}" class="especie-content" 
                style="max-height: 2000px; overflow: hidden; transition: max-height 0.5s ease-in-out;">
-            ${acoesFiltradas.map(acao => {
+            ${acoesVisiveis.map(acao => {
               const frutiferaId = acao.frutifera.id || acao.frutifera.fid || acao.frutifera.identificacao;
               const actionId = `action-${frutiferaId}-${acao.tipo}`;
               const isDone = localStorage.getItem(actionId) === 'true';
