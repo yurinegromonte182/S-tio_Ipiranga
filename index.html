@@ -1075,6 +1075,9 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyYmVmYm5qeGdwZXRiZXRsenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzI4ODcsImV4cCI6MjA3NjYwODg4N30.d09pjgddZpNY3Z4cVZ3V4h77aAf_GVGF0sOBTZkZf2A';
 
   let frutiferas = [];
+  let dadosCarregados = false; // 🔴 CONTROLE DE CARREGAMENTO
+  let paginaAtualPorEspecie = {};
+  
   let historico = [];
   let perfilAtual = localStorage.getItem('perfilAtual') || 'Default';
   let currentFilter = 'todas';
@@ -1091,7 +1094,12 @@
     'Cajueiro': '#f59e0b',
     'Coqueiro': '#ef4444',
     'Cacau': '#8b5cf6'
-  };
+    };
+    let dadosCarregados = false; // 🔴 CONTROLE DE CARREGAMENTO
+    let paginaAtualPorEspecie = {};
+let currentFilter = 'todas';
+
+const ACOES_POR_PAGINA = 30;  
 
   // ⭐⭐ DEBOUNCE PARA EVITAR CHAMADAS DUPLICADAS ⭐⭐
   let debounceTimer;
@@ -1102,63 +1110,23 @@
     };
   }
 
-  async function carregarFrutiferas() {
-    console.log('🔥 Carregando frutíferas do Supabase...');
-    
-    try {
-      if (navigator.onLine) {
-        const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/frutiferas?select=*&nome_popular=in.(Mangabeira,Cajueiro,Coqueiro,Cacau)`,
-          {
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            }
-          }
-        );
-        
-        if (response.ok) {
-          const dados = await response.json();
-          
-          frutiferas = dados.map(f => ({
-            id: f.id,
-            fid: f.fid,
-            especie: f.nome_popular,
-            nome_popular: f.nome_popular,
-            identificacao: f.fid,
-            data_plantio: f.data_plantio || null,
-            ultima_rega: f.data_irrigacao_ordinaria || null,
-            ultima_poda: f.data_poda_formacao_1 || null,
-            ultima_colheita: f.inicio_colheita || null,
-            latitude: f.latitude || null,
-            longitude: f.longitude || null,
-            altura_total: f.altura_total || null,
-            diametro_copa: f.diametro_copa || null,
-            created_at: f.created_at || new Date().toISOString()
-          }));
-          
-          localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
-          console.log(`✅ ${frutiferas.length} frutíferas carregadas do Supabase`);
-          atualizarTodasAbas();
-          
-          if (document.getElementById('mapa').classList.contains('active')) {
-            atualizarMapa();
-          }
-        } else {
-          console.error('Erro na resposta do Supabase:', response.status);
-          carregarDoCache();
-        }
-      } else {
-        console.log('📡 Modo offline - carregando do cache');
-        carregarDoCache();
-      }
-      
-    } catch (error) {
-      console.error('❌ Erro ao carregar frutíferas:', error);
-      mostrarToast('⚠️ Erro ao carregar. Usando dados locais.');
-      carregarDoCache();
-    }
+ async function carregarFrutiferasSupabase() {
+  const { data, error } = await supabase
+    .from('frutiferas')
+    .select('*');
+
+  if (error) {
+    console.error('Erro Supabase:', error);
+    return;
   }
+
+  frutiferas = data || [];
+
+  dadosCarregados = true;        // ✅ MARCA COMO CARREGADO
+  paginaAtualPorEspecie = {};    // ✅ RESET SEGURO
+  carregarAcoesHoje();           // ✅ RENDER UMA ÚNICA VEZ
+}
+
 
   function carregarDoCache() {
     const frutiferasLocal = JSON.parse(localStorage.getItem('frutiferas') || '[]');
@@ -1283,20 +1251,22 @@
 
 
   function carregarAcoesHoje() {
-    console.log('📋 carregarAcoesHoje() executando...');
-    const container = document.getElementById('acoesHoje');
-    if (!container) return;
-    
-    if (frutiferas.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">📋</div>
-          <p>Nenhuma frutífera cadastrada.</p>
-          <p><small>Cadastre frutíferas para ver as ações pendentes</small></p>
-        </div>
-      `;
-      return;
-    }
+  const container = document.getElementById('acoesHoje');
+  if (!container) return;
+
+  // 🔒 BLOQUEIO DE LOOP
+  if (!dadosCarregados) {
+    container.innerHTML = `
+      <div class="info-box">
+        ⏳ <strong>Carregando dados...</strong><br>
+        Aguarde a sincronização com o Supabase.
+      </div>
+    `;
+    return;
+  }
+
+  // ⬇️ DAQUI PRA BAIXO FICA SEU CÓDIGO DE RENDER NORMAL
+
     
     // Agrupar ações por espécie
     const acoesPorEspecie = {
@@ -2405,11 +2375,11 @@ async function sincronizarComSupabase() {
     }
   }
 
-  function filterAcoes(event, tipo) {
-    paginaAtualPorEspecie = {}; // 🔥 RESET OBRIGATÓRIO
-    currentFilter = tipo;
-    carregarAcoesHoje();
-  }
+ function filterAcoes(event, tipo) {
+  paginaAtualPorEspecie = {}; // 🔥 EVITA BUG DE PAGINAÇÃO
+  currentFilter = tipo;
+  carregarAcoesHoje();
+}
 
 
   function filtrarFrutiferas() {
