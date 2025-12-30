@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Sítio Ipiranga">
 
-  <!-- Leaflet CSS ----> 
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 
   <style>
@@ -2731,7 +2731,7 @@
 
     /* ===============================
        COLETAR AÇÕES JÁ CALCULADAS
-       (não duplica regras)
+       ⭐ ATUALIZADO: Apenas PODA (exceto Abacaxi)
     ================================ */
     function coletarAcoesAtuais() {
       const acoes = [];
@@ -2739,34 +2739,22 @@
       frutiferas.forEach(f => {
         const especie = f.nome_popular || f.especie;
 
-        const diasRega = f.ultima_rega ? calcularDias(f.ultima_rega) : 999;
-        if (diasRega >= obterIntervaloRega(f)) {
-          acoes.push({
-            tipo: "rega",
-            especie,
-            frutifera_id: f.id || f.fid,
-            dias: diasRega
-          });
-        }
+        // ⭐ REMOVIDO: Rega automática
+        // ⭐ REMOVIDO: Colheita automática
 
-        const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
-        if (diasPoda >= obterIntervaloPoda(f)) {
-          acoes.push({
-            tipo: "poda",
-            especie,
-            frutifera_id: f.id || f.fid,
-            dias: diasPoda
-          });
-        }
+        // ✅ MANTIDO: Apenas Poda (verificando se a espécie requer poda)
+        const requiresPruning = speciesConfig[especie]?.requiresPruning !== false;
 
-        const diasColheita = f.ultima_colheita ? calcularDias(f.ultima_colheita) : 999;
-        if (diasColheita >= obterIntervaloColheita(f)) {
-          acoes.push({
-            tipo: "colheita",
-            especie,
-            frutifera_id: f.id || f.fid,
-            dias: diasColheita
-          });
+        if (requiresPruning) {
+          const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
+          if (diasPoda >= obterIntervaloPoda(f)) {
+            acoes.push({
+              tipo: "poda",
+              especie,
+              frutifera_id: f.id || f.fid,
+              dias: diasPoda
+            });
+          }
         }
       });
 
