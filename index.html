@@ -1621,6 +1621,10 @@
       document.body.appendChild(modal.firstElementChild);
     }
 
+    // ⭐⭐ PAGINAÇÃO: Estado global para cada espécie ⭐⭐
+    const paginationState = {};
+    const ITEMS_PER_PAGE = 5; // Número de ações por página
+
     // ⭐⭐ VERSÃO COM DEBOUNCE PARA EVITAR CHAMADAS DUPLICADAS ⭐⭐
     function carregarAcoesHojeDebounced() {
       clearTimeout(debounceTimer);
@@ -1646,12 +1650,19 @@
         return;
       }
 
-      // Agrupar ações por espécie
+      // ⭐⭐ Agrupar ações por espécie - TODAS AS 11 ESPÉCIES ⭐⭐
       const acoesPorEspecie = {
         'Mangabeira': { rega: [], poda: [], colheita: [], icone: '🥭' },
         'Cajueiro': { rega: [], poda: [], colheita: [], icone: '🌰' },
         'Coqueiro': { rega: [], poda: [], colheita: [], icone: '🥥' },
-        'Cacau': { rega: [], poda: [], colheita: [], icone: '🍫' }
+        'Cacau': { rega: [], poda: [], colheita: [], icone: '🍫' },
+        'Abacaxi': { rega: [], poda: [], colheita: [], icone: '🍍' },
+        'Abacate': { rega: [], poda: [], colheita: [], icone: '🥑' },
+        'Abricó-do-pará': { rega: [], poda: [], colheita: [], icone: '🍑' },
+        'Acerola': { rega: [], poda: [], colheita: [], icone: '🍒' },
+        'Manga': { rega: [], poda: [], colheita: [], icone: '🥭' },
+        'Laranja-cravo': { rega: [], poda: [], colheita: [], icone: '🍊' },
+        'Limão': { rega: [], poda: [], colheita: [], icone: '🍋' }
       };
 
       // Organizar ações por espécie
@@ -1747,6 +1758,20 @@
 
         if (acoesFiltradas.length === 0) return;
 
+        // ⭐⭐ PAGINAÇÃO: Inicializar estado se não existir ⭐⭐
+        if (!paginationState[especieId]) {
+          paginationState[especieId] = {
+            currentPage: 1,
+            isExpanded: false
+          };
+        }
+
+        const currentPage = paginationState[especieId].currentPage;
+        const totalPages = Math.ceil(acoesFiltradas.length / ITEMS_PER_PAGE);
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        const acoesPaginadas = acoesFiltradas.slice(startIndex, endIndex);
+
         // Gerar seção da espécie (acordeão)
         const especieId = especie.toLowerCase().replace(/\s+/g, '-');
         html += `
@@ -1768,6 +1793,7 @@
                 <div style="font-weight: 700; color: #1f2937; font-size: 1.1rem;">${especie}</div>
                 <div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.25rem;">
                   ${acoesFiltradas.length} ação(ões) pendente(s)
+                  ${totalPages > 1 ? ` • Página ${currentPage}/${totalPages}` : ''}
                 </div>
               </div>
             </div>
@@ -1776,7 +1802,7 @@
           
           <div id="content-${especieId}" class="especie-content" 
                style="max-height: 2000px; overflow: hidden; transition: max-height 0.5s ease-in-out;">
-            ${acoesFiltradas.map(acao => {
+            ${acoesPaginadas.map(acao => {
           const frutiferaId = acao.frutifera.id || acao.frutifera.fid || acao.frutifera.identificacao;
           const actionId = `action-${frutiferaId}-${acao.tipo}`;
           const isDone = localStorage.getItem(actionId) === 'true';
@@ -1833,6 +1859,42 @@
               </div>
             `;
         }).join('')}
+            
+            ${totalPages > 1 ? `
+            <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+              <button 
+                onclick="changePage('${especieId}', ${currentPage - 1})"
+                ${currentPage === 1 ? 'disabled' : ''}
+                style="padding: 0.5rem 1rem; 
+                       background: ${currentPage === 1 ? '#e5e7eb' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}; 
+                       color: ${currentPage === 1 ? '#9ca3af' : 'white'}; 
+                       border: none; 
+                       border-radius: 6px; 
+                       font-weight: 600; 
+                       cursor: ${currentPage === 1 ? 'not-allowed' : 'pointer'};
+                       transition: all 0.3s;">
+                ← Anterior
+              </button>
+              
+              <span style="font-weight: 600; color: #1f2937;">
+                Página ${currentPage} de ${totalPages}
+              </span>
+              
+              <button 
+                onclick="changePage('${especieId}', ${currentPage + 1})"
+                ${currentPage === totalPages ? 'disabled' : ''}
+                style="padding: 0.5rem 1rem; 
+                       background: ${currentPage === totalPages ? '#e5e7eb' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}; 
+                       color: ${currentPage === totalPages ? '#9ca3af' : 'white'}; 
+                       border: none; 
+                       border-radius: 6px; 
+                       font-weight: 600; 
+                       cursor: ${currentPage === totalPages ? 'not-allowed' : 'pointer'};
+                       transition: all 0.3s;">
+                Próxima →
+              </button>
+            </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -1849,14 +1911,28 @@
 
       container.innerHTML = html;
 
-      // Inicializar todas as seções fechadas (minimizadas)
+      // ⭐⭐ Restaurar estado de expansão/colapso de cada seção ⭐⭐
       Object.keys(acoesPorEspecie).forEach(especie => {
         const especieId = especie.toLowerCase().replace(/\s+/g, '-');
         const content = document.getElementById(`content-${especieId}`);
         const toggle = document.getElementById(`toggle-${especieId}`);
+        const header = toggle?.closest('.especie-header');
+
         if (content && toggle) {
-          content.style.maxHeight = '0px';
-          toggle.style.transform = 'rotate(0deg)';
+          // Verificar se a seção estava expandida
+          const isExpanded = paginationState[especieId]?.isExpanded || false;
+
+          if (isExpanded) {
+            content.style.maxHeight = '2000px';
+            toggle.style.transform = 'rotate(180deg)';
+            if (header) {
+              header.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.15)';
+              header.style.borderColor = '#10b981';
+            }
+          } else {
+            content.style.maxHeight = '0px';
+            toggle.style.transform = 'rotate(0deg)';
+          }
         }
       });
     }
@@ -1867,20 +1943,44 @@
       const header = toggle.closest('.especie-header');
 
       if (content.style.maxHeight === '0px' || content.style.maxHeight === '') {
+        // Expandir
         content.style.maxHeight = '2000px';
         toggle.style.transform = 'rotate(180deg)';
         if (header) {
           header.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.15)';
           header.style.borderColor = '#10b981';
         }
+        // ⭐⭐ Salvar estado expandido ⭐⭐
+        if (!paginationState[especieId]) {
+          paginationState[especieId] = { currentPage: 1, isExpanded: true };
+        } else {
+          paginationState[especieId].isExpanded = true;
+        }
       } else {
+        // Colapsar
         content.style.maxHeight = '0px';
         toggle.style.transform = 'rotate(0deg)';
         if (header) {
           header.style.boxShadow = 'none';
           header.style.borderColor = '#e5e7eb';
         }
+        // ⭐⭐ Salvar estado colapsado ⭐⭐
+        if (paginationState[especieId]) {
+          paginationState[especieId].isExpanded = false;
+        }
       }
+    }
+
+    // ⭐⭐ NOVA FUNÇÃO: Mudar página mantendo estado expandido ⭐⭐
+    function changePage(especieId, newPage) {
+      if (!paginationState[especieId]) {
+        paginationState[especieId] = { currentPage: 1, isExpanded: false };
+      }
+
+      paginationState[especieId].currentPage = newPage;
+
+      // Recarregar ações mantendo o estado
+      carregarAcoesHoje();
     }
 
     function toggleAction(tipo, frutiferaId, actionId, event) {
