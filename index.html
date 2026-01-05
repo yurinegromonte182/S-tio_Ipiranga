@@ -1697,18 +1697,24 @@
           });
         }
 
-        const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
-        const intervaloPoda = obterIntervaloPoda(f);
+        // ⭐ PODA: Apenas para espécies que requerem poda (exceto Abacaxi)
+        const especieLower = especie.toLowerCase();
+        const requiresPruning = !especieLower.includes('abacaxi');
 
-        if (diasPoda >= intervaloPoda) {
-          acoesPorEspecie[especie].poda.push({
-            tipo: 'poda',
-            urgencia: 'warning',
-            frutifera: f,
-            dias: diasPoda,
-            titulo: `Podar ${f.nome_popular || f.especie}`,
-            descricao: `Última poda: ${diasPoda === 999 ? 'Nunca' : diasPoda + ' dias atrás'}`
-          });
+        if (requiresPruning) {
+          const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
+          const intervaloPoda = obterIntervaloPoda(f);
+
+          if (diasPoda >= intervaloPoda) {
+            acoesPorEspecie[especie].poda.push({
+              tipo: 'poda',
+              urgencia: 'warning',
+              frutifera: f,
+              dias: diasPoda,
+              titulo: `Podar ${f.nome_popular || f.especie}`,
+              descricao: `Última poda: ${diasPoda === 999 ? 'Nunca' : diasPoda + ' dias atrás'}`
+            });
+          }
         }
 
         const diasColheita = f.ultima_colheita ? calcularDias(f.ultima_colheita) : 999;
@@ -3039,8 +3045,9 @@
         // ⭐ REMOVIDO: Rega automática
         // ⭐ REMOVIDO: Colheita automática
 
-        // ✅ MANTIDO: Apenas Poda (verificando se a espécie requer poda)
-        const requiresPruning = speciesConfig[especie]?.requiresPruning !== false;
+        // ✅ MANTIDO: Apenas Poda (exceto Abacaxi)
+        const especieLower = especie.toLowerCase();
+        const requiresPruning = !especieLower.includes('abacaxi');
 
         if (requiresPruning) {
           const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
