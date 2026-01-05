@@ -2754,7 +2754,7 @@
         mostrarToast('🔄 Carregando curvas de nível...');
 
         const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/cn_sitio?select=*`,
+          `${SUPABASE_URL}/rest/v1/cn_sitio?select=fid,elev,geom`,
           {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
@@ -2769,55 +2769,111 @@
 
         const contours = await response.json();
         console.log(`✅ ${contours.length} curvas de nível carregadas`);
+        console.log('Exemplo de dados:', contours[0]); // Debug
 
         // Limpar camada antes de adicionar novas curvas
         contoursLayer.clearLayers();
 
+        let contoursAdded = 0;
+
         // Adicionar cada curva ao mapa
-        contours.forEach(contour => {
+        contours.forEach((contour, index) => {
           if (contour.geom) {
             try {
-              // O Supabase retorna geometria em formato GeoJSON
-              const geojson = typeof contour.geom === 'string'
-                ? JSON.parse(contour.geom)
-                : contour.geom;
+              // O Supabase pode retornar geometria em diferentes formatos
+              let geojson = contour.geom;
+
+              // Se for string, fazer parse
+              if (typeof geojson === 'string') {
+                geojson = JSON.parse(geojson);
+              }
 
               // Criar a linha da curva de nível
               const layer = L.geoJSON(geojson, {
                 style: {
                   color: '#3b82f6',
                   weight: 2,
-                  opacity: 0.7
+                  opacity: 0.8
                 }
               });
 
-              // Adicionar label com a elevação
+              contoursLayer.addLayer(layer);
+              contoursAdded++;
+
+              // Adicionar labels com a elevação ao longo da curva
               if (contour.elev !== null && contour.elev !== undefined) {
-                const bounds = layer.getBounds();
-                const center = bounds.getCenter();
+                const elevText = `${contour.elev.toFixed(1)}m`;
 
-                // Criar marcador de texto para a cota
-                const label = L.marker(center, {
-                  icon: L.divIcon({
-                    className: 'contour-label',
-                    html: `<div style="background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #3b82f6; font-size: 11px; font-weight: 600; color: #1e40af; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">${contour.elev.toFixed(1)}m</div>`,
-                    iconSize: [50, 20],
-                    iconAnchor: [25, 10]
-                  })
-                });
+                // Tentar obter coordenadas da geometria
+                let coordinates = [];
 
-                contoursLayer.addLayer(layer);
-                contoursLayer.addLayer(label);
-              } else {
-                contoursLayer.addLayer(layer);
+                if (geojson.type === 'LineString') {
+                  coordinates = geojson.coordinates;
+                } else if (geojson.type === 'MultiLineString') {
+                  coordinates = geojson.coordinates[0]; // Pegar primeira linha
+                } else if (geojson.geometry) {
+                  if (geojson.geometry.type === 'LineString') {
+                    coordinates = geojson.geometry.coordinates;
+                  } else if (geojson.geometry.type === 'MultiLineString') {
+                    coordinates = geojson.geometry.coordinates[0];
+                  }
+                }
+
+                // Se temos coordenadas, adicionar labels ao longo da linha
+                if (coordinates && coordinates.length > 0) {
+                  // Adicionar label no início, meio e fim da curva
+                  const positions = [
+                    0, // início
+                    Math.floor(coordinates.length / 2), // meio
+                    coordinates.length - 1 // fim
+                  ];
+
+                  positions.forEach(pos => {
+                    if (coordinates[pos]) {
+                      const coord = coordinates[pos];
+                      // GeoJSON usa [lon, lat], Leaflet usa [lat, lon]
+                      const latLng = [coord[1], coord[0]];
+
+                      const label = L.marker(latLng, {
+                        icon: L.divIcon({
+                          className: 'contour-label',
+                          html: `<div style="background: rgba(255,255,255,0.95); padding: 3px 8px; border-radius: 4px; border: 1px solid #3b82f6; font-size: 12px; font-weight: 700; color: #1e40af; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3); pointer-events: none;">${elevText}</div>`,
+                          iconSize: [60, 24],
+                          iconAnchor: [30, 12]
+                        })
+                      });
+
+                      contoursLayer.addLayer(label);
+                    }
+                  });
+                } else {
+                  // Fallback: usar o centro do bounds
+                  try {
+                    const bounds = layer.getBounds();
+                    const center = bounds.getCenter();
+
+                    const label = L.marker(center, {
+                      icon: L.divIcon({
+                        className: 'contour-label',
+                        html: `<div style="background: rgba(255,255,255,0.95); padding: 3px 8px; border-radius: 4px; border: 1px solid #3b82f6; font-size: 12px; font-weight: 700; color: #1e40af; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3); pointer-events: none;">${elevText}</div>`,
+                        iconSize: [60, 24],
+                        iconAnchor: [30, 12]
+                      })
+                    });
+
+                    contoursLayer.addLayer(label);
+                  } catch (e) {
+                    console.warn('Não foi possível adicionar label para curva', contour.fid);
+                  }
+                }
               }
             } catch (error) {
-              console.error('Erro ao processar curva:', error);
+              console.error('Erro ao processar curva', contour.fid, ':', error);
             }
           }
         });
 
-        mostrarToast(`✅ ${contours.length} curvas de nível carregadas`);
+        mostrarToast(`✅ ${contoursAdded} curvas de nível carregadas com cotas`);
 
       } catch (error) {
         console.error('❌ Erro ao carregar curvas de nível:', error);
