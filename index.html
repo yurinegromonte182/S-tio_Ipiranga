@@ -1802,12 +1802,10 @@
         const especieId = especie.toLowerCase().replace(/\s+/g, '-');
 
         // ⭐⭐ PAGINAÇÃO: Inicializar estado se não existir ⭐⭐
-        // ⭐ AUTO-EXPANDIR SE HOUVER AÇÕES URGENTES ⭐
-        const hasUrgent = acoesFiltradas.some(a => a.urgencia === 'urgent');
         if (!paginationState[especieId]) {
           paginationState[especieId] = {
             currentPage: 1,
-            isExpanded: hasUrgent // Expandir automaticamente se houver urgentes
+            isExpanded: false // Sempre começar colapsado
           };
         }
 
@@ -2825,91 +2823,84 @@
         }
 
         const contours = await response.json();
+
+        if (!contours || contours.length === 0) {
+          mostrarToast('⚠️ Nenhuma curva de nível encontrada');
+          document.getElementById('toggleContours').checked = false;
+          return;
+        }
+
         console.log(`✅ ${contours.length} curvas de nível carregadas`);
-        console.log('Exemplo de dados:', contours[0]); // Debug
 
         // Limpar camada antes de adicionar novas curvas
         contoursLayer.clearLayers();
 
         let contoursAdded = 0;
+        let errors = 0;
 
         // Adicionar cada curva ao mapa
         contours.forEach((contour, index) => {
-          if (contour.geom) {
-            try {
-              // O Supabase pode retornar geometria em diferentes formatos
-              let geojson = contour.geom;
+          if (!contour.geom) {
+            errors++;
+            return;
+          }
 
-              // Se for string, fazer parse
-              if (typeof geojson === 'string') {
-                geojson = JSON.parse(geojson);
+          try {
+            // O Supabase pode retornar geometria em diferentes formatos
+            let geojson = contour.geom;
+
+            // Se for string, fazer parse
+            if (typeof geojson === 'string') {
+              geojson = JSON.parse(geojson);
+            }
+
+            // Criar a linha da curva de nível
+            const layer = L.geoJSON(geojson, {
+              style: {
+                color: '#3b82f6',
+                weight: 2,
+                opacity: 0.8
+              }
+            });
+
+            contoursLayer.addLayer(layer);
+            contoursAdded++;
+
+            // Adicionar labels com a elevação ao longo da curva
+            if (contour.elev !== null && contour.elev !== undefined) {
+              const elevText = `${contour.elev.toFixed(1)}m`;
+
+              // Tentar obter coordenadas da geometria
+              let coordinates = [];
+
+              if (geojson.type === 'LineString') {
+                coordinates = geojson.coordinates;
+              } else if (geojson.type === 'MultiLineString') {
+                coordinates = geojson.coordinates[0]; // Pegar primeira linha
+              } else if (geojson.geometry) {
+                if (geojson.geometry.type === 'LineString') {
+                  coordinates = geojson.geometry.coordinates;
+                } else if (geojson.geometry.type === 'MultiLineString') {
+                  coordinates = geojson.geometry.coordinates[0];
+                }
               }
 
-              // Criar a linha da curva de nível
-              const layer = L.geoJSON(geojson, {
-                style: {
-                  color: '#3b82f6',
-                  weight: 2,
-                  opacity: 0.8
-                }
-              });
+              // Se temos coordenadas, adicionar labels ao longo da linha
+              if (coordinates && coordinates.length > 0) {
+                // Adicionar label no início, meio e fim da curva
+                const positions = [
+                  0, // início
+                  Math.floor(coordinates.length / 2), // meio
+                  coordinates.length - 1 // fim
+                ];
 
-              contoursLayer.addLayer(layer);
-              contoursAdded++;
+                positions.forEach(pos => {
+                  if (coordinates[pos]) {
+                    const coord = coordinates[pos];
+                    // GeoJSON usa [lon, lat], Leaflet usa [lat, lon]
+                    const latLng = [coord[1], coord[0]];
 
-              // Adicionar labels com a elevação ao longo da curva
-              if (contour.elev !== null && contour.elev !== undefined) {
-                const elevText = `${contour.elev.toFixed(1)}m`;
-
-                // Tentar obter coordenadas da geometria
-                let coordinates = [];
-
-                if (geojson.type === 'LineString') {
-                  coordinates = geojson.coordinates;
-                } else if (geojson.type === 'MultiLineString') {
-                  coordinates = geojson.coordinates[0]; // Pegar primeira linha
-                } else if (geojson.geometry) {
-                  if (geojson.geometry.type === 'LineString') {
-                    coordinates = geojson.geometry.coordinates;
-                  } else if (geojson.geometry.type === 'MultiLineString') {
-                    coordinates = geojson.geometry.coordinates[0];
-                  }
-                }
-
-                // Se temos coordenadas, adicionar labels ao longo da linha
-                if (coordinates && coordinates.length > 0) {
-                  // Adicionar label no início, meio e fim da curva
-                  const positions = [
-                    0, // início
-                    Math.floor(coordinates.length / 2), // meio
-                    coordinates.length - 1 // fim
-                  ];
-
-                  positions.forEach(pos => {
-                    if (coordinates[pos]) {
-                      const coord = coordinates[pos];
-                      // GeoJSON usa [lon, lat], Leaflet usa [lat, lon]
-                      const latLng = [coord[1], coord[0]];
-
-                      const label = L.marker(latLng, {
-                        icon: L.divIcon({
-                          className: 'contour-label',
-                          html: `<div style="background: rgba(255,255,255,0.95); padding: 3px 8px; border-radius: 4px; border: 1px solid #3b82f6; font-size: 12px; font-weight: 700; color: #1e40af; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3); pointer-events: none;">${elevText}</div>`,
-                          iconSize: [60, 24],
-                          iconAnchor: [30, 12]
-                        })
-                      });
-
-                      contoursLayer.addLayer(label);
-                    }
-                  });
-                } else {
-                  // Fallback: usar o centro do bounds
-                  try {
-                    const bounds = layer.getBounds();
-                    const center = bounds.getCenter();
-
-                    const label = L.marker(center, {
+                    const label = L.marker(latLng, {
                       icon: L.divIcon({
                         className: 'contour-label',
                         html: `<div style="background: rgba(255,255,255,0.95); padding: 3px 8px; border-radius: 4px; border: 1px solid #3b82f6; font-size: 12px; font-weight: 700; color: #1e40af; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3); pointer-events: none;">${elevText}</div>`,
@@ -2919,24 +2910,42 @@
                     });
 
                     contoursLayer.addLayer(label);
-                  } catch (e) {
-                    console.warn('Não foi possível adicionar label para curva', contour.fid);
                   }
+                });
+              } else {
+                // Fallback: usar o centro do bounds
+                try {
+                  const bounds = layer.getBounds();
+                  const center = bounds.getCenter();
+
+                  const label = L.marker(center, {
+                    icon: L.divIcon({
+                      className: 'contour-label',
+                      html: `<div style="background: rgba(255,255,255,0.95); padding: 3px 8px; border-radius: 4px; border: 1px solid #3b82f6; font-size: 12px; font-weight: 700; color: #1e40af; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3); pointer-events: none;">${elevText}</div>`,
+                      iconSize: [60, 24],
+                      iconAnchor: [30, 12]
+                    })
+                  });
+
+                  contoursLayer.addLayer(label);
+                } catch (e) {
+                  console.warn('Não foi possível adicionar label para curva', contour.fid);
                 }
               }
-            } catch (error) {
-              console.error('Erro ao processar curva', contour.fid, ':', error);
             }
+          } catch (error) {
+            console.error('Erro ao processar curva', contour.fid, ':', error);
           }
+        }
         });
 
-        mostrarToast(`✅ ${contoursAdded} curvas de nível carregadas com cotas`);
+      mostrarToast(`✅ ${contoursAdded} curvas de nível carregadas com cotas`);
 
-      } catch (error) {
-        console.error('❌ Erro ao carregar curvas de nível:', error);
-        mostrarToast('❌ Erro ao carregar curvas de nível');
-        document.getElementById('toggleContours').checked = false;
-      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar curvas de nível:', error);
+      mostrarToast('❌ Erro ao carregar curvas de nível');
+      document.getElementById('toggleContours').checked = false;
+    }
     }
 
     function toggleCadastroForm() {
