@@ -2935,17 +2935,21 @@
             }
           } catch (error) {
             console.error('Erro ao processar curva', contour.fid, ':', error);
+            errors++;
           }
-        }
         });
 
-      mostrarToast(`✅ ${contoursAdded} curvas de nível carregadas com cotas`);
+        if (errors > 0) {
+          console.warn(`⚠️ ${errors} curva(s) com erro ao processar`);
+        }
 
-    } catch (error) {
-      console.error('❌ Erro ao carregar curvas de nível:', error);
-      mostrarToast('❌ Erro ao carregar curvas de nível');
-      document.getElementById('toggleContours').checked = false;
-    }
+        mostrarToast(`✅ ${contoursAdded} curvas de nível carregadas`);
+
+      } catch (error) {
+        console.error('❌ Erro ao carregar curvas de nível:', error);
+        mostrarToast('❌ Erro ao carregar curvas de nível');
+        document.getElementById('toggleContours').checked = false;
+      }
     }
 
     function toggleCadastroForm() {
