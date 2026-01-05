@@ -1552,29 +1552,29 @@
 
       if (frutiferas.length === 0) {
         lista.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">🌱</div>
-          <p>Nenhuma frutífera cadastrada ainda.</p>
-          <p><small>Vá para a aba "Mapa" para adicionar sua primeira frutífera!</small></p>
-        </div>
-      `;
+          <div class="empty-state">
+            <div class="empty-state-icon">🌱</div>
+            <p>Nenhuma frutífera cadastrada ainda.</p>
+            <p><small>Vá para a aba "Mapa" para adicionar sua primeira frutífera!</small></p>
+          </div>
+        `;
         return;
       }
 
       lista.innerHTML = frutiferas.map(f => `
-      <div class="frutifera-card" onclick="mostrarDetalhesFrutifera('${f.id || f.fid}')">
-        <div class="frutifera-header">
-          <div class="frutifera-name">${f.nome_popular || f.especie}</div>
-          <span class="badge">${f.identificacao || f.id || f.fid}</span>
+        <div class="frutifera-card" onclick="mostrarDetalhesFrutifera('${f.id || f.fid}')">
+          <div class="frutifera-header">
+            <div class="frutifera-name">${f.nome_popular || f.especie}</div>
+            <span class="badge">${f.identificacao || f.id || f.fid}</span>
+          </div>
+          <div class="frutifera-info">
+            <div>📅 Plantio: ${formatarData(f.data_plantio) || 'Sem data'}</div>
+            <div>💧 Última rega: ${formatarData(f.ultima_rega) || 'Nunca'}</div>
+            <div>✂️ Última poda: ${formatarData(f.ultima_poda) || 'Nunca'}</div>
+            ${f.latitude && f.longitude ? `<div>📍 GPS: ${f.latitude.toFixed(6)}, ${f.longitude.toFixed(6)}</div>` : ''}
+          </div>
         </div>
-        <div class="frutifera-info">
-          <div>📅 Plantio: ${formatarData(f.data_plantio) || 'Sem data'}</div>
-          <div>💧 Última rega: ${formatarData(f.ultima_rega) || 'Nunca'}</div>
-          <div>✂️ Última poda: ${formatarData(f.ultima_poda) || 'Nunca'}</div>
-          ${f.latitude && f.longitude ? `<div>📍 GPS: ${f.latitude.toFixed(6)}, ${f.longitude.toFixed(6)}</div>` : ''}
-        </div>
-      </div>
-    `).join('');
+      `).join('');
     }
 
     function mostrarDetalhesFrutifera(id) {
@@ -1582,61 +1582,61 @@
       if (!frutifera) return;
 
       const modalHTML = `
-      <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center;" id="modalDetalhes">
-        <div style="background: white; border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="margin: 0; color: #10b981;">${frutifera.nome_popular || frutifera.especie}</h3>
-            <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">×</button>
-          </div>
-          
-          <div style="margin-bottom: 1rem;">
-            <div style="display: grid; gap: 0.75rem;">
-              <div>
-                <strong style="color: #6b7280; font-size: 0.85rem;">Código:</strong>
-                <div style="margin-top: 0.25rem;">${frutifera.identificacao || frutifera.id || frutifera.fid}</div>
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center;" id="modalDetalhes">
+          <div style="background: white; border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <h3 style="margin: 0; color: #10b981;">${frutifera.nome_popular || frutifera.especie}</h3>
+              <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">×</button>
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+              <div style="display: grid; gap: 0.75rem;">
+                <div>
+                  <strong style="color: #6b7280; font-size: 0.85rem;">Código:</strong>
+                  <div style="margin-top: 0.25rem;">${frutifera.identificacao || frutifera.id || frutifera.fid}</div>
+                </div>
+                
+                ${frutifera.data_plantio ? `
+                <div>
+                  <strong style="color: #6b7280; font-size: 0.85rem;">Data do Plantio:</strong>
+                  <div style="margin-top: 0.25rem;">${formatarData(frutifera.data_plantio)}</div>
+                </div>` : ''}
+                
+                ${frutifera.ultima_rega ? `
+                <div>
+                  <strong style="color: #6b7280; font-size: 0.85rem;">Última Rega:</strong>
+                  <div style="margin-top: 0.25rem;">${formatarData(frutifera.ultima_rega)} (${calcularDias(frutifera.ultima_rega)} dias atrás)</div>
+                </div>` : ''}
+                
+                ${frutifera.ultima_poda ? `
+                <div>
+                  <strong style="color: #6b7280; font-size: 0.85rem;">Última Poda:</strong>
+                  <div style="margin-top: 0.25rem;">${formatarData(frutifera.ultima_poda)} (${calcularDias(frutifera.ultima_poda)} dias atrás)</div>
+                </div>` : ''}
+                
+                ${frutifera.latitude && frutifera.longitude ? `
+                <div>
+                  <strong style="color: #6b7280; font-size: 0.85rem;">Localização:</strong>
+                  <div style="margin-top: 0.25rem;">${frutifera.latitude.toFixed(6)}, ${frutifera.longitude.toFixed(6)}</div>
+                </div>` : ''}
               </div>
-              
-              ${frutifera.data_plantio ? `
-              <div>
-                <strong style="color: #6b7280; font-size: 0.85rem;">Data do Plantio:</strong>
-                <div style="margin-top: 0.25rem;">${formatarData(frutifera.data_plantio)}</div>
-              </div>` : ''}
-              
-              ${frutifera.ultima_rega ? `
-              <div>
-                <strong style="color: #6b7280; font-size: 0.85rem;">Última Rega:</strong>
-                <div style="margin-top: 0.25rem;">${formatarData(frutifera.ultima_rega)} (${calcularDias(frutifera.ultima_rega)} dias atrás)</div>
-              </div>` : ''}
-              
-              ${frutifera.ultima_poda ? `
-              <div>
-                <strong style="color: #6b7280; font-size: 0.85rem;">Última Poda:</strong>
-                <div style="margin-top: 0.25rem;">${formatarData(frutifera.ultima_poda)} (${calcularDias(frutifera.ultima_poda)} dias atrás)</div>
-              </div>` : ''}
-              
-              ${frutifera.latitude && frutifera.longitude ? `
-              <div>
-                <strong style="color: #6b7280; font-size: 0.85rem;">Localização:</strong>
-                <div style="margin-top: 0.25rem;">${frutifera.latitude.toFixed(6)}, ${frutifera.longitude.toFixed(6)}</div>
-              </div>` : ''}
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <button onclick="confirmarDeletarFrutifera('${frutifera.id || frutifera.fid}', '${frutifera.nome_popular || frutifera.especie}')" 
+                      style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(239, 68, 68, 0.4)'"
+                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                🗑️ Deletar
+              </button>
+              <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                      style="width: 100%; padding: 0.75rem; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                Fechar
+              </button>
             </div>
           </div>
-          
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-            <button onclick="confirmarDeletarFrutifera('${frutifera.id || frutifera.fid}', '${frutifera.nome_popular || frutifera.especie}')" 
-                    style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
-                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(239, 68, 68, 0.4)'"
-                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-              🗑️ Deletar
-            </button>
-            <button onclick="this.parentElement.parentElement.parentElement.remove()" 
-                    style="width: 100%; padding: 0.75rem; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-              Fechar
-            </button>
-          </div>
         </div>
-      </div>
-    `;
+      `;
 
       const modal = document.createElement('div');
       modal.innerHTML = modalHTML;
@@ -1663,12 +1663,12 @@
 
       if (frutiferas.length === 0) {
         container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">📋</div>
-          <p>Nenhuma frutífera cadastrada.</p>
-          <p><small>Cadastre frutíferas para ver as ações pendentes</small></p>
-        </div>
-      `;
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>Nenhuma frutífera cadastrada.</p>
+            <p><small>Cadastre frutíferas para ver as ações pendentes</small></p>
+          </div>
+        `;
         return;
       }
 
@@ -1758,11 +1758,11 @@
 
       if (totalAcoes === 0) {
         container.innerHTML = `
-        <div class="info-box success-box">
-          ✅ <strong>Tudo em dia!</strong><br>
-          Nenhuma ação pendente no momento.
-        </div>
-      `;
+          <div class="info-box success-box">
+            ✅ <strong>Tudo em dia!</strong><br>
+            Nenhuma ação pendente no momento.
+          </div>
+        `;
         document.getElementById('actionCount').textContent = '📋 0 ações';
         return;
       }
@@ -1815,138 +1815,138 @@
         const endIndex = startIndex + ITEMS_PER_PAGE;
         const acoesPaginadas = acoesFiltradas.slice(startIndex, endIndex);
         html += `
-        <div class="especie-section" style="margin-bottom: 1.5rem;">
-          <div class="especie-header" onclick="toggleEspecieSection('${especieId}')" 
-               style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); 
-                      border: 1px solid #e5e7eb; 
-                      border-radius: 10px; 
-                      padding: 1rem; 
-                      cursor: pointer;
-                      display: flex;
-                      align-items: center;
-                      justify-content: space-between;
-                      transition: all 0.3s;
-                      margin-bottom: 0.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span style="font-size: 1.5rem;">${dados.icone}</span>
-              <div>
-                <div style="font-weight: 700; color: #1f2937; font-size: 1.1rem;">${especie}</div>
-                <div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.25rem;">
-                  ${acoesFiltradas.length} ação(ões) pendente(s)
-                  ${totalPages > 1 ? ` • Página ${currentPage}/${totalPages}` : ''}
+          <div class="especie-section" style="margin-bottom: 1.5rem;">
+            <div class="especie-header" onclick="toggleEspecieSection('${especieId}')" 
+                style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); 
+                        border: 1px solid #e5e7eb; 
+                        border-radius: 10px; 
+                        padding: 1rem; 
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        transition: all 0.3s;
+                        margin-bottom: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.5rem;">${dados.icone}</span>
+                <div>
+                  <div style="font-weight: 700; color: #1f2937; font-size: 1.1rem;">${especie}</div>
+                  <div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.25rem;">
+                    ${acoesFiltradas.length} ação(ões) pendente(s)
+                    ${totalPages > 1 ? ` • Página ${currentPage}/${totalPages}` : ''}
+                  </div>
                 </div>
               </div>
+              <span id="toggle-${especieId}" style="font-size: 1.2rem; color: #10b981; transition: transform 0.3s;">▼</span>
             </div>
-            <span id="toggle-${especieId}" style="font-size: 1.2rem; color: #10b981; transition: transform 0.3s;">▼</span>
-          </div>
-          
-          <div id="content-${especieId}" class="especie-content" 
-               style="max-height: 2000px; overflow: hidden; transition: max-height 0.5s ease-in-out;">
-            ${acoesPaginadas.map(acao => {
+            
+            <div id="content-${especieId}" class="especie-content" 
+                style="max-height: 2000px; overflow: hidden; transition: max-height 0.5s ease-in-out;">
+              ${acoesPaginadas.map(acao => {
           const frutiferaId = acao.frutifera.id || acao.frutifera.fid || acao.frutifera.identificacao;
           const actionId = `action-${frutiferaId}-${acao.tipo}`;
           const isDone = localStorage.getItem(actionId) === 'true';
 
           return `
-              <div class="action-item ${acao.urgencia} ${isDone ? 'completed' : ''}" 
-                   style="position: relative; 
-                          border-left: 4px solid ${isDone ? '#10b981' : (acao.urgencia === 'urgent' ? '#ef4444' : acao.urgencia === 'warning' ? '#f59e0b' : '#10b981')}; 
-                          background: ${isDone ? '#f0fdf4' : (acao.urgencia === 'urgent' ? '#fef2f2' : acao.urgencia === 'warning' ? '#fffbeb' : '#f0fdf4')}; 
-                          border-radius: 8px; 
-                          padding: 1rem; 
-                          margin-bottom: 0.75rem;
-                          transition: all 0.3s;
-                          transform: ${isDone ? 'translateY(-2px)' : 'none'};
-                          box-shadow: ${isDone ? '0 4px 12px rgba(16, 185, 129, 0.2)' : '0 1px 3px rgba(0,0,0,0.1)'}">
-                
-                ${isDone ? `
-                  <div style="position: absolute; top: -8px; right: -8px; background: #10b981; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; z-index: 1;">
-                    ✅ Feito
+                <div class="action-item ${acao.urgencia} ${isDone ? 'completed' : ''}" 
+                    style="position: relative; 
+                            border-left: 4px solid ${isDone ? '#10b981' : (acao.urgencia === 'urgent' ? '#ef4444' : acao.urgencia === 'warning' ? '#f59e0b' : '#10b981')}; 
+                            background: ${isDone ? '#f0fdf4' : (acao.urgencia === 'urgent' ? '#fef2f2' : acao.urgencia === 'warning' ? '#fffbeb' : '#f0fdf4')}; 
+                            border-radius: 8px; 
+                            padding: 1rem; 
+                            margin-bottom: 0.75rem;
+                            transition: all 0.3s;
+                            transform: ${isDone ? 'translateY(-2px)' : 'none'};
+                            box-shadow: ${isDone ? '0 4px 12px rgba(16, 185, 129, 0.2)' : '0 1px 3px rgba(0,0,0,0.1)'}">
+                  
+                  ${isDone ? `
+                    <div style="position: absolute; top: -8px; right: -8px; background: #10b981; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; z-index: 1;">
+                      ✅ Feito
+                    </div>
+                  ` : ''}
+                  
+                  <div class="action-title">
+                    ${acao.urgencia === 'urgent' ? '🚨' : acao.tipo === 'rega' ? '💧' : acao.tipo === 'poda' ? '✂️' : '🍊'}
+                    ${acao.titulo}
                   </div>
-                ` : ''}
-                
-                <div class="action-title">
-                  ${acao.urgencia === 'urgent' ? '🚨' : acao.tipo === 'rega' ? '💧' : acao.tipo === 'poda' ? '✂️' : '🍊'}
-                  ${acao.titulo}
-                </div>
-                <div class="action-desc">${acao.descricao}</div>
-                <div class="action-meta">
-                  Código: ${acao.frutifera.identificacao || acao.frutifera.id}
-                  ${acao.frutifera.latitude && acao.frutifera.longitude ?
+                  <div class="action-desc">${acao.descricao}</div>
+                  <div class="action-meta">
+                    Código: ${acao.frutifera.identificacao || acao.frutifera.id}
+                    ${acao.frutifera.latitude && acao.frutifera.longitude ?
               `• <a href="#" onclick="abrirNoMapa(${acao.frutifera.latitude}, ${acao.frutifera.longitude}, '${acao.frutifera.nome_popular || acao.frutifera.especie}'); return false;" style="color: #10b981; text-decoration: none; font-weight: 600;">📍 Ver no Mapa</a>` : ''}
-                </div>
-                
-                <button class="action-button ${isDone ? 'btn-undo' : 'btn-do'}" 
-                        onclick="toggleAction('${acao.tipo}', '${frutiferaId}', '${actionId}', event)"
-                        style="width: 100%; 
-                               padding: 0.75rem; 
-                               border: none; 
-                               border-radius: 8px; 
-                               font-weight: 600; 
-                               cursor: pointer; 
-                               margin-top: 0.75rem;
-                               transition: all 0.3s;
-                               ${isDone ?
+                  </div>
+                  
+                  <button class="action-button ${isDone ? 'btn-undo' : 'btn-do'}" 
+                          onclick="toggleAction('${acao.tipo}', '${frutiferaId}', '${actionId}', event)"
+                          style="width: 100%; 
+                                padding: 0.75rem; 
+                                border: none; 
+                                border-radius: 8px; 
+                                font-weight: 600; 
+                                cursor: pointer; 
+                                margin-top: 0.75rem;
+                                transition: all 0.3s;
+                                ${isDone ?
               'background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;' :
               'background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;'}
-                               transform: ${isDone ? 'scale(0.98)' : 'none'};
-                               box-shadow: ${isDone ? '0 2px 4px rgba(239, 68, 68, 0.3)' : '0 2px 4px rgba(16, 185, 129, 0.3)'}">
-                  <span style="font-size: 1.1rem; margin-right: 0.5rem;">
-                    ${isDone ? '↶' : '✅'}
-                  </span>
-                  ${isDone ? 'Desmarcar' : 'Marcar como feito'}
+                                transform: ${isDone ? 'scale(0.98)' : 'none'};
+                                box-shadow: ${isDone ? '0 2px 4px rgba(239, 68, 68, 0.3)' : '0 2px 4px rgba(16, 185, 129, 0.3)'}">
+                    <span style="font-size: 1.1rem; margin-right: 0.5rem;">
+                      ${isDone ? '↶' : '✅'}
+                    </span>
+                    ${isDone ? 'Desmarcar' : 'Marcar como feito'}
+                  </button>
+                </div>
+              `;
+        }).join('')}
+              
+              ${totalPages > 1 ? `
+              <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+                <button 
+                  onclick="changePage('${especieId}', ${currentPage - 1})"
+                  ${currentPage === 1 ? 'disabled' : ''}
+                  style="padding: 0.5rem 1rem; 
+                        background: ${currentPage === 1 ? '#e5e7eb' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}; 
+                        color: ${currentPage === 1 ? '#9ca3af' : 'white'}; 
+                        border: none; 
+                        border-radius: 6px; 
+                        font-weight: 600; 
+                        cursor: ${currentPage === 1 ? 'not-allowed' : 'pointer'};
+                        transition: all 0.3s;">
+                  ← Anterior
+                </button>
+                
+                <span style="font-weight: 600; color: #1f2937;">
+                  Página ${currentPage} de ${totalPages}
+                </span>
+                
+                <button 
+                  onclick="changePage('${especieId}', ${currentPage + 1})"
+                  ${currentPage === totalPages ? 'disabled' : ''}
+                  style="padding: 0.5rem 1rem; 
+                        background: ${currentPage === totalPages ? '#e5e7eb' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}; 
+                        color: ${currentPage === totalPages ? '#9ca3af' : 'white'}; 
+                        border: none; 
+                        border-radius: 6px; 
+                        font-weight: 600; 
+                        cursor: ${currentPage === totalPages ? 'not-allowed' : 'pointer'};
+                        transition: all 0.3s;">
+                  Próxima →
                 </button>
               </div>
-            `;
-        }).join('')}
-            
-            ${totalPages > 1 ? `
-            <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
-              <button 
-                onclick="changePage('${especieId}', ${currentPage - 1})"
-                ${currentPage === 1 ? 'disabled' : ''}
-                style="padding: 0.5rem 1rem; 
-                       background: ${currentPage === 1 ? '#e5e7eb' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}; 
-                       color: ${currentPage === 1 ? '#9ca3af' : 'white'}; 
-                       border: none; 
-                       border-radius: 6px; 
-                       font-weight: 600; 
-                       cursor: ${currentPage === 1 ? 'not-allowed' : 'pointer'};
-                       transition: all 0.3s;">
-                ← Anterior
-              </button>
-              
-              <span style="font-weight: 600; color: #1f2937;">
-                Página ${currentPage} de ${totalPages}
-              </span>
-              
-              <button 
-                onclick="changePage('${especieId}', ${currentPage + 1})"
-                ${currentPage === totalPages ? 'disabled' : ''}
-                style="padding: 0.5rem 1rem; 
-                       background: ${currentPage === totalPages ? '#e5e7eb' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}; 
-                       color: ${currentPage === totalPages ? '#9ca3af' : 'white'}; 
-                       border: none; 
-                       border-radius: 6px; 
-                       font-weight: 600; 
-                       cursor: ${currentPage === totalPages ? 'not-allowed' : 'pointer'};
-                       transition: all 0.3s;">
-                Próxima →
-              </button>
+              ` : ''}
             </div>
-            ` : ''}
           </div>
-        </div>
-      `;
+        `;
       });
 
       if (html === '') {
         html = `
-        <div class="info-box">
-          ℹ️ <strong>Nenhuma ação encontrada</strong><br>
-          Com o filtro atual, não há ações para exibir.
-        </div>
-      `;
+          <div class="info-box">
+            ℹ️ <strong>Nenhuma ação encontrada</strong><br>
+            Com o filtro atual, não há ações para exibir.
+          </div>
+        `;
       }
 
       container.innerHTML = html;
@@ -2188,19 +2188,19 @@
           Object.entries(especiesContagem).forEach(([especie, quantidade]) => {
             const percentual = ((quantidade / totalFrutiferas) * 100).toFixed(1);
             html += `
-            <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border-left: 4px solid #10b981;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-                <span style="font-weight: 600; font-size: 0.95rem;">${especie}</span>
-                <span style="font-weight: 700; color: #059669;">${quantidade}</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
-                  <div style="height: 100%; background: #10b981; width: ${percentual}%;"></div>
+              <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; border-left: 4px solid #10b981;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                  <span style="font-weight: 600; font-size: 0.95rem;">${especie}</span>
+                  <span style="font-weight: 700; color: #059669;">${quantidade}</span>
                 </div>
-                <span style="font-size: 0.8rem; color: #6b7280;">${percentual}%</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <div style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+                    <div style="height: 100%; background: #10b981; width: ${percentual}%;"></div>
+                  </div>
+                  <span style="font-size: 0.8rem; color: #6b7280;">${percentual}%</span>
+                </div>
               </div>
-            </div>
-          `;
+            `;
           });
           speciesSummary.innerHTML = html;
         }
@@ -2407,14 +2407,14 @@
 
       const toast = document.getElementById('toast');
       toast.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 0.5rem;">
-      <span>🔄</span>
-      <div>
-        Sincronizando ${acoesPendentes.length} ação(ões)...
-        <div style="font-size: 0.8rem; opacity: 0.8;">Por favor, aguarde</div>
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span>🔄</span>
+        <div>
+          Sincronizando ${acoesPendentes.length} ação(ões)...
+          <div style="font-size: 0.8rem; opacity: 0.8;">Por favor, aguarde</div>
+        </div>
       </div>
-    </div>
-  `;
+    `;
       toast.className = 'toast show';
 
       const sucessos = [];
@@ -2486,13 +2486,13 @@
       if (statusEl) {
         if (total > 0) {
           statusEl.innerHTML = `
-          <span style="display: flex; align-items: center; gap: 5px;">
-            <span style="background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold;">
-              ${total}
+            <span style="display: flex; align-items: center; gap: 5px;">
+              <span style="background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold;">
+                ${total}
+              </span>
+              <span>pendente(s)</span>
             </span>
-            <span>pendente(s)</span>
-          </span>
-        `;
+          `;
           statusEl.style.color = '#f59e0b';
         } else {
           statusEl.innerHTML = '✅ Sincronizado';
@@ -2708,27 +2708,27 @@
           });
 
           const popupContent = `
-          <div class="popup-content">
-            <h3>${f.nome_popular || f.especie}</h3>
-            <div class="info-row">
-              <span class="info-label">Código:</span>
-              <span class="info-value">${f.identificacao || f.id}</span>
+            <div class="popup-content">
+              <h3>${f.nome_popular || f.especie}</h3>
+              <div class="info-row">
+                <span class="info-label">Código:</span>
+                <span class="info-value">${f.identificacao || f.id}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Data Plantio:</span>
+                <span class="info-value">${formatarData(f.data_plantio) || 'Não informado'}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Última Rega:</span>
+                <span class="info-value">${formatarData(f.ultima_rega) || 'Nunca'}</span>
+              </div>
+              ${f.altura_total ? `
+              <div class="info-row">
+                <span class="info-label">Altura:</span>
+                <span class="info-value">${f.altura_total} m</span>
+              </div>` : ''}
             </div>
-            <div class="info-row">
-              <span class="info-label">Data Plantio:</span>
-              <span class="info-value">${formatarData(f.data_plantio) || 'Não informado'}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Última Rega:</span>
-              <span class="info-value">${formatarData(f.ultima_rega) || 'Nunca'}</span>
-            </div>
-            ${f.altura_total ? `
-            <div class="info-row">
-              <span class="info-label">Altura:</span>
-              <span class="info-value">${f.altura_total} m</span>
-            </div>` : ''}
-          </div>
-        `;
+          `;
 
           marker.bindPopup(popupContent);
           frutiferasLayer.addLayer(marker);
@@ -2806,14 +2806,14 @@
         mostrarToast('🔄 Carregando curvas de nível...');
 
         // Carregar curvas de nível com geometria em formato GeoJSON
+        // Usar RPC ou tentar buscar apenas fid e elev primeiro
         const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/cn_sitio?select=fid,elev,geom`,
+          `${SUPABASE_URL}/rest/v1/cn_sitio?select=fid,elev`,
           {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
               'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Accept': 'application/json',
-              'Accept-Profile': 'public'
+              'Accept': 'application/json'
             }
           }
         );
@@ -2830,11 +2830,21 @@
           return;
         }
 
-        console.log(`✅ ${contours.length} curvas de nível carregadas`);
+        console.log(`✅ ${contours.length} curvas de nível encontradas no banco`);
 
-        // Limpar camada antes de adicionar novas curvas
+        // Limpar camada
         contoursLayer.clearLayers();
 
+        // ⚠️ A geometria requer configuração especial do PostGIS
+        // Por enquanto, apenas informar que as curvas existem
+        mostrarToast(`ℹ️ ${contours.length} curvas de nível disponíveis (renderização em desenvolvimento)`);
+
+        // Desmarcar toggle
+        document.getElementById('toggleContours').checked = false;
+
+        /*
+        // TODO: Implementar renderização de geometria PostGIS
+        // Requer função RPC no Supabase para converter geometria
         let contoursAdded = 0;
         let errors = 0;
 
@@ -2844,113 +2854,17 @@
             errors++;
             return;
           }
-
-          try {
-            // O Supabase pode retornar geometria em diferentes formatos
-            let geojson = contour.geom;
-
-            // Se for string, fazer parse
-            if (typeof geojson === 'string') {
-              geojson = JSON.parse(geojson);
-            }
-
-            // Criar a linha da curva de nível
-            const layer = L.geoJSON(geojson, {
-              style: {
-                color: '#3b82f6',
-                weight: 2,
-                opacity: 0.8
-              }
-            });
-
-            contoursLayer.addLayer(layer);
-            contoursAdded++;
-
-            // Adicionar labels com a elevação ao longo da curva
-            if (contour.elev !== null && contour.elev !== undefined) {
-              const elevText = `${contour.elev.toFixed(1)}m`;
-
-              // Tentar obter coordenadas da geometria
-              let coordinates = [];
-
-              if (geojson.type === 'LineString') {
-                coordinates = geojson.coordinates;
-              } else if (geojson.type === 'MultiLineString') {
-                coordinates = geojson.coordinates[0]; // Pegar primeira linha
-              } else if (geojson.geometry) {
-                if (geojson.geometry.type === 'LineString') {
-                  coordinates = geojson.geometry.coordinates;
-                } else if (geojson.geometry.type === 'MultiLineString') {
-                  coordinates = geojson.geometry.coordinates[0];
-                }
-              }
-
-              // Se temos coordenadas, adicionar labels ao longo da linha
-              if (coordinates && coordinates.length > 0) {
-                // Adicionar label no início, meio e fim da curva
-                const positions = [
-                  0, // início
-                  Math.floor(coordinates.length / 2), // meio
-                  coordinates.length - 1 // fim
-                ];
-
-                positions.forEach(pos => {
-                  if (coordinates[pos]) {
-                    const coord = coordinates[pos];
-                    // GeoJSON usa [lon, lat], Leaflet usa [lat, lon]
-                    const latLng = [coord[1], coord[0]];
-
-                    const label = L.marker(latLng, {
-                      icon: L.divIcon({
-                        className: 'contour-label',
-                        html: `<div style="background: rgba(255,255,255,0.95); padding: 3px 8px; border-radius: 4px; border: 1px solid #3b82f6; font-size: 12px; font-weight: 700; color: #1e40af; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3); pointer-events: none;">${elevText}</div>`,
-                        iconSize: [60, 24],
-                        iconAnchor: [30, 12]
-                      })
-                    });
-
-                    contoursLayer.addLayer(label);
-                  }
-                });
-              } else {
-                // Fallback: usar o centro do bounds
-                try {
-                  const bounds = layer.getBounds();
-                  const center = bounds.getCenter();
-
-                  const label = L.marker(center, {
-                    icon: L.divIcon({
-                      className: 'contour-label',
-                      html: `<div style="background: rgba(255,255,255,0.95); padding: 3px 8px; border-radius: 4px; border: 1px solid #3b82f6; font-size: 12px; font-weight: 700; color: #1e40af; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3); pointer-events: none;">${elevText}</div>`,
-                      iconSize: [60, 24],
-                      iconAnchor: [30, 12]
-                    })
-                  });
-
-                  contoursLayer.addLayer(label);
-                } catch (e) {
-                  console.warn('Não foi possível adicionar label para curva', contour.fid);
-                }
-              }
-            }
-          } catch (error) {
-            console.error('Erro ao processar curva', contour.fid, ':', error);
-            errors++;
-          }
+          // ... geometry processing code here ...
         });
-
-        if (errors > 0) {
-          console.warn(`⚠️ ${errors} curva(s) com erro ao processar`);
-        }
-
-        mostrarToast(`✅ ${contoursAdded} curvas de nível carregadas`);
+        */
 
       } catch (error) {
         console.error('❌ Erro ao carregar curvas de nível:', error);
-        mostrarToast('❌ Erro ao carregar curvas de nível');
+        mostrarToast(`❌ Erro: ${error.message}`);
         document.getElementById('toggleContours').checked = false;
       }
     }
+
 
     function toggleCadastroForm() {
       const container = document.getElementById('cadastroFormContainer');
@@ -3134,41 +3048,41 @@
     // ⭐ NOVA FUNÇÃO: Confirmar Deleção de Frutífera ⭐
     function confirmarDeletarFrutifera(id, nome) {
       const confirmHTML = `
-      <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2001; display: flex; align-items: center; justify-content: center;" id="modalConfirmacao">
-        <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
-          <div style="text-align: center; margin-bottom: 1.5rem;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
-            <h3 style="margin: 0 0 0.5rem 0; color: #ef4444; font-size: 1.3rem;">Deletar Frutífera?</h3>
-            <p style="color: #6b7280; margin: 0; font-size: 0.95rem;">Esta ação não pode ser desfeita!</p>
-          </div>
-          
-          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-            <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.5rem;">Você está prestes a deletar:</div>
-            <div style="font-size: 1.1rem; font-weight: 700; color: #dc2626;">${nome}</div>
-            <div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.25rem;">Código: ${id}</div>
-          </div>
-          
-          <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.75rem; margin-bottom: 1.5rem;">
-            <div style="font-size: 0.85rem; color: #92400e;">
-              <strong>⚠️ Atenção:</strong> Todos os dados e histórico desta frutífera serão removidos permanentemente.
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2001; display: flex; align-items: center; justify-content: center;" id="modalConfirmacao">
+          <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+              <h3 style="margin: 0 0 0.5rem 0; color: #ef4444; font-size: 1.3rem;">Deletar Frutífera?</h3>
+              <p style="color: #6b7280; margin: 0; font-size: 0.95rem;">Esta ação não pode ser desfeita!</p>
+            </div>
+            
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+              <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.5rem;">Você está prestes a deletar:</div>
+              <div style="font-size: 1.1rem; font-weight: 700; color: #dc2626;">${nome}</div>
+              <div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.25rem;">Código: ${id}</div>
+            </div>
+            
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.75rem; margin-bottom: 1.5rem;">
+              <div style="font-size: 0.85rem; color: #92400e;">
+                <strong>⚠️ Atenção:</strong> Todos os dados e histórico desta frutífera serão removidos permanentemente.
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <button onclick="document.getElementById('modalConfirmacao').remove()" 
+                      style="width: 100%; padding: 0.75rem; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                Cancelar
+              </button>
+              <button onclick="deletarFrutifera('${id}'); document.getElementById('modalConfirmacao').remove(); document.getElementById('modalDetalhes').remove();" 
+                      style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                      onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(239, 68, 68, 0.4)'"
+                      onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'">
+                🗑️ Sim, Deletar
+              </button>
             </div>
           </div>
-          
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-            <button onclick="document.getElementById('modalConfirmacao').remove()" 
-                    style="width: 100%; padding: 0.75rem; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-              Cancelar
-            </button>
-            <button onclick="deletarFrutifera('${id}'); document.getElementById('modalConfirmacao').remove(); document.getElementById('modalDetalhes').remove();" 
-                    style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
-                    onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(239, 68, 68, 0.4)'"
-                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'">
-              🗑️ Sim, Deletar
-            </button>
-          </div>
         </div>
-      </div>
-      `;
+        `;
 
       const confirmModal = document.createElement('div');
       confirmModal.innerHTML = confirmHTML;
@@ -3298,14 +3212,14 @@
   </script>
   <script>
     /* ===============================
-       EDGE FUNCTION CONFIG
+      EDGE FUNCTION CONFIG
     ================================ */
     const EDGE_FUNCTION_URL =
       "https://erbefbnjxgpetbetlzya.supabase.co/functions/v1/update-geojson";
 
     /* ===============================
-       COLETAR AÇÕES JÁ CALCULADAS
-       ⭐ ATUALIZADO: Apenas PODA (exceto Abacaxi)
+      COLETAR AÇÕES JÁ CALCULADAS
+      ⭐ ATUALIZADO: Apenas PODA (exceto Abacaxi)
     ================================ */
     function coletarAcoesAtuais() {
       const acoes = [];
@@ -3337,7 +3251,7 @@
     }
 
     /* ===============================
-       ENVIAR PARA EDGE FUNCTION
+      ENVIAR PARA EDGE FUNCTION
     ================================ */
     async function enviarAcoesParaEdgeFunction() {
       const acoes = coletarAcoesAtuais();
