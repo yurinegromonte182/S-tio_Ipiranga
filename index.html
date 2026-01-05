@@ -1687,13 +1687,16 @@
         const intervaloRega = obterIntervaloRega(f);
 
         if (diasRega >= intervaloRega) {
+          const atraso = diasRega - intervaloRega;
           acoesPorEspecie[especie].rega.push({
             tipo: 'rega',
             urgencia: diasRega >= (intervaloRega + 2) ? 'urgent' : 'warning',
             frutifera: f,
             dias: diasRega,
+            intervalo: intervaloRega,
+            atraso: atraso,
             titulo: `Regar ${f.nome_popular || f.especie}`,
-            descricao: `Última rega: ${diasRega === 999 ? 'Nunca' : diasRega + ' dias atrás'}`
+            descricao: `Última rega: ${diasRega === 999 ? 'Nunca' : diasRega + ' dias atrás'} • Intervalo: ${intervaloRega}d • <b>+${atraso}d de atraso</b>`
           });
         }
 
@@ -1706,13 +1709,16 @@
           const intervaloPoda = obterIntervaloPoda(f);
 
           if (diasPoda >= intervaloPoda) {
+            const atraso = diasPoda - intervaloPoda;
             acoesPorEspecie[especie].poda.push({
               tipo: 'poda',
-              urgencia: 'warning',
+              urgencia: diasPoda >= (intervaloPoda + 30) ? 'urgent' : 'warning',
               frutifera: f,
               dias: diasPoda,
+              intervalo: intervaloPoda,
+              atraso: atraso,
               titulo: `Podar ${f.nome_popular || f.especie}`,
-              descricao: `Última poda: ${diasPoda === 999 ? 'Nunca' : diasPoda + ' dias atrás'}`
+              descricao: `Última poda: ${diasPoda === 999 ? 'Nunca' : diasPoda + ' dias atrás'} • Intervalo: ${intervaloPoda}d • <b>+${atraso}d de atraso</b>`
             });
           }
         }
@@ -1721,13 +1727,16 @@
         const intervaloColheita = obterIntervaloColheita(f);
 
         if (diasColheita >= intervaloColheita) {
+          const atraso = diasColheita - intervaloColheita;
           acoesPorEspecie[especie].colheita.push({
             tipo: 'colheita',
-            urgencia: 'normal',
+            urgencia: diasColheita >= (intervaloColheita + 7) ? 'urgent' : 'warning',
             frutifera: f,
             dias: diasColheita,
+            intervalo: intervaloColheita,
+            atraso: atraso,
             titulo: `Colher ${f.nome_popular || f.especie}`,
-            descricao: `Última colheita: ${diasColheita === 999 ? 'Nunca' : diasColheita + ' dias atrás'}`
+            descricao: `Última colheita: ${diasColheita === 999 ? 'Nunca' : diasColheita + ' dias atrás'} • Intervalo: ${intervaloColheita}d • <b>+${atraso}d de atraso</b>`
           });
         }
       });
@@ -1777,14 +1786,19 @@
 
         if (acoesFiltradas.length === 0) return;
 
+        // ⭐ ORDENAR POR URGÊNCIA (dias de atraso) ⭐
+        acoesFiltradas.sort((a, b) => b.dias - a.dias);
+
         // Gerar ID da espécie primeiro (necessário para paginação)
         const especieId = especie.toLowerCase().replace(/\s+/g, '-');
 
         // ⭐⭐ PAGINAÇÃO: Inicializar estado se não existir ⭐⭐
+        // ⭐ AUTO-EXPANDIR SE HOUVER AÇÕES URGENTES ⭐
+        const hasUrgent = acoesFiltradas.some(a => a.urgencia === 'urgent');
         if (!paginationState[especieId]) {
           paginationState[especieId] = {
             currentPage: 1,
-            isExpanded: false
+            isExpanded: hasUrgent // Expandir automaticamente se houver urgentes
           };
         }
 
@@ -1852,7 +1866,7 @@
                 <div class="action-meta">
                   Código: ${acao.frutifera.identificacao || acao.frutifera.id}
                   ${acao.frutifera.latitude && acao.frutifera.longitude ?
-              `• 📍 ${acao.frutifera.latitude.toFixed(4)}, ${acao.frutifera.longitude.toFixed(4)}` : ''}
+              `• <a href="#" onclick="abrirNoMapa(${acao.frutifera.latitude}, ${acao.frutifera.longitude}, '${acao.frutifera.nome_popular || acao.frutifera.especie}'); return false;" style="color: #10b981; text-decoration: none; font-weight: 600;">📍 Ver no Mapa</a>` : ''}
                 </div>
                 
                 <button class="action-button ${isDone ? 'btn-undo' : 'btn-do'}" 
@@ -3016,6 +3030,82 @@
           mostrarToast('❌ Erro ao obter localização');
         }
       );
+    }
+
+    // ⭐ NOVA FUNÇÃO: Abrir no Mapa a partir das ações ⭐
+    function abrirNoMapa(lat, lon, nome) {
+      // Mudar para a aba do mapa
+      const mapaTab = document.querySelector('[onclick*="mapa"]');
+      if (mapaTab) {
+        mapaTab.click();
+      }
+
+      // Aguardar o mapa carregar
+      setTimeout(() => {
+        if (!map) {
+          inicializarMapa();
+        }
+
+        // Centralizar no ponto
+        map.setView([lat, lon], 18);
+
+        // Encontrar e abrir o popup do marcador
+        Object.values(markers).forEach(marker => {
+          const markerLatLng = marker.getLatLng();
+          if (Math.abs(markerLatLng.lat - lat) < 0.0001 && Math.abs(markerLatLng.lng - lon) < 0.0001) {
+            marker.openPopup();
+          }
+        });
+
+        mostrarToast(`📍 Mostrando ${nome} no mapa`);
+      }, 300);
+    }
+
+    // ⭐ NOVA FUNÇÃO: Atualizar contador de sincronização ⭐
+    function atualizarContadorSync() {
+      const pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+      const acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
+      const totalPendente = pendingSync.length + acoesPendentes.length;
+
+      // Atualizar indicador visual no header
+      const syncStatus = document.getElementById('syncStatus');
+      if (syncStatus) {
+        if (totalPendente > 0) {
+          syncStatus.innerHTML = `🔄 ${totalPendente} item(ns) não sincronizado(s)`;
+          syncStatus.style.color = '#f59e0b';
+          syncStatus.style.fontWeight = '600';
+        } else {
+          syncStatus.innerHTML = 'Sítio Ipiranga';
+          syncStatus.style.color = '';
+          syncStatus.style.fontWeight = '';
+        }
+      }
+
+      return totalPendente;
+    }
+
+    // ⭐ NOVA FUNÇÃO: Sincronizar tudo automaticamente ⭐
+    async function sincronizarTudo() {
+      if (!navigator.onLine) {
+        console.log('Offline - não é possível sincronizar');
+        return;
+      }
+
+      const totalPendente = atualizarContadorSync();
+      if (totalPendente === 0) {
+        console.log('Nada para sincronizar');
+        return;
+      }
+
+      console.log(`🔄 Sincronizando ${totalPendente} item(ns)...`);
+
+      // Sincronizar frutíferas pendentes
+      await sincronizarComSupabase();
+
+      // Sincronizar ações pendentes
+      await sincronizarFilaAcoes();
+
+      atualizarContadorSync();
     }
 
     // Inicialização
