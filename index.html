@@ -1582,7 +1582,7 @@
       if (!frutifera) return;
 
       const modalHTML = `
-      <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center;">
+      <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center;" id="modalDetalhes">
         <div style="background: white; border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h3 style="margin: 0; color: #10b981;">${frutifera.nome_popular || frutifera.especie}</h3>
@@ -1622,9 +1622,18 @@
             </div>
           </div>
           
-          <button onclick="this.parentElement.parentElement.remove()" style="width: 100%; padding: 0.75rem; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-            Fechar
-          </button>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <button onclick="confirmarDeletarFrutifera('${frutifera.id || frutifera.fid}', '${frutifera.nome_popular || frutifera.especie}')" 
+                    style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(239, 68, 68, 0.4)'"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+              🗑️ Deletar
+            </button>
+            <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                    style="width: 100%; padding: 0.75rem; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+              Fechar
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -3065,7 +3074,8 @@
     function atualizarContadorSync() {
       const pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
       const acoesPendentes = JSON.parse(localStorage.getItem('acoesPendentes') || '[]');
-      const totalPendente = pendingSync.length + acoesPendentes.length;
+      const deleteQueue = JSON.parse(localStorage.getItem('deleteQueue') || '[]');
+      const totalPendente = pendingSync.length + acoesPendentes.length + deleteQueue.length;
 
       // Atualizar indicador visual no header
       const syncStatus = document.getElementById('syncStatus');
@@ -3104,6 +3114,164 @@
 
       // Sincronizar ações pendentes
       await sincronizarFilaAcoes();
+
+      atualizarContadorSync();
+    }
+
+    // ⭐ NOVA FUNÇÃO: Confirmar Deleção de Frutífera ⭐
+    function confirmarDeletarFrutifera(id, nome) {
+      const confirmHTML = `
+      <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2001; display: flex; align-items: center; justify-content: center;" id="modalConfirmacao">
+        <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+          <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+            <h3 style="margin: 0 0 0.5rem 0; color: #ef4444; font-size: 1.3rem;">Deletar Frutífera?</h3>
+            <p style="color: #6b7280; margin: 0; font-size: 0.95rem;">Esta ação não pode ser desfeita!</p>
+          </div>
+          
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+            <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.5rem;">Você está prestes a deletar:</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: #dc2626;">${nome}</div>
+            <div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.25rem;">Código: ${id}</div>
+          </div>
+          
+          <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.75rem; margin-bottom: 1.5rem;">
+            <div style="font-size: 0.85rem; color: #92400e;">
+              <strong>⚠️ Atenção:</strong> Todos os dados e histórico desta frutífera serão removidos permanentemente.
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <button onclick="document.getElementById('modalConfirmacao').remove()" 
+                    style="width: 100%; padding: 0.75rem; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+              Cancelar
+            </button>
+            <button onclick="deletarFrutifera('${id}'); document.getElementById('modalConfirmacao').remove(); document.getElementById('modalDetalhes').remove();" 
+                    style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                    onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(239, 68, 68, 0.4)'"
+                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'">
+              🗑️ Sim, Deletar
+            </button>
+          </div>
+        </div>
+      </div>
+      `;
+
+      const confirmModal = document.createElement('div');
+      confirmModal.innerHTML = confirmHTML;
+      document.body.appendChild(confirmModal.firstElementChild);
+    }
+
+    // ⭐ NOVA FUNÇÃO: Deletar Frutífera ⭐
+    async function deletarFrutifera(id) {
+      console.log('🗑️ Deletando frutífera:', id);
+
+      // Encontrar a frutífera
+      const index = frutiferas.findIndex(f => f.id === id || f.fid === id);
+      if (index === -1) {
+        mostrarToast('❌ Frutífera não encontrada');
+        return;
+      }
+
+      const frutifera = frutiferas[index];
+      const nome = frutifera.nome_popular || frutifera.especie;
+      const especieTable = getTableNameFromSpecies(frutifera.especie);
+
+      // Remover localmente
+      frutiferas.splice(index, 1);
+      localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+
+      // Adicionar à fila de deleções
+      let deleteQueue = JSON.parse(localStorage.getItem('deleteQueue') || '[]');
+      deleteQueue.push({
+        id: frutifera.id,
+        fid: frutifera.fid,
+        especie: frutifera.especie,
+        table: especieTable,
+        timestamp: Date.now()
+      });
+      localStorage.setItem('deleteQueue', JSON.stringify(deleteQueue));
+
+      // Atualizar UI
+      atualizarTodasAbas();
+      if (map) {
+        atualizarMapa();
+      }
+      atualizarContadorSync();
+
+      // Tentar sincronizar se estiver online
+      if (navigator.onLine) {
+        mostrarToast(`🗑️ ${nome} deletada! Sincronizando...`);
+        setTimeout(() => {
+          sincronizarDelecoes();
+        }, 500);
+      } else {
+        mostrarToast(`🗑️ ${nome} deletada! Sincronizará quando online.`);
+      }
+    }
+
+    // ⭐ NOVA FUNÇÃO: Sincronizar Deleções com Supabase ⭐
+    async function sincronizarDelecoes() {
+      if (!navigator.onLine) {
+        console.log('Offline - não é possível sincronizar deleções');
+        return;
+      }
+
+      let deleteQueue = JSON.parse(localStorage.getItem('deleteQueue') || '[]');
+
+      if (deleteQueue.length === 0) {
+        console.log('Nenhuma deleção pendente');
+        return;
+      }
+
+      console.log(`🗑️ Sincronizando ${deleteQueue.length} deleção(ões)...`);
+
+      let sucessos = 0;
+      let erros = 0;
+
+      for (const item of deleteQueue) {
+        try {
+          // Deletar do Supabase usando o ID real (não o fid)
+          if (item.id) {
+            const response = await fetch(
+              `${SUPABASE_URL}/rest/v1/${item.table}?id=eq.${item.id}`,
+              {
+                method: 'DELETE',
+                headers: {
+                  'apikey': SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+
+            if (response.ok || response.status === 204) {
+              console.log(`✅ Deletado do Supabase: ${item.table} ID ${item.id}`);
+              sucessos++;
+            } else {
+              console.error(`❌ Erro ao deletar: ${response.status}`);
+              erros++;
+            }
+          } else {
+            // Se não tem ID, era uma frutífera local que nunca foi sincronizada
+            console.log(`⏭️ Pulando deleção de item local: ${item.fid}`);
+            sucessos++;
+          }
+        } catch (error) {
+          console.error('❌ Erro ao deletar:', error);
+          erros++;
+        }
+      }
+
+      // Limpar fila de deleções
+      if (erros === 0) {
+        localStorage.setItem('deleteQueue', '[]');
+        console.log(`✅ ${sucessos} deleção(ões) sincronizada(s)`);
+        mostrarToast(`✅ ${sucessos} deleção(ões) sincronizada(s)`);
+      } else {
+        console.log(`⚠️ ${sucessos} sucesso(s), ${erros} erro(s)`);
+        mostrarToast(`⚠️ ${sucessos} sucesso(s), ${erros} erro(s)`);
+      }
 
       atualizarContadorSync();
     }
