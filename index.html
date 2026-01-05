@@ -2611,7 +2611,32 @@
     function inicializarMapa() {
       if (map) return;
 
-      map = L.map('mapContainer').setView([-7.1195, -34.8450], 13);
+      // Criar mapa com interações mais controladas
+      map = L.map('mapContainer', {
+        scrollWheelZoom: false,  // Desabilitar zoom com scroll do mouse
+        doubleClickZoom: true,   // Permitir zoom com duplo clique
+        touchZoom: true,         // Permitir zoom por toque (mobile)
+        dragging: true,          // Permitir arrastar
+        tap: true,               // Permitir toque
+        boxZoom: true,           // Permitir zoom por seleção de área
+        keyboard: true,          // Permitir navegação por teclado
+        zoomControl: true        // Mostrar controles de zoom
+      }).setView([-7.1195, -34.8450], 13);
+
+      // Adicionar mensagem ao tentar usar scroll
+      map.on('mousewheel', function (e) {
+        mostrarToast('💡 Use os botões +/- ou Ctrl+Scroll para dar zoom');
+      });
+
+      // Permitir zoom com Ctrl+Scroll (comportamento comum em mapas)
+      map.on('wheel', function (e) {
+        if (e.originalEvent.ctrlKey) {
+          map.scrollWheelZoom.enable();
+          setTimeout(() => {
+            map.scrollWheelZoom.disable();
+          }, 100);
+        }
+      });
 
       baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Esri, Maxar',
