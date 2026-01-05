@@ -813,6 +813,18 @@
           </button>
         </div>
 
+        <!-- Toggle de Curvas de Nível -->
+        <div class="layer-toggle" style="margin-bottom: 1rem;">
+          <div class="layer-label">
+            <div class="layer-badge" style="color: #3b82f6; background-color: #3b82f6;"></div>
+            <span style="font-weight: 500;">📏 Curvas de Nível</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleContours" onchange="toggleContoursLayer()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
         <!-- Toggle da camada de frutíferas -->
         <div class="layer-toggle" style="margin-bottom: 1rem;">
           <div class="layer-label">
@@ -1392,6 +1404,7 @@
     let baseLayers = {};
     let orthomosaicLayer;
     let frutiferasLayer;
+    let contoursLayer; // Camada de curvas de nível
     let markers = {};
 
     // ⭐⭐ CONFIGURAÇÃO COMPLETA DAS ESPÉCIES ⭐⭐
@@ -2616,6 +2629,7 @@
       }).addTo(map);
 
       frutiferasLayer = L.layerGroup().addTo(map);
+      contoursLayer = L.layerGroup(); // Inicializar camada de curvas de nível
       map.fitBounds(orthoBounds);
       atualizarMapa();
     }
@@ -2710,6 +2724,105 @@
         frutiferasLayer.addTo(map);
       } else {
         map.removeLayer(frutiferasLayer);
+      }
+    }
+
+    // ⭐⭐ FUNÇÃO: Toggle Curvas de Nível ⭐⭐
+    async function toggleContoursLayer() {
+      const isChecked = document.getElementById('toggleContours').checked;
+
+      if (isChecked) {
+        // Se a camada ainda não foi carregada, carregar do Supabase
+        if (contoursLayer.getLayers().length === 0) {
+          await carregarCurvasDeNivel();
+        }
+        contoursLayer.addTo(map);
+      } else {
+        map.removeLayer(contoursLayer);
+      }
+    }
+
+    // ⭐⭐ FUNÇÃO: Carregar Curvas de Nível do Supabase ⭐⭐
+    async function carregarCurvasDeNivel() {
+      if (!navigator.onLine) {
+        mostrarToast('📡 Você está offline. Conecte-se para carregar as curvas de nível.');
+        document.getElementById('toggleContours').checked = false;
+        return;
+      }
+
+      try {
+        mostrarToast('🔄 Carregando curvas de nível...');
+
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/cn_sitio?select=*`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Erro ao carregar curvas: ${response.status}`);
+        }
+
+        const contours = await response.json();
+        console.log(`✅ ${contours.length} curvas de nível carregadas`);
+
+        // Limpar camada antes de adicionar novas curvas
+        contoursLayer.clearLayers();
+
+        // Adicionar cada curva ao mapa
+        contours.forEach(contour => {
+          if (contour.geom) {
+            try {
+              // O Supabase retorna geometria em formato GeoJSON
+              const geojson = typeof contour.geom === 'string'
+                ? JSON.parse(contour.geom)
+                : contour.geom;
+
+              // Criar a linha da curva de nível
+              const layer = L.geoJSON(geojson, {
+                style: {
+                  color: '#3b82f6',
+                  weight: 2,
+                  opacity: 0.7
+                }
+              });
+
+              // Adicionar label com a elevação
+              if (contour.elev !== null && contour.elev !== undefined) {
+                const bounds = layer.getBounds();
+                const center = bounds.getCenter();
+
+                // Criar marcador de texto para a cota
+                const label = L.marker(center, {
+                  icon: L.divIcon({
+                    className: 'contour-label',
+                    html: `<div style="background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #3b82f6; font-size: 11px; font-weight: 600; color: #1e40af; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">${contour.elev.toFixed(1)}m</div>`,
+                    iconSize: [50, 20],
+                    iconAnchor: [25, 10]
+                  })
+                });
+
+                contoursLayer.addLayer(layer);
+                contoursLayer.addLayer(label);
+              } else {
+                contoursLayer.addLayer(layer);
+              }
+            } catch (error) {
+              console.error('Erro ao processar curva:', error);
+            }
+          }
+        });
+
+        mostrarToast(`✅ ${contours.length} curvas de nível carregadas`);
+
+      } catch (error) {
+        console.error('❌ Erro ao carregar curvas de nível:', error);
+        mostrarToast('❌ Erro ao carregar curvas de nível');
+        document.getElementById('toggleContours').checked = false;
       }
     }
 
