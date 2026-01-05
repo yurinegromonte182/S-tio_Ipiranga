@@ -1758,6 +1758,9 @@
 
         if (acoesFiltradas.length === 0) return;
 
+        // Gerar ID da espécie primeiro (necessário para paginação)
+        const especieId = especie.toLowerCase().replace(/\s+/g, '-');
+
         // ⭐⭐ PAGINAÇÃO: Inicializar estado se não existir ⭐⭐
         if (!paginationState[especieId]) {
           paginationState[especieId] = {
@@ -1771,9 +1774,6 @@
         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
         const endIndex = startIndex + ITEMS_PER_PAGE;
         const acoesPaginadas = acoesFiltradas.slice(startIndex, endIndex);
-
-        // Gerar seção da espécie (acordeão)
-        const especieId = especie.toLowerCase().replace(/\s+/g, '-');
         html += `
         <div class="especie-section" style="margin-bottom: 1.5rem;">
           <div class="especie-header" onclick="toggleEspecieSection('${especieId}')" 
