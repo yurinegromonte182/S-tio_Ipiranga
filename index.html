@@ -3418,11 +3418,15 @@
 
     // ⭐ NOVA FUNÇÃO: Deletar Frutífera ⭐
     async function deletarFrutifera(id) {
-      console.log('🗑️ Deletando frutífera:', id);
+      console.log('🗑️ Deletando frutífera com ID:', id, 'tipo:', typeof id);
+      console.log('📋 Array de frutíferas:', frutiferas.map(f => ({ id: f.id, fid: f.fid, especie: f.especie })));
 
-      // Encontrar a frutífera
-      const index = frutiferas.findIndex(f => f.id === id || f.fid === id);
+      // Encontrar a frutífera - usar == para comparar string/number
+      const index = frutiferas.findIndex(f => f.id == id || f.fid == id);
+
       if (index === -1) {
+        console.error('❌ Frutífera não encontrada. ID buscado:', id);
+        console.error('IDs disponíveis:', frutiferas.map(f => f.id || f.fid));
         mostrarToast('❌ Frutífera não encontrada');
         return;
       }
