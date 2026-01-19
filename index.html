@@ -2456,12 +2456,27 @@
 
       for (const acao of acoesPendentes) {
         try {
+          // ⭐⭐ Mapear campo correto do Supabase ⭐⭐
           const campoSupabase = acao.tipo === 'rega' ? 'data_irrigacao_ordinaria' :
             acao.tipo === 'poda' ? 'data_poda_formacao_1' :
               'inicio_colheita';
 
+          // ⭐⭐ Encontrar a frutífera para obter a tabela correta ⭐⭐
+          const frutifera = frutiferas.find(f =>
+            f.id === acao.frutiferaId || f.fid === acao.frutiferaId || f.identificacao === acao.frutiferaId
+          );
+
+          if (!frutifera) {
+            console.warn(`⚠️ Frutífera ${acao.frutiferaId} não encontrada`);
+            falhas.push(acao);
+            continue;
+          }
+
+          // ⭐⭐ Usar tabela específica da espécie ⭐⭐
+          const tabelaEspecie = frutifera._sourceTable || getTableNameFromSpecies(frutifera.especie);
+
           const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/frutiferas?id=eq.${acao.frutiferaId}`,
+            `${SUPABASE_URL}/rest/v1/${tabelaEspecie}?id=eq.${frutifera.id}`,
             {
               method: 'PATCH',
               headers: {
@@ -2475,7 +2490,7 @@
 
           if (response.ok) {
             sucessos.push(acao);
-            console.log(`✅ ${acao.tipo} sincronizada para ID ${acao.frutiferaId}`);
+            console.log(`✅ ${acao.tipo} sincronizada para ${frutifera.especie} ID ${acao.frutiferaId} na tabela ${tabelaEspecie}`);
           } else {
             falhas.push(acao);
           }
