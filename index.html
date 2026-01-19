@@ -1705,8 +1705,21 @@
 
       // Organizar ações por espécie
       frutiferas.forEach(f => {
-        const especie = f.especie || f.nome_popular || 'Desconhecida';
-        if (!acoesPorEspecie[especie]) return;
+        let especie = f.especie || f.nome_popular || 'Desconhecida';
+
+        // ⭐ FIX: Normalizar nome da espécie para lidar com dados do QGIS
+        // Tentar encontrar correspondência case-insensitive
+        const especieNormalizada = Object.keys(acoesPorEspecie).find(
+          key => key.toLowerCase() === especie.toLowerCase()
+        );
+
+        if (especieNormalizada) {
+          especie = especieNormalizada;
+        } else {
+          // Se não encontrar, adicionar dinamicamente
+          console.warn(`⚠️ Espécie desconhecida: ${especie}. Adicionando dinamicamente.`);
+          acoesPorEspecie[especie] = { rega: [], poda: [], colheita: [], icone: '🌿' };
+        }
 
         const diasRega = f.ultima_rega ? calcularDias(f.ultima_rega) : 999;
         const intervaloRega = obterIntervaloRega(f);
@@ -3387,7 +3400,7 @@
                         style="width: 100%; padding: 0.75rem; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
                   Cancelar
                 </button>
-                <button onclick="deletarFrutifera('${id}'); document.getElementById('modalConfirmacao').remove(); document.getElementById('modalDetalhes').remove();" 
+                <button onclick="deletarFrutifera('${id}'); document.getElementById('modalConfirmacao').remove(); const modal = document.getElementById('modalDetalhes'); if (modal) modal.remove();" 
                         style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
                         onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(239, 68, 68, 0.4)'"
                         onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'">
