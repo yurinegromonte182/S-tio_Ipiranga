@@ -2523,7 +2523,14 @@
         mang_rega: 7, mang_poda: 180, mang_colh: 90,
         caju_rega: 10, caju_poda: 365, caju_colh: 60,
         coq_rega: 5, coq_poda: 730, coq_colh: 30,
-        cac_rega: 3, cac_poda: 180, cac_colh: 120
+        cac_rega: 3, cac_poda: 180, cac_colh: 120,
+        abac_rega: 7, abac_poda: 0, abac_colh: 180,
+        abacate_rega: 7, abacate_poda: 365, abacate_colh: 120,
+        abrico_rega: 5, abrico_poda: 180, abrico_colh: 90,
+        acer_rega: 5, acer_poda: 180, acer_colh: 60,
+        manga_rega: 7, manga_poda: 365, manga_colh: 120,
+        laranja_rega: 7, laranja_poda: 365, laranja_colh: 90,
+        limao_rega: 7, limao_poda: 365, limao_colh: 90
       };
 
       Object.keys(defaults).forEach(key => {
@@ -2538,7 +2545,7 @@
     function saveConfig() {
       const config = {};
 
-      ['mang', 'caju', 'coq', 'cac'].forEach(prefixo => {
+      ['mang', 'caju', 'coq', 'cac', 'abac', 'abacate', 'abrico', 'acer', 'manga', 'laranja', 'limao'].forEach(prefixo => {
         ['rega', 'poda', 'colh'].forEach(tipo => {
           const key = `${prefixo}_${tipo}`;
           const input = document.getElementById(key);
@@ -2570,6 +2577,13 @@
       if (especie.includes('cacau')) return parseInt(config.cac_rega || localStorage.getItem('cac_rega') || '3');
       if (especie.includes('mangabeira')) return parseInt(config.mang_rega || localStorage.getItem('mang_rega') || '7');
       if (especie.includes('caju')) return parseInt(config.caju_rega || localStorage.getItem('caju_rega') || '10');
+      if (especie.includes('abacaxi')) return parseInt(config.abac_rega || localStorage.getItem('abac_rega') || '7');
+      if (especie.includes('abacate')) return parseInt(config.abacate_rega || localStorage.getItem('abacate_rega') || '7');
+      if (especie.includes('abricó')) return parseInt(config.abrico_rega || localStorage.getItem('abrico_rega') || '5');
+      if (especie.includes('acerola')) return parseInt(config.acer_rega || localStorage.getItem('acer_rega') || '5');
+      if (especie.includes('manga')) return parseInt(config.manga_rega || localStorage.getItem('manga_rega') || '7');
+      if (especie.includes('laranja')) return parseInt(config.laranja_rega || localStorage.getItem('laranja_rega') || '7');
+      if (especie.includes('limão') || especie.includes('limao')) return parseInt(config.limao_rega || localStorage.getItem('limao_rega') || '7');
       return 7;
     }
 
@@ -2581,6 +2595,13 @@
       if (especie.includes('cacau')) return parseInt(config.cac_poda || localStorage.getItem('cac_poda') || '180');
       if (especie.includes('mangabeira')) return parseInt(config.mang_poda || localStorage.getItem('mang_poda') || '180');
       if (especie.includes('caju')) return parseInt(config.caju_poda || localStorage.getItem('caju_poda') || '365');
+      if (especie.includes('abacaxi')) return parseInt(config.abac_poda || localStorage.getItem('abac_poda') || '0');
+      if (especie.includes('abacate')) return parseInt(config.abacate_poda || localStorage.getItem('abacate_poda') || '365');
+      if (especie.includes('abricó')) return parseInt(config.abrico_poda || localStorage.getItem('abrico_poda') || '180');
+      if (especie.includes('acerola')) return parseInt(config.acer_poda || localStorage.getItem('acer_poda') || '180');
+      if (especie.includes('manga')) return parseInt(config.manga_poda || localStorage.getItem('manga_poda') || '365');
+      if (especie.includes('laranja')) return parseInt(config.laranja_poda || localStorage.getItem('laranja_poda') || '365');
+      if (especie.includes('limão') || especie.includes('limao')) return parseInt(config.limao_poda || localStorage.getItem('limao_poda') || '365');
       return 180;
     }
 
@@ -2592,6 +2613,13 @@
       if (especie.includes('cacau')) return parseInt(config.cac_colh || localStorage.getItem('cac_colh') || '120');
       if (especie.includes('mangabeira')) return parseInt(config.mang_colh || localStorage.getItem('mang_colh') || '90');
       if (especie.includes('caju')) return parseInt(config.caju_colh || localStorage.getItem('caju_colh') || '60');
+      if (especie.includes('abacaxi')) return parseInt(config.abac_colh || localStorage.getItem('abac_colh') || '180');
+      if (especie.includes('abacate')) return parseInt(config.abacate_colh || localStorage.getItem('abacate_colh') || '120');
+      if (especie.includes('abricó')) return parseInt(config.abrico_colh || localStorage.getItem('abrico_colh') || '90');
+      if (especie.includes('acerola')) return parseInt(config.acer_colh || localStorage.getItem('acer_colh') || '60');
+      if (especie.includes('manga')) return parseInt(config.manga_colh || localStorage.getItem('manga_colh') || '120');
+      if (especie.includes('laranja')) return parseInt(config.laranja_colh || localStorage.getItem('laranja_colh') || '90');
+      if (especie.includes('limão') || especie.includes('limao')) return parseInt(config.limao_colh || localStorage.getItem('limao_colh') || '90');
       return 90;
     }
 
