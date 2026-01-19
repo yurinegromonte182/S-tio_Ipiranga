@@ -2116,7 +2116,25 @@
         }
 
         localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
+
+        // ⭐⭐ ADICIONAR AO HISTÓRICO ⭐⭐
+        const historicoAcoes = JSON.parse(localStorage.getItem('historicoAcoes') || '[]');
+        const frutifera = frutiferas[index];
+
+        historicoAcoes.push({
+          id: Date.now(),
+          tipo: tipo,
+          frutifera_id: frutiferaId,
+          frutifera_nome: frutifera.nome_popular || frutifera.especie,
+          especie: frutifera.especie,
+          data: new Date().toISOString(),
+          responsavel: perfilAtual || 'Sistema'
+        });
+
+        localStorage.setItem('historicoAcoes', JSON.stringify(historicoAcoes));
+        console.log(`📜 Ação ${tipo} adicionada ao histórico`);
       }
+
 
       atualizarContadorSync();
 
@@ -3035,6 +3053,11 @@
             atualizarMapa();
           }
         }, 100);
+      } else if (tabName === 'historico') {
+        // ⭐⭐ Carregar histórico ao abrir a aba ⭐⭐
+        setTimeout(() => {
+          carregarHistorico('7');
+        }, 100);
       }
     }
 
@@ -3058,6 +3081,166 @@
     function filterHistorico(event, periodo) {
       document.querySelectorAll('#historico .filter-btn').forEach(btn => btn.classList.remove('active'));
       event.target.classList.add('active');
+      carregarHistorico(periodo);
+    }
+
+    // ⭐⭐ NOVA FUNÇÃO: Carregar e Exibir Histórico ⭐⭐
+    function carregarHistorico(periodo = '7') {
+      const historicoList = document.getElementById('historicoList');
+      if (!historicoList) return;
+
+      const historicoAcoes = JSON.parse(localStorage.getItem('historicoAcoes') || '[]');
+
+      if (historicoAcoes.length === 0) {
+        historicoList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📜</div>
+            <p>Nenhuma ação registrada ainda.</p>
+            <p><small>As ações realizadas aparecerão aqui.</small></p>
+          </div>
+        `;
+        return;
+      }
+
+      // Filtrar por período
+      let historicoFiltrado = [...historicoAcoes];
+      const agora = new Date();
+
+      if (periodo !== 'todos') {
+        const diasFiltro = parseInt(periodo);
+        historicoFiltrado = historicoAcoes.filter(acao => {
+          const dataAcao = new Date(acao.data);
+          const diffDias = Math.floor((agora - dataAcao) / (1000 * 60 * 60 * 24));
+          return diffDias <= diasFiltro;
+        });
+      }
+
+      if (historicoFiltrado.length === 0) {
+        historicoList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📜</div>
+            <p>Nenhuma ação neste período.</p>
+            <p><small>Tente selecionar um período maior.</small></p>
+          </div>
+        `;
+        return;
+      }
+
+      // Ordenar por data (mais recente primeiro)
+      historicoFiltrado.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+      // Agrupar por data
+      const agrupadoPorData = {};
+      historicoFiltrado.forEach(acao => {
+        const dataAcao = new Date(acao.data);
+        const dataKey = dataAcao.toLocaleDateString('pt-BR');
+
+        if (!agrupadoPorData[dataKey]) {
+          agrupadoPorData[dataKey] = [];
+        }
+        agrupadoPorData[dataKey].push(acao);
+      });
+
+      // Gerar HTML
+      let html = '';
+      Object.keys(agrupadoPorData).forEach(dataKey => {
+        const acoes = agrupadoPorData[dataKey];
+        const labelData = obterLabelData(acoes[0].data);
+
+        html += `
+          <div style="margin-bottom: 1.5rem;">
+            <div style="font-weight: 700; color: #374151; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb; display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.1rem;">📅</span>
+              <span>${labelData}</span>
+              <span style="font-size: 0.85rem; color: #9ca3af; font-weight: 400;">(${acoes.length} ${acoes.length === 1 ? 'ação' : 'ações'})</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              ${acoes.map(acao => formatarHistoricoItem(acao)).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      historicoList.innerHTML = html;
+    }
+
+    // ⭐⭐ FUNÇÃO AUXILIAR: Formatar Item do Histórico ⭐⭐
+    function formatarHistoricoItem(acao) {
+      const icones = {
+        'rega': { emoji: '💧', cor: '#3b82f6', label: 'Rega' },
+        'poda': { emoji: '✂️', cor: '#10b981', label: 'Poda' },
+        'colheita': { emoji: '🍊', cor: '#f59e0b', label: 'Colheita' }
+      };
+
+      const config = icones[acao.tipo] || { emoji: '📝', cor: '#6b7280', label: acao.tipo };
+      const dataAcao = new Date(acao.data);
+      const horaFormatada = dataAcao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const tempoRelativo = obterTempoRelativo(acao.data);
+
+      return `
+        <div style="background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%); border-left: 4px solid ${config.cor}; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; this.style.transform='translateX(4px)';" onmouseout="this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)'; this.style.transform='translateX(0)';">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <div style="font-size: 1.5rem; background: ${config.cor}20; padding: 0.5rem; border-radius: 8px; display: flex; align-items: center; justify-content: center; min-width: 40px; height: 40px;">
+              ${config.emoji}
+            </div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: #1f2937; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                ${config.label} - ${acao.frutifera_nome}
+              </div>
+              <div style="font-size: 0.8rem; color: #6b7280;">
+                <span style="background: #f3f4f6; padding: 0.15rem 0.5rem; border-radius: 4px; margin-right: 0.5rem;">${acao.especie}</span>
+                <span>${tempoRelativo}</span>
+              </div>
+            </div>
+            <div style="text-align: right; font-size: 0.75rem; color: #9ca3af;">
+              <div style="font-weight: 500;">${horaFormatada}</div>
+              <div>${acao.responsavel || 'Sistema'}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ⭐⭐ FUNÇÃO AUXILIAR: Obter Label de Data ⭐⭐
+    function obterLabelData(dataString) {
+      const data = new Date(dataString);
+      const hoje = new Date();
+      const ontem = new Date(hoje);
+      ontem.setDate(ontem.getDate() - 1);
+
+      const dataFormatada = data.toLocaleDateString('pt-BR');
+      const hojeFormatada = hoje.toLocaleDateString('pt-BR');
+      const ontemFormatada = ontem.toLocaleDateString('pt-BR');
+
+      if (dataFormatada === hojeFormatada) {
+        return 'Hoje';
+      } else if (dataFormatada === ontemFormatada) {
+        return 'Ontem';
+      } else {
+        return dataFormatada;
+      }
+    }
+
+    // ⭐⭐ FUNÇÃO AUXILIAR: Obter Tempo Relativo ⭐⭐
+    function obterTempoRelativo(dataString) {
+      const data = new Date(dataString);
+      const agora = new Date();
+      const diffMs = agora - data;
+      const diffMinutos = Math.floor(diffMs / (1000 * 60));
+      const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffMinutos < 1) {
+        return 'Agora mesmo';
+      } else if (diffMinutos < 60) {
+        return `${diffMinutos} ${diffMinutos === 1 ? 'minuto' : 'minutos'} atrás`;
+      } else if (diffHoras < 24) {
+        return `${diffHoras} ${diffHoras === 1 ? 'hora' : 'horas'} atrás`;
+      } else if (diffDias < 7) {
+        return `${diffDias} ${diffDias === 1 ? 'dia' : 'dias'} atrás`;
+      } else {
+        return data.toLocaleDateString('pt-BR');
+      }
     }
 
     function obterLocalizacao() {
