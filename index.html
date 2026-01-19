@@ -2743,6 +2743,14 @@
                   <span class="info-label">Altura:</span>
                   <span class="info-value">${f.altura_total} m</span>
                 </div>` : ''}
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                  <button onclick="confirmarDeletarFrutifera('${f.id || f.fid}', '${(f.nome_popular || f.especie).replace(/'/g, "\\'")}')"
+                          style="width: 100%; padding: 0.5rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;"
+                          onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 8px rgba(239, 68, 68, 0.4)'"
+                          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    🗑️ Deletar Frutífera
+                  </button>
+                </div>
               </div>
             `;
 
