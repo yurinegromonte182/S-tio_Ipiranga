@@ -715,6 +715,22 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* Estilos para labels das curvas de nível */
+    .contour-label {
+      background: rgba(139, 69, 19, 0.9) !important;
+      color: white !important;
+      border: none !important;
+      border-radius: 4px !important;
+      padding: 2px 6px !important;
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .contour-label:before {
+      display: none !important;
+    }
   </style>
 </head>
 
@@ -2820,7 +2836,7 @@
 
         if (!response.ok) {
           if (response.status === 400 || response.status === 404) {
-            console.warn('⚠️ Tabela cn_sitio não encontrada');
+            console.warn('⚠️ Função RPC ou tabela cn_sitio não encontrada');
             mostrarToast('ℹ️ Curvas de nível não disponíveis');
             document.getElementById('toggleContours').checked = false;
             return;
@@ -2841,28 +2857,78 @@
         // Limpar camada
         contoursLayer.clearLayers();
 
-        // ⚠️ A geometria requer configuração especial do PostGIS
-        // Por enquanto, apenas informar que as curvas existem
-        mostrarToast(`ℹ️ ${contours.length} curvas de nível disponíveis (renderização em desenvolvimento)`);
-
-        // Desmarcar toggle
-        document.getElementById('toggleContours').checked = false;
-
-        /*
-        // TODO: Implementar renderização de geometria PostGIS
-        // Requer função RPC no Supabase para converter geometria
         let contoursAdded = 0;
         let errors = 0;
 
         // Adicionar cada curva ao mapa
         contours.forEach((contour, index) => {
-          if (!contour.geom) {
+          try {
+            if (!contour.geojson) {
+              errors++;
+              console.warn(`Curva ${contour.id} sem geometria`);
+              return;
+            }
+
+            // Criar feature GeoJSON
+            const feature = {
+              type: 'Feature',
+              properties: {
+                elev: contour.elev,
+                id: contour.id
+              },
+              geometry: contour.geojson
+            };
+
+            // Adicionar ao mapa com estilo
+            const contourLine = L.geoJSON(feature, {
+              style: {
+                color: '#8B4513',      // Marrom terra
+                weight: 2,
+                opacity: 0.7
+              },
+              onEachFeature: (feature, layer) => {
+                // Adicionar tooltip com elevação
+                if (feature.properties.elev !== null && feature.properties.elev !== undefined) {
+                  const elevation = feature.properties.elev.toFixed(1);
+
+                  // Tooltip permanente no meio da linha
+                  layer.bindTooltip(`${elevation}m`, {
+                    permanent: true,
+                    direction: 'center',
+                    className: 'contour-label',
+                    opacity: 0.9
+                  });
+
+                  // Popup ao clicar
+                  layer.bindPopup(`
+                    <div class="popup-content">
+                      <h3>Curva de Nível</h3>
+                      <div class="info-row">
+                        <span class="info-label">Elevação:</span>
+                        <span class="info-value">${elevation} metros</span>
+                      </div>
+                    </div>
+                  `);
+                }
+              }
+            });
+
+            contoursLayer.addLayer(contourLine);
+            contoursAdded++;
+
+          } catch (err) {
             errors++;
-            return;
+            console.error(`Erro ao processar curva ${contour.id}:`, err);
           }
-          // ... geometry processing code here ...
         });
-        */
+
+        if (contoursAdded > 0) {
+          mostrarToast(`✅ ${contoursAdded} curvas de nível carregadas!`);
+          console.log(`✅ ${contoursAdded} curvas adicionadas, ${errors} erros`);
+        } else {
+          mostrarToast('❌ Nenhuma curva pôde ser renderizada');
+          document.getElementById('toggleContours').checked = false;
+        }
 
       } catch (error) {
         console.error('❌ Erro ao carregar curvas de nível:', error);
