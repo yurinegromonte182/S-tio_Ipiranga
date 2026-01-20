@@ -2254,6 +2254,22 @@
       }
     }
 
+    // ⭐⭐ FUNÇÃO: Gerar próximo ID auto-incrementado ⭐⭐
+    function getNextFrutileraId() {
+      // Buscar o maior ID existente
+      let maxId = 0;
+
+      frutiferas.forEach(f => {
+        const currentId = parseInt(f.fid) || parseInt(f.identificacao) || 0;
+        if (currentId > maxId) {
+          maxId = currentId;
+        }
+      });
+
+      // Retornar próximo ID
+      return maxId + 1;
+    }
+
     async function cadastrarFrutifera(event) {
       event.preventDefault();
 
@@ -2275,7 +2291,8 @@
         lon = coords[1];
       }
 
-      const fidTemp = `${especie.substring(0, 3).toUpperCase()}-${Date.now()}`;
+      // ⭐⭐ NOVO: Usar ID auto-incrementado ao invés de prefixo-timestamp ⭐⭐
+      const fidTemp = getNextFrutileraId().toString();
 
       const novaFrutifera = {
         id: null,
