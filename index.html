@@ -1511,9 +1511,9 @@
             nome_popular: f.nome_popular || f.especie,
             identificacao: f.fid || f.id,
             data_plantio: f.data_plantio || null,
-            ultima_rega: f.data_irrigacao_ordinaria || null,
-            ultima_poda: f.data_poda_formacao_1 || null,
-            ultima_colheita: f.inicio_colheita || null,
+            ultima_rega: f.ultima_irrigacao || null,
+            ultima_poda: f.ultima_poda || null,
+            ultima_colheita: f.ultima_colheita || null,
             latitude: f.latitude || null,
             longitude: f.longitude || null,
             altura_total: f.altura_total || null,
@@ -2395,9 +2395,9 @@
                 longitude: frutifera.longitude,
                 responsavel: frutifera.responsavel, // ⭐ NOVO: Adicionar responsavel
                 em_plantio: frutifera.em_plantio || false, // ⭐ NOVO: Adicionar EM
-                data_irrigacao_ordinaria: frutifera.ultima_rega,
-                data_poda_formacao_1: frutifera.ultima_poda,
-                inicio_colheita: frutifera.ultima_colheita
+                ultima_irrigacao: frutifera.ultima_rega,
+                ultima_poda: frutifera.ultima_poda,
+                ultima_colheita: frutifera.ultima_colheita
               })
             }
           );
@@ -2483,13 +2483,14 @@
 
       const sucessos = [];
       const falhas = [];
+      const acoesDescartadas = [];
 
       for (const acao of acoesPendentes) {
         try {
           // ⭐⭐ Mapear campo correto do Supabase ⭐⭐
-          const campoSupabase = acao.tipo === 'rega' ? 'data_irrigacao_ordinaria' :
-            acao.tipo === 'poda' ? 'data_poda_formacao_1' :
-              'inicio_colheita';
+          const campoSupabase = acao.tipo === 'rega' ? 'ultima_irrigacao' :
+            acao.tipo === 'poda' ? 'ultima_poda' :
+              'ultima_colheita';
 
           // ⭐⭐ Encontrar a frutífera para obter a tabela correta ⭐⭐
           const frutifera = frutiferas.find(f =>
@@ -2497,7 +2498,17 @@
           );
 
           if (!frutifera) {
-            console.warn(`⚠️ Frutífera ${acao.frutiferaId} não encontrada`);
+            // Verificar se a ação é muito antiga (mais de 7 dias)
+            const idadeAcao = Date.now() - (acao.timestamp || new Date(acao.data).getTime());
+            const diasAntiga = idadeAcao / (1000 * 60 * 60 * 24);
+
+            if (diasAntiga > 7) {
+              console.warn(`🗑️ Descartando ação antiga (${diasAntiga.toFixed(1)} dias) para frutífera ${acao.frutiferaId} não encontrada`);
+              acoesDescartadas.push(acao);
+              continue;
+            }
+
+            console.warn(`⚠️ Frutífera ${acao.frutiferaId} não encontrada - mantendo na fila (${diasAntiga.toFixed(1)} dias)`);
             falhas.push(acao);
             continue;
           }
@@ -2531,11 +2542,18 @@
 
       localStorage.setItem('acoesPendentes', JSON.stringify(falhas));
 
+      // Log informações sobre ações descartadas
+      if (acoesDescartadas.length > 0) {
+        console.log(`🗑️ ${acoesDescartadas.length} ação(ões) antiga(s) descartada(s) (frutíferas não encontradas)`);
+      }
+
       if (sucessos.length > 0) {
         mostrarToast(`✅ ${sucessos.length} ação(ões) sincronizada(s) com sucesso!`);
         console.log(`✅ ${sucessos.length} ação(ões) sincronizada(s) - notificação via relatório programado`);
       } else if (falhas.length > 0) {
         mostrarToast(`⚠️ Erro ao sincronizar ${falhas.length} ação(ões)`);
+      } else if (acoesDescartadas.length > 0) {
+        mostrarToast(`🗑️ ${acoesDescartadas.length} ação(ões) antiga(s) removida(s)`);
       }
 
       atualizarContadorSync();
