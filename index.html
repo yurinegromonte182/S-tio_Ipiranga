@@ -853,6 +853,187 @@
           </label>
         </div>
 
+        <!-- Filtros de Espécies -->
+        <div
+          style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <div class="section-title clickable" onclick="toggleSpeciesFiltersSection()"
+            style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <div
+              style="font-size: 0.9rem; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.5px;">
+              🌿 Filtrar por Espécie
+            </div>
+            <span id="speciesFilterToggleIcon"
+              style="font-size: 1.2rem; color: #10b981; transition: transform 0.3s ease;">▼</span>
+          </div>
+
+          <div id="speciesFiltersContent"
+            style="transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out; overflow: hidden; max-height: 1000px; opacity: 1;">
+            <!-- Botões de Selecionar/Desmarcar Todas -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <button onclick="selectAllSpecies()"
+                style="padding: 0.5rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.3)'"
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                ✓ Selecionar Todas
+              </button>
+              <button onclick="deselectAllSpecies()"
+                style="padding: 0.5rem; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 8px rgba(0, 0, 0, 0.1)'"
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                ✗ Desmarcar Todas
+              </button>
+            </div>
+
+            <!-- Checkboxes de Espécies -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div class="layer-toggle"
+                style="margin-bottom: 0; padding: 0.5rem; background: white; border-radius: 6px;">
+                <div class="layer-label" style="gap: 0.4rem;">
+                  <div class="layer-badge"
+                    style="color: #10b981; background-color: #10b981; width: 12px; height: 12px;"></div>
+                  <span style="font-weight: 500; font-size: 0.8rem;">🥭 Mangabeira</span>
+                </div>
+                <label class="toggle-switch" style="width: 36px; height: 20px;">
+                  <input type="checkbox" id="filter_Mangabeira" checked onchange="toggleSpeciesFilter('Mangabeira')">
+                  <span class="toggle-slider" style="border-radius: 20px;"></span>
+                </label>
+              </div>
+
+              <div class="layer-toggle"
+                style="margin-bottom: 0; padding: 0.5rem; background: white; border-radius: 6px;">
+                <div class="layer-label" style="gap: 0.4rem;">
+                  <div class="layer-badge"
+                    style="color: #f59e0b; background-color: #f59e0b; width: 12px; height: 12px;"></div>
+                  <span style="font-weight: 500; font-size: 0.8rem;">🌰 Cajueiro</span>
+                </div>
+                <label class="toggle-switch" style="width: 36px; height: 20px;">
+                  <input type="checkbox" id="filter_Cajueiro" checked onchange="toggleSpeciesFilter('Cajueiro')">
+                  <span class="toggle-slider" style="border-radius: 20px;"></span>
+                </label>
+              </div>
+
+              <div class="layer-toggle"
+                style="margin-bottom: 0; padding: 0.5rem; background: white; border-radius: 6px;">
+                <div class="layer-label" style="gap: 0.4rem;">
+                  <div class="layer-badge"
+                    style="color: #ef4444; background-color: #ef4444; width: 12px; height: 12px;"></div>
+                  <span style="font-weight: 500; font-size: 0.8rem;">🥥 Coqueiro</span>
+                </div>
+                <label class="toggle-switch" style="width: 36px; height: 20px;">
+                  <input type="checkbox" id="filter_Coqueiro" checked onchange="toggleSpeciesFilter('Coqueiro')">
+                  <span class="toggle-slider" style="border-radius: 20px;"></span>
+                </label>
+              </div>
+
+              <div class="layer-toggle"
+                style="margin-bottom: 0; padding: 0.5rem; background: white; border-radius: 6px;">
+                <div class="layer-label" style="gap: 0.4rem;">
+                  <div class="layer-badge"
+                    style="color: #8b5cf6; background-color: #8b5cf6; width: 12px; height: 12px;"></div>
+                  <span style="font-weight: 500; font-size: 0.8rem;">🍫 Cacau</span>
+                </div>
+                <label class="toggle-switch" style="width: 36px; height: 20px;">
+                  <input type="checkbox" id="filter_Cacau" checked onchange="toggleSpeciesFilter('Cacau')">
+                  <span class="toggle-slider" style="border-radius: 20px;"></span>
+                </label>
+              </div>
+
+              <div class="layer-toggle"
+                style="margin-bottom: 0; padding: 0.5rem; background: white; border-radius: 6px;">
+                <div class="layer-label" style="gap: 0.4rem;">
+                  <div class="layer-badge"
+                    style="color: #eab308; background-color: #eab308; width: 12px; height: 12px;"></div>
+                  <span style="font-weight: 500; font-size: 0.8rem;">🍍 Abacaxi</span>
+                </div>
+                <label class="toggle-switch" style="width: 36px; height: 20px;">
+                  <input type="checkbox" id="filter_Abacaxi" checked onchange="toggleSpeciesFilter('Abacaxi')">
+                  <span class="toggle-slider" style="border-radius: 20px;"></span>
+                </label>
+              </div>
+
+              <div class="layer-toggle"
+                style="margin-bottom: 0; padding: 0.5rem; background: white; border-radius: 6px;">
+                <div class="layer-label" style="gap: 0.4rem;">
+                  <div class="layer-badge"
+                    style="color: #22c55e; background-color: #22c55e; width: 12px; height: 12px;"></div>
+                  <span style="font-weight: 500; font-size: 0.8rem;">🥑 Abacate</span>
+                </div>
+                <label class="toggle-switch" style="width: 36px; height: 20px;">
+                  <input type="checkbox" id="filter_Abacate" checked onchange="toggleSpeciesFilter('Abacate')">
+                  <span class="toggle-slider" style="border-radius: 20px;"></span>
+                </label>
+              </div>
+
+              <div class="layer-toggle"
+                style="margin-bottom: 0; padding: 0.5rem; background: white; border-radius: 6px;">
+                <div class="layer-label" style="gap: 0.4rem;">
+                  <div class="layer-badge"
+                    style="color: #fb923c; background-color: #fb923c; width: 12px; height: 12px;"></div>
+                  <span style="font-weight: 500; font-size: 0.8rem;">🍑 Abricó</span>
+                </div>
+                <label class="toggle-switch" style="width: 36px; height: 20px;">
+                  <input type="checkbox" id="filter_Abricó-do-pará" checked
+                    onchange="toggleSpeciesFilter('Abricó-do-pará')">
+                  <span class="toggle-slider" style="border-radius: 20px;"></span>
+                </label>
+              </div>
+
+              <div class="layer-toggle"
+                style="margin-bottom: 0; padding: 0.5rem; background: white; border-radius: 6px;">
+                <div class="layer-label" style="gap: 0.4rem;">
+                  <div class="layer-badge"
+                    style="color: #f43f5e; background-color: #f43f5e; width: 12px; height: 12px;"></div>
+                  <span style="font-weight: 500; font-size: 0.8rem;">🍒 Acerola</span>
+                </div>
+                <label class="toggle-switch" style="width: 36px; height: 20px;">
+                  <input type="checkbox" id="filter_Acerola" checked onchange="toggleSpeciesFilter('Acerola')">
+                  <span class="toggle-slider" style="border-radius: 20px;"></span>
+                </label>
+              </div>
+
+              <div class="layer-toggle"
+                style="margin-bottom: 0; padding: 0.5rem; background: white; border-radius: 6px;">
+                <div class="layer-label" style="gap: 0.4rem;">
+                  <div class="layer-badge"
+                    style="color: #fbbf24; background-color: #fbbf24; width: 12px; height: 12px;"></div>
+                  <span style="font-weight: 500; font-size: 0.8rem;">🥭 Manga</span>
+                </div>
+                <label class="toggle-switch" style="width: 36px; height: 20px;">
+                  <input type="checkbox" id="filter_Manga" checked onchange="toggleSpeciesFilter('Manga')">
+                  <span class="toggle-slider" style="border-radius: 20px;"></span>
+                </label>
+              </div>
+
+              <div class="layer-toggle"
+                style="margin-bottom: 0; padding: 0.5rem; background: white; border-radius: 6px;">
+                <div class="layer-label" style="gap: 0.4rem;">
+                  <div class="layer-badge"
+                    style="color: #fb7185; background-color: #fb7185; width: 12px; height: 12px;"></div>
+                  <span style="font-weight: 500; font-size: 0.8rem;">🍊 Laranja</span>
+                </div>
+                <label class="toggle-switch" style="width: 36px; height: 20px;">
+                  <input type="checkbox" id="filter_Laranja-cravo" checked
+                    onchange="toggleSpeciesFilter('Laranja-cravo')">
+                  <span class="toggle-slider" style="border-radius: 20px;"></span>
+                </label>
+              </div>
+
+              <div class="layer-toggle"
+                style="margin-bottom: 0; padding: 0.5rem; background: white; border-radius: 6px;">
+                <div class="layer-label" style="gap: 0.4rem;">
+                  <div class="layer-badge"
+                    style="color: #a3e635; background-color: #a3e635; width: 12px; height: 12px;"></div>
+                  <span style="font-weight: 500; font-size: 0.8rem;">🍋 Limão</span>
+                </div>
+                <label class="toggle-switch" style="width: 36px; height: 20px;">
+                  <input type="checkbox" id="filter_Limão" checked onchange="toggleSpeciesFilter('Limão')">
+                  <span class="toggle-slider" style="border-radius: 20px;"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Legenda de Espécies -->
         <div
           style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
@@ -1422,6 +1603,7 @@
     let frutiferasLayer;
     let contoursLayer; // Camada de curvas de nível
     let markers = {};
+    let visibleSpecies = {}; // Rastrear visibilidade de cada espécie
 
     // ⭐⭐ CONFIGURAÇÃO COMPLETA DAS ESPÉCIES ⭐⭐
     const speciesConfig = {
@@ -2710,6 +2892,7 @@
 
       try {
         loadConfig(); // Carrega configurações primeiro
+        initializeSpeciesFilters(); // ⭐ NOVO: Inicializar filtros de espécies
         atualizarContadorSync();
         await carregarFrutiferas();
 
@@ -2820,7 +3003,8 @@
       const bounds = [];
 
       frutiferas.forEach(f => {
-        if (f.latitude && f.longitude) {
+        // ⭐ NOVO: Verificar se a espécie está visível no filtro
+        if (f.latitude && f.longitude && visibleSpecies[f.especie] !== false) {
           const color = speciesColors[f.especie] || '#10b981';
 
           const marker = L.circleMarker([f.latitude, f.longitude], {
@@ -2861,7 +3045,7 @@
                   <span class="info-value">${f.altura_total} m</span>
                 </div>` : ''}
                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
-                  <button onclick="confirmarDeletarFrutifera('${f.id || f.fid}', '${(f.nome_popular || f.especie).replace(/'/g, "\\'")}')"
+                  <button onclick="confirmarDeletarFrutifera('${f.id || f.fid}', '${(f.nome_popular || f.especie).replace(/'/g, "\\'")}')" 
                           style="width: 100%; padding: 0.5rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;"
                           onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 8px rgba(239, 68, 68, 0.4)'"
                           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
@@ -3072,6 +3256,106 @@
         icon.textContent = '▼';
       } else {
         container.classList.add('collapsed');
+        icon.textContent = '▶';
+      }
+    }
+
+    // ⭐⭐ FUNÇÕES DE FILTRO DE ESPÉCIES ⭐⭐
+    function initializeSpeciesFilters() {
+      // Carregar filtros salvos do localStorage ou inicializar com todas visíveis
+      const savedFilters = localStorage.getItem('speciesFilters');
+      if (savedFilters) {
+        visibleSpecies = JSON.parse(savedFilters);
+      } else {
+        // Inicializar todas as espécies como visíveis
+        Object.keys(speciesConfig).forEach(species => {
+          visibleSpecies[species] = true;
+        });
+      }
+
+      // Atualizar checkboxes com os valores carregados
+      Object.keys(speciesConfig).forEach(species => {
+        const checkbox = document.getElementById(`filter_${species}`);
+        if (checkbox) {
+          checkbox.checked = visibleSpecies[species] !== false;
+        }
+      });
+
+      console.log('🌿 Filtros de espécies inicializados:', visibleSpecies);
+    }
+
+    function toggleSpeciesFilter(species) {
+      // Alternar visibilidade da espécie
+      visibleSpecies[species] = !visibleSpecies[species];
+
+      // Salvar no localStorage
+      localStorage.setItem('speciesFilters', JSON.stringify(visibleSpecies));
+
+      // Atualizar mapa
+      if (map && frutiferasLayer) {
+        atualizarMapa();
+      }
+
+      console.log(`🌿 Filtro ${species}: ${visibleSpecies[species] ? 'visível' : 'oculto'}`);
+    }
+
+    function selectAllSpecies() {
+      // Marcar todas as espécies como visíveis
+      Object.keys(speciesConfig).forEach(species => {
+        visibleSpecies[species] = true;
+        const checkbox = document.getElementById(`filter_${species}`);
+        if (checkbox) {
+          checkbox.checked = true;
+        }
+      });
+
+      // Salvar no localStorage
+      localStorage.setItem('speciesFilters', JSON.stringify(visibleSpecies));
+
+      // Atualizar mapa
+      if (map && frutiferasLayer) {
+        atualizarMapa();
+      }
+
+      mostrarToast('✅ Todas as espécies visíveis');
+      console.log('🌿 Todas as espécies selecionadas');
+    }
+
+    function deselectAllSpecies() {
+      // Marcar todas as espécies como ocultas
+      Object.keys(speciesConfig).forEach(species => {
+        visibleSpecies[species] = false;
+        const checkbox = document.getElementById(`filter_${species}`);
+        if (checkbox) {
+          checkbox.checked = false;
+        }
+      });
+
+      // Salvar no localStorage
+      localStorage.setItem('speciesFilters', JSON.stringify(visibleSpecies));
+
+      // Atualizar mapa
+      if (map && frutiferasLayer) {
+        atualizarMapa();
+      }
+
+      mostrarToast('🚫 Todas as espécies ocultas');
+      console.log('🌿 Todas as espécies desmarcadas');
+    }
+
+    function toggleSpeciesFiltersSection() {
+      const content = document.getElementById('speciesFiltersContent');
+      const icon = document.getElementById('speciesFilterToggleIcon');
+
+      if (content.style.maxHeight === '0px' || content.style.maxHeight === '') {
+        // Expandir
+        content.style.maxHeight = '1000px';
+        content.style.opacity = '1';
+        icon.textContent = '▼';
+      } else {
+        // Colapsar
+        content.style.maxHeight = '0px';
+        content.style.opacity = '0';
         icon.textContent = '▶';
       }
     }
