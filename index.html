@@ -1818,7 +1818,7 @@
           acoesPorEspecie[especie] = { rega: [], poda: [], colheita: [], icone: '🌿' };
         }
 
-        const diasRega = f.ultima_rega ? calcularDias(f.ultima_rega) : 999;
+        const diasRega = f.regado_em ? calcularDias(f.regado_em) : 999;
         const intervaloRega = obterIntervaloRega(f);
 
         if (diasRega >= intervaloRega) {
@@ -1840,7 +1840,7 @@
         const requiresPruning = !especieLower.includes('abacaxi');
 
         if (requiresPruning) {
-          const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
+          const diasPoda = f.podado_em ? calcularDias(f.podado_em) : 999;
           const intervaloPoda = obterIntervaloPoda(f);
 
           if (diasPoda >= intervaloPoda) {
@@ -1858,7 +1858,7 @@
           }
         }
 
-        const diasColheita = f.ultima_colheita ? calcularDias(f.ultima_colheita) : 999;
+        const diasColheita = f.colhido_em ? calcularDias(f.colhido_em) : 999;
         const intervaloColheita = obterIntervaloColheita(f);
 
         if (diasColheita >= intervaloColheita) {
@@ -2218,11 +2218,11 @@
 
       if (index >= 0) {
         if (tipo === 'rega') {
-          frutiferas[index].ultima_rega = new Date().toISOString();
+          frutiferas[index].regado_em = new Date().toISOString();
         } else if (tipo === 'poda') {
-          frutiferas[index].ultima_poda = new Date().toISOString();
+          frutiferas[index].podado_em = new Date().toISOString();
         } else if (tipo === 'colheita') {
-          frutiferas[index].ultima_colheita = new Date().toISOString();
+          frutiferas[index].colhido_em = new Date().toISOString();
         }
 
         localStorage.setItem('frutiferas', JSON.stringify(frutiferas));
@@ -2276,7 +2276,7 @@
         especiesUnicas.add(f.especie || f.nome_popular);
 
         // Calcular pendencias para esta frutífera
-        const diasRega = f.ultima_rega ? calcularDias(f.ultima_rega) : 999;
+        const diasRega = f.regado_em ? calcularDias(f.regado_em) : 999;
         const intervaloRega = obterIntervaloRega(f);
 
         if (diasRega >= intervaloRega) {
@@ -2286,7 +2286,7 @@
           }
         }
 
-        const diasPoda = f.ultima_poda ? calcularDias(f.ultima_poda) : 999;
+        const diasPoda = f.podado_em ? calcularDias(f.podado_em) : 999;
         const intervaloPoda = obterIntervaloPoda(f);
 
         if (diasPoda >= intervaloPoda) {
@@ -2397,14 +2397,14 @@
         especie: especie,
         nome_popular: especie,
         identificacao: fidTemp,
-        data_plantio: dataPlantio,
+        plantado_em: dataPlantio,
         latitude: lat,
         longitude: lon,
         responsavel: responsavel,
         em_plantio: emPlantio, // ⭐ NOVO: Incluir campo EM
-        ultima_rega: null,
-        ultima_poda: null,
-        ultima_colheita: null,
+        regado_em: null,
+        podado_em: null,
+        colhido_em: null,
         created_at: new Date().toISOString(),
         pendingSync: true
       };
@@ -2487,14 +2487,14 @@
               body: JSON.stringify({
                 nome_popular: frutifera.especie,
                 especie: frutifera.especie, // ⭐ NOVO: Adicionar campo especie
-                data_plantio: frutifera.data_plantio,
+                plantado_em: frutifera.plantado_em,
                 latitude: frutifera.latitude,
                 longitude: frutifera.longitude,
                 responsavel: frutifera.responsavel, // ⭐ NOVO: Adicionar responsavel
                 em_plantio: frutifera.em_plantio || false, // ⭐ NOVO: Adicionar EM
-                ultima_irrigacao: frutifera.ultima_rega,
-                ultima_poda: frutifera.ultima_poda,
-                ultima_colheita: frutifera.ultima_colheita
+                regado_em: frutifera.regado_em,
+                podado_em: frutifera.podado_em,
+                colhido_em: frutifera.colhido_em
               })
             }
           );
@@ -2585,9 +2585,9 @@
       for (const acao of acoesPendentes) {
         try {
           // ⭐⭐ Mapear campo correto do Supabase ⭐⭐
-          const campoSupabase = acao.tipo === 'rega' ? 'ultima_irrigacao' :
-            acao.tipo === 'poda' ? 'ultima_poda' :
-              'ultima_colheita';
+          const campoSupabase = acao.tipo === 'rega' ? 'regado_em' :
+            acao.tipo === 'poda' ? 'podado_em' :
+              'colhido_em';
 
           // ⭐⭐ Encontrar a frutífera para obter a tabela correta ⭐⭐
           const frutifera = frutiferas.find(f =>
